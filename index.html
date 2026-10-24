@@ -483,6 +483,63 @@ h1.game-title {
   background: var(--accent-green);
 }
 
+/* ===== v6: Game selector chips (5 игр) ===== */
+.game-selector {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.game-chip {
+  appearance: none;
+  border: 2px solid rgba(255, 255, 255, 0.12);
+  background: linear-gradient(180deg, #1b2236 0%, #121827 100%);
+  color: #e6e9f2;
+  border-radius: 14px;
+  padding: 12px 8px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  font-family: 'Russo One', sans-serif;
+  font-size: 13px;
+  letter-spacing: 0.03em;
+  text-align: center;
+  transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.game-chip:hover,
+.game-chip:focus {
+  transform: translateY(-2px);
+  border-color: rgba(0, 240, 255, 0.6);
+  outline: none;
+}
+
+.game-chip.selected {
+  border-color: #ffb800;
+  background: linear-gradient(180deg, #3a2a06 0%, #1d1608 100%);
+  box-shadow: 0 0 18px rgba(255, 184, 0, 0.35);
+  color: #ffd76a;
+}
+
+.game-chip:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.game-chip-icon {
+  font-size: 28px;
+  line-height: 1;
+}
+
+@media (max-width: 760px) {
+  .game-selector {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
 </style>
   <!-- MediaPipe Pose (Full Body 33 Landmarks), MQTT over WSS, PeerJS (WebRTC), and QRCode.js -->
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
@@ -549,7 +606,7 @@ h1.game-title {
             <h1 class="game-title">
               MOTION ARENA TV
               <span style="display: inline-block; font-size: 18px; background: var(--accent-gold); color: #0b0e14; padding: 5px 12px; border-radius: 8px; vertical-align: middle; margin-left: 8px; font-weight: 900;">
-                ВЕРСИЯ: v4.8 / v5.4
+                ВЕРСИЯ: v6.0 САМУРАЙ
               </span>
             </h1>
           </div>
@@ -559,18 +616,11 @@ h1.game-title {
         </button>
       </div>
 
-      <!-- Game Mode Selector Bar -->
-      <div style="display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap;">
-        <button id="btn-select-boxfruit" class="btn btn-gold" style="flex: 1; padding: 14px 18px; font-size: 16px;" type="button">
-          🥊 Игра 1: BOXFRUIT 2D (Боксёрские перчатки) ✓
-        </button>
-        <button id="btn-select-saber3d" class="btn btn-secondary" style="flex: 1; padding: 14px 18px; font-size: 16px;" type="button">
-          ⚔️ Игра 2: 3D SABER SLICER (Сабли из 3D-глубины)
-        </button>
-      </div>
+      <!-- Game Selector (5 игр, строится из GAME_LIST в game.js) -->
+      <div id="game-selector" class="game-selector"></div>
 
       <p id="selected-game-desc" class="game-subtitle" style="margin-bottom: 20px;">
-        <strong>Выбрана игра: 🥊 BOXFRUIT 2D.</strong> Классический боксёрский поединок с яркими векторными фруктами, перчатками и минами (а рядом можно включить 3D Сабли!).
+        <strong>Выбрана игра: ⚔️ 3D SABER SLICER.</strong>
       </p>
 
       <div class="mode-grid">
@@ -579,7 +629,7 @@ h1.game-title {
           <span class="mode-tag">1. Для Телевизора (Без камеры)</span>
           <h2>📺 Это экран ТВ / Монитор</h2>
           <p>
-            Показывает 3D-арену, твой неоновый силуэт и плазменные сабли / перчатки на большом экране.
+            Показывает неон-додзё, твоего персонажа-самурая с катанами / перчатками и все 5 игр на большом экране.
           </p>
           <span class="btn btn-gold" style="width: 100%; margin-top: 6px;">Открыть экран ТВ</span>
         </button>
@@ -674,7 +724,7 @@ h1.game-title {
         Связать с ТВ
       </button>
       <button id="btn-phone-switch-game" class="btn btn-secondary" style="flex: 1;" type="button">
-        ⚔️ Сменить игру (3D/2D)
+        🎮 Следующая игра на ТВ
       </button>
       <button id="btn-phone-restart" class="btn btn-gold" style="width: 100%;" type="button">
         ▶ ЗАПУСТИТЬ / ПЕРЕЗАПУСТИТЬ РАУНД НА ТВ
@@ -907,38 +957,63 @@ const Saber3DEngine = {
     };
   },
 
-  // Спавн волны 3D-предметов из глубины экрана
+  // 6 зон экрана: 3 колонки × 2 ряда (доли ширины/высоты экрана ТВ)
+  LANES: [
+    { col: 0, row: 0, fx: 1 / 6, fy: 0.32 },
+    { col: 1, row: 0, fx: 3 / 6, fy: 0.32 },
+    { col: 2, row: 0, fx: 5 / 6, fy: 0.32 },
+    { col: 0, row: 1, fx: 1 / 6, fy: 0.74 },
+    { col: 1, row: 1, fx: 3 / 6, fy: 0.74 },
+    { col: 2, row: 1, fx: 5 / 6, fy: 0.74 }
+  ],
+  // Глубина «Зоны Удара»: резать можно ТОЛЬКО когда предмет подлетел ближе этого z (крупный и близкий)
+  STRIKE_Z: 0.3,
+  lastLaneIdx: -1,
+
+  // Спавн: по одному предмету в случайную из 6 зон (не повторяя предыдущую)
   spawn3DWave(score = 0) {
-    const count = 1; // По одному предмету за волну — без перегруза экрана
-    for (let i = 0; i < count; i++) {
-      const isBomb = Math.random() < 0.16 && i === 0;
-      const pool = isBomb
-        ? this.targetsCatalog.filter((t) => t.isBomb)
-        : this.targetsCatalog.filter((t) => !t.isBomb);
-      const spec = pool[Math.floor(Math.random() * pool.length)];
+    const isBomb = Math.random() < 0.16;
+    const pool = isBomb
+      ? this.targetsCatalog.filter((t) => t.isBomb)
+      : this.targetsCatalog.filter((t) => !t.isBomb);
+    const spec = pool[Math.floor(Math.random() * pool.length)];
 
-      // Выбирает траекторию: предмет летит из центра горизонта к левой/правой руке игрока
-      const side = count === 2 ? (i === 0 ? -1 : 1) : (Math.random() < 0.5 ? -1 : 1);
-      const targetWorldX = side * (0.22 + Math.random() * 0.52);
-      const targetWorldY = -0.35 + Math.random() * 0.78;
+    let laneIdx = Math.floor(Math.random() * this.LANES.length);
+    if (laneIdx === this.lastLaneIdx) laneIdx = (laneIdx + 1 + Math.floor(Math.random() * 5)) % 6;
+    this.lastLaneIdx = laneIdx;
 
-      // Скорость приближения по оси Z (чем выше счёт, тем стремительнее подлёт)
-      const zSpeed = 0.0085 + Math.min(0.006, score * 0.000018) + Math.random() * 0.0025;
+    // Скорость подлёта по Z: ~2.5 сек от горизонта до игрока, окно удара ~0.7 сек
+    const zSpeed = 0.0065 + Math.min(0.004, score * 0.000012) + Math.random() * 0.0015;
 
-      this.objects3D.push({
-        ...spec,
-        z: 1.0, // Начинает далеко в глубине (маленькая точка)
-        zSpeed,
-        worldX: targetWorldX * 0.15,
-        worldY: targetWorldY * 0.15,
-        targetWorldX,
-        targetWorldY,
-        arcLift: 0.18 + Math.random() * 0.14, // Красивая навесная 3D-дуга полёта
-        rotation: Math.random() * Math.PI * 2,
-        vRotation: (Math.random() - 0.5) * 0.07,
-        sliced: false
-      });
-    }
+    this.objects3D.push({
+      ...spec,
+      laneIdx,
+      z: 1.0, // Начинает далеко в глубине (маленькая точка)
+      zSpeed,
+      rotation: Math.random() * Math.PI * 2,
+      vRotation: (Math.random() - 0.5) * 0.07,
+      sliced: false
+    });
+  },
+
+  // Проекция предмета в своей зоне: издалека летит из глубины своей зоны и растёт по мере приближения
+  projectLane(obj, w, h) {
+    const lane = this.LANES[obj.laneIdx] || this.LANES[1];
+    const vanishX = w * 0.5;
+    const vanishY = h * 0.43;
+    const nearX = lane.fx * w;
+    const nearY = lane.fy * h;
+    // Далёкая точка зоны — на 40% пути от центра к зоне (видно, из какой зоны летит)
+    const farX = vanishX + (nearX - vanishX) * 0.4;
+    const farY = vanishY + (nearY - vanishY) * 0.4;
+    const progress = Math.max(0, Math.min(1, 1 - obj.z));
+    const t = Math.pow(progress, 1.5);
+    const scale = 0.14 + 1.06 * Math.pow(progress, 1.7); // z=1 → 0.14 (точка), z≈0 → 1.2 (огромный)
+    return {
+      screenX: farX + (nearX - farX) * t,
+      screenY: farY + (nearY - farY) * t,
+      scale
+    };
   },
 
   // Вычисление координат сабли (Рукоять в кисти -> Остриё сабли по вектору предплечья)
@@ -990,44 +1065,87 @@ const Saber3DEngine = {
       ctx.stroke();
     }
 
-    // Кольца глубины (Depth Rings) + Подсвеченное кольцо «Зоны Удара» (Strike Zone z ≈ 0.22)
+    // Кольца глубины (Depth Rings) — тонкие, только для ощущения туннеля
     const depthRings = [0.85, 0.62, 0.42, 0.24];
-    depthRings.forEach((zRing, idx) => {
+    depthRings.forEach((zRing) => {
       const p = this.project3D(0, 0, zRing, w, h);
       const rx = w * 0.42 * p.scale;
       const ry = h * 0.36 * p.scale;
-      const isStrikeRing = idx === 3;
       ctx.beginPath();
       saberSafeEllipse(ctx, cx, cy, rx, ry, 0);
-      ctx.strokeStyle = isStrikeRing
-        ? 'rgba(0, 240, 255, 0.32)'
-        : 'rgba(255, 255, 255, 0.06)';
-      ctx.lineWidth = isStrikeRing ? 2.5 : 1;
-      if (isStrikeRing) {
-        ctx.setLineDash([14, 10]);
-      } else {
-        ctx.setLineDash([]);
-      }
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+      ctx.lineWidth = 1;
       ctx.stroke();
     });
     ctx.setLineDash([]);
+
+    // 6 зон удара (3 колонки × 2 ряда): тонкая сетка + подсветка зоны, где предмет уже можно рубить
+    const colW = w / 3;
+    const rowSplit = h * 0.53;
+    ctx.strokeStyle = 'rgba(0, 240, 255, 0.10)';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([10, 14]);
+    ctx.beginPath();
+    ctx.moveTo(colW, h * 0.1);
+    ctx.lineTo(colW, h * 0.97);
+    ctx.moveTo(colW * 2, h * 0.1);
+    ctx.lineTo(colW * 2, h * 0.97);
+    ctx.moveTo(w * 0.04, rowSplit);
+    ctx.lineTo(w * 0.96, rowSplit);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    for (let i = 0; i < this.objects3D.length; i++) {
+      const o = this.objects3D[i];
+      const lane = this.LANES[o.laneIdx];
+      if (!lane) continue;
+      const x0 = lane.col * colW;
+      const y0 = lane.row === 0 ? h * 0.1 : rowSplit;
+      const y1 = lane.row === 0 ? rowSplit : h * 0.97;
+      const near = Math.max(0, Math.min(1, (0.6 - o.z) / 0.6));
+      if (near <= 0) continue;
+      const strike = o.z <= this.STRIKE_Z;
+      ctx.fillStyle = o.isBomb
+        ? 'rgba(255, 34, 34, ' + (0.03 + near * 0.06).toFixed(3) + ')'
+        : strike
+        ? 'rgba(24, 226, 153, 0.10)'
+        : 'rgba(0, 240, 255, ' + (near * 0.05).toFixed(3) + ')';
+      ctx.fillRect(x0 + 6, y0 + 6, colW - 12, y1 - y0 - 12);
+      if (strike) {
+        ctx.strokeStyle = o.isBomb ? 'rgba(255, 34, 34, 0.5)' : 'rgba(24, 226, 153, 0.55)';
+        ctx.lineWidth = 3;
+        ctx.strokeRect(x0 + 6, y0 + 6, colW - 12, y1 - y0 - 12);
+      }
+    }
     ctx.restore();
   },
 
   // Отрисовка 3-слойного 3D-предмета (Сфера с объёмным градиентом, полосами, бликом и индикатором зоны удара)
   draw3DObject(ctx, obj, screenX, screenY, radius) {
     const safeR = Math.max(10, Number.isFinite(radius) ? radius : 40);
+    const strikeZ = this.STRIKE_Z || 0.3;
     ctx.save();
     ctx.translate(screenX, screenY);
+    // Далёкие предметы — полупрозрачные (их ещё нельзя рубить), близкие — яркие
+    ctx.globalAlpha = obj.z <= strikeZ ? 1 : Math.max(0.6, 1 - obj.z * 0.45);
 
-    // Кольцо-прицел «РУБИ СЕЙЧАС!», когда предмет влетел в Зону Удара (z < 0.38)
-    if (obj.z < 0.38 && !obj.isBomb) {
-      const readyAlpha = Math.min(1, (0.38 - obj.z) * 3.5);
+    // Кольцо-прицел «РУБИ СЕЙЧАС!», когда предмет влетел в Зону Удара
+    if (obj.z <= strikeZ && !obj.isBomb) {
+      const pulse = 1 + Math.sin(performance.now() * 0.02) * 0.05;
       ctx.save();
-      ctx.strokeStyle = obj.isBonus ? `rgba(0, 240, 255, ${readyAlpha})` : `rgba(24, 226, 153, ${readyAlpha})`;
-      ctx.lineWidth = 3.5;
+      ctx.strokeStyle = obj.isBonus ? '#00f0ff' : '#18e299';
+      ctx.lineWidth = 4;
       ctx.beginPath();
-      ctx.arc(0, 0, safeR * 1.16, 0, Math.PI * 2);
+      ctx.arc(0, 0, safeR * 1.18 * pulse, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    } else if (obj.z > strikeZ) {
+      // Индикатор приближения: сжимающееся кольцо показывает, когда предмет станет доступен для удара
+      const approach = Math.max(0, Math.min(1, (obj.z - strikeZ) / (1 - strikeZ)));
+      ctx.save();
+      ctx.strokeStyle = obj.isBomb ? 'rgba(255, 60, 60, 0.45)' : 'rgba(255, 255, 255, 0.35)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(0, 0, safeR * (1.2 + approach * 1.6), 0, Math.PI * 2);
       ctx.stroke();
       ctx.restore();
     }
@@ -1221,6 +1339,1955 @@ const Saber3DEngine = {
 window.GAME_CATALOG = GAME_CATALOG;
 window.Saber3DEngine = Saber3DEngine;
 window.playKatanaSlashSound = playKatanaSlashSound;
+
+</script>
+  <script>
+// ============================================================================
+// MOTION ARENA TV v6 — ВИЗУАЛ: Ночное Неон-Додзё + Персонаж-Самурай + Катаны
+// Совместимо со старыми браузерами Smart TV: без ctx.ellipse/roundRect/filter,
+// без ?. и ??, все размеры защищены от NaN/0.
+// ============================================================================
+(function () {
+  'use strict';
+
+  function fin(v, d) {
+    return typeof v === 'number' && isFinite(v) ? v : d;
+  }
+
+  function ell(ctx, x, y, rx, ry, rot) {
+    rx = Math.max(0.5, Math.abs(fin(rx, 1)));
+    ry = Math.max(0.5, Math.abs(fin(ry, 1)));
+    ctx.save();
+    ctx.translate(x, y);
+    if (rot) ctx.rotate(rot);
+    ctx.scale(1, ry / rx);
+    ctx.arc(0, 0, rx, 0, Math.PI * 2);
+    ctx.restore();
+  }
+
+  // ---------------------------------------------------------------------------
+  // 1. ФОН: ночное додзё (кэшируется в offscreen-canvas, перерисовка только при ресайзе)
+  // ---------------------------------------------------------------------------
+  let bgCache = null;
+  let bgW = 0;
+  let bgH = 0;
+  const petals = [];
+
+  function buildBackground(w, h) {
+    const c = document.createElement('canvas');
+    c.width = w;
+    c.height = h;
+    const g = c.getContext('2d');
+    const horizon = h * 0.43;
+    const vx = w * 0.5;
+
+    // Небо
+    const sky = g.createLinearGradient(0, 0, 0, horizon);
+    sky.addColorStop(0, '#05070f');
+    sky.addColorStop(0.6, '#0e1530');
+    sky.addColorStop(1, '#2a1238');
+    g.fillStyle = sky;
+    g.fillRect(0, 0, w, horizon + 2);
+
+    // Звёзды (детерминированно)
+    let seed = 7;
+    const rnd = function () {
+      seed = (seed * 9301 + 49297) % 233280;
+      return seed / 233280;
+    };
+    g.fillStyle = 'rgba(255,255,255,0.75)';
+    for (let i = 0; i < 70; i++) {
+      const sx = rnd() * w;
+      const sy = rnd() * horizon * 0.8;
+      const sr = rnd() * 1.4 + 0.3;
+      g.globalAlpha = 0.3 + rnd() * 0.6;
+      g.beginPath();
+      g.arc(sx, sy, sr, 0, Math.PI * 2);
+      g.fill();
+    }
+    g.globalAlpha = 1;
+
+    // Луна с ореолом
+    const mx = w * 0.8;
+    const my = h * 0.16;
+    const mr = Math.max(8, h * 0.065);
+    const halo = g.createRadialGradient(mx, my, mr * 0.6, mx, my, mr * 4);
+    halo.addColorStop(0, 'rgba(255, 220, 230, 0.35)');
+    halo.addColorStop(1, 'rgba(255, 220, 230, 0)');
+    g.fillStyle = halo;
+    g.fillRect(mx - mr * 4, my - mr * 4, mr * 8, mr * 8);
+    const moon = g.createRadialGradient(mx - mr * 0.3, my - mr * 0.3, mr * 0.1, mx, my, mr);
+    moon.addColorStop(0, '#fff7f0');
+    moon.addColorStop(1, '#f2c9d6');
+    g.fillStyle = moon;
+    g.beginPath();
+    g.arc(mx, my, mr, 0, Math.PI * 2);
+    g.fill();
+
+    // Горы (2 слоя)
+    const mountains = function (color, base, amp, step, phase) {
+      g.fillStyle = color;
+      g.beginPath();
+      g.moveTo(0, horizon);
+      for (let x = 0; x <= w + step; x += step) {
+        const y = base - Math.abs(Math.sin(x * 0.004 + phase)) * amp - Math.sin(x * 0.011 + phase * 2) * amp * 0.25;
+        g.lineTo(x, y);
+      }
+      g.lineTo(w, horizon);
+      g.closePath();
+      g.fill();
+    };
+    mountains('#1a1736', horizon - h * 0.02, h * 0.12, 24, 1.3);
+    mountains('#110f24', horizon, h * 0.07, 18, 3.1);
+
+    // Тории в точке схода
+    const tw = Math.max(40, w * 0.11);
+    const th = tw * 0.75;
+    const tx = vx - tw / 2;
+    const ty = horizon - th;
+    g.fillStyle = '#7a1024';
+    g.fillRect(tx + tw * 0.14, ty + th * 0.18, tw * 0.07, th * 0.82);
+    g.fillRect(tx + tw * 0.79, ty + th * 0.18, tw * 0.07, th * 0.82);
+    g.fillRect(tx + tw * 0.08, ty + th * 0.32, tw * 0.84, th * 0.07);
+    g.beginPath();
+    g.moveTo(tx - tw * 0.06, ty + th * 0.06);
+    g.quadraticCurveTo(vx, ty + th * 0.2, tx + tw * 1.06, ty + th * 0.06);
+    g.lineTo(tx + tw * 1.02, ty + th * 0.17);
+    g.quadraticCurveTo(vx, ty + th * 0.28, tx - tw * 0.02, ty + th * 0.17);
+    g.closePath();
+    g.fill();
+
+    // Пол: деревянные доски с перспективой
+    const floor = g.createLinearGradient(0, horizon, 0, h);
+    floor.addColorStop(0, '#120c10');
+    floor.addColorStop(1, '#2b1a14');
+    g.fillStyle = floor;
+    g.fillRect(0, horizon, w, h - horizon);
+    g.strokeStyle = 'rgba(255, 184, 0, 0.07)';
+    g.lineWidth = 1.5;
+    for (let i = -12; i <= 12; i++) {
+      g.beginPath();
+      g.moveTo(vx, horizon);
+      g.lineTo(vx + i * w * 0.12, h);
+      g.stroke();
+    }
+    for (let k = 1; k <= 9; k++) {
+      const t = Math.pow(k / 9, 2);
+      const y = horizon + (h - horizon) * t;
+      g.strokeStyle = 'rgba(255, 184, 0, ' + (0.03 + t * 0.06).toFixed(3) + ')';
+      g.beginPath();
+      g.moveTo(0, y);
+      g.lineTo(w, y);
+      g.stroke();
+    }
+    // Отражение луны на полу
+    const refl = g.createRadialGradient(vx, h * 0.8, 10, vx, h * 0.8, w * 0.45);
+    refl.addColorStop(0, 'rgba(0, 240, 255, 0.07)');
+    refl.addColorStop(1, 'rgba(0, 240, 255, 0)');
+    g.fillStyle = refl;
+    g.fillRect(0, horizon, w, h - horizon);
+
+    // Боковые колонны додзё
+    const pillar = function (x0, wdt) {
+      const pg = g.createLinearGradient(x0, 0, x0 + wdt, 0);
+      pg.addColorStop(0, '#0a0610');
+      pg.addColorStop(0.5, '#24121a');
+      pg.addColorStop(1, '#0a0610');
+      g.fillStyle = pg;
+      g.fillRect(x0, 0, wdt, h);
+    };
+    pillar(0, w * 0.035);
+    pillar(w - w * 0.035, w * 0.035);
+    // Верхняя балка
+    g.fillStyle = '#160a10';
+    g.fillRect(0, 0, w, h * 0.035);
+    g.fillStyle = 'rgba(255, 184, 0, 0.25)';
+    g.fillRect(0, h * 0.035, w, 2);
+
+    // Виньетка
+    const vig = g.createRadialGradient(vx, h * 0.5, Math.min(w, h) * 0.35, vx, h * 0.5, Math.max(w, h) * 0.75);
+    vig.addColorStop(0, 'rgba(0,0,0,0)');
+    vig.addColorStop(1, 'rgba(0,0,0,0.6)');
+    g.fillStyle = vig;
+    g.fillRect(0, 0, w, h);
+    return c;
+  }
+
+  function drawLantern(ctx, x, y, r, now, phase) {
+    const flicker = 0.85 + Math.sin(now * 0.004 + phase) * 0.08 + Math.sin(now * 0.013 + phase) * 0.05;
+    const glow = ctx.createRadialGradient(x, y, r * 0.2, x, y, r * 3.2);
+    glow.addColorStop(0, 'rgba(255, 150, 60, ' + (0.32 * flicker).toFixed(3) + ')');
+    glow.addColorStop(1, 'rgba(255, 150, 60, 0)');
+    ctx.fillStyle = glow;
+    ctx.fillRect(x - r * 3.2, y - r * 3.2, r * 6.4, r * 6.4);
+    // Шнур
+    ctx.strokeStyle = 'rgba(0,0,0,0.7)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, y - r * 1.2);
+    ctx.stroke();
+    // Корпус фонаря
+    const body = ctx.createRadialGradient(x - r * 0.2, y - r * 0.3, r * 0.1, x, y, r * 1.2);
+    body.addColorStop(0, '#fff1c2');
+    body.addColorStop(0.5, '#ff8a3d');
+    body.addColorStop(1, '#a3241a');
+    ctx.fillStyle = body;
+    ctx.beginPath();
+    ell(ctx, x, y, r * 0.85, r * 1.15, 0);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(80, 20, 10, 0.6)';
+    ctx.lineWidth = 1.5;
+    for (let i = -2; i <= 2; i++) {
+      ctx.beginPath();
+      ctx.moveTo(x - r * 0.8, y + i * r * 0.36);
+      ctx.lineTo(x + r * 0.8, y + i * r * 0.36);
+      ctx.stroke();
+    }
+    ctx.fillStyle = '#1a0a08';
+    ctx.fillRect(x - r * 0.5, y - r * 1.25, r, r * 0.16);
+    ctx.fillRect(x - r * 0.5, y + r * 1.1, r, r * 0.16);
+  }
+
+  function drawBackground(ctx, w, h, now, comboGlow) {
+    if (!bgCache || bgW !== w || bgH !== h) {
+      try {
+        bgCache = buildBackground(w, h);
+        bgW = w;
+        bgH = h;
+      } catch (e) {
+        bgCache = null;
+      }
+    }
+    if (bgCache) {
+      ctx.drawImage(bgCache, 0, 0);
+    } else {
+      ctx.fillStyle = '#0b0e14';
+      ctx.fillRect(0, 0, w, h);
+    }
+    const lr = Math.max(10, h * 0.035);
+    drawLantern(ctx, w * 0.12, h * 0.17, lr, now, 0);
+    drawLantern(ctx, w * 0.88, h * 0.17, lr, now, 2.1);
+
+    // Падающие лепестки сакуры
+    if (petals.length === 0) {
+      for (let i = 0; i < 16; i++) {
+        petals.push({ x: Math.random(), y: Math.random(), s: 0.6 + Math.random() * 0.8, p: Math.random() * 6.28 });
+      }
+    }
+    ctx.fillStyle = 'rgba(255, 170, 200, 0.75)';
+    for (let i = 0; i < petals.length; i++) {
+      const pt = petals[i];
+      pt.y += 0.0009 * pt.s;
+      pt.x += Math.sin(now * 0.001 + pt.p) * 0.0006;
+      if (pt.y > 1.02) {
+        pt.y = -0.02;
+        pt.x = Math.random();
+      }
+      ctx.beginPath();
+      ell(ctx, pt.x * w, pt.y * h, 5 * pt.s, 2.6 * pt.s, now * 0.002 + pt.p);
+      ctx.fill();
+    }
+
+    // Пульс комбо по краям
+    if (comboGlow > 0) {
+      ctx.save();
+      ctx.globalAlpha = Math.min(0.35, comboGlow * 0.04);
+      ctx.strokeStyle = '#00f0ff';
+      ctx.lineWidth = 10;
+      ctx.strokeRect(5, 5, w - 10, h - 10);
+      ctx.restore();
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // 2. ПЕРСОНАЖ-САМУРАЙ по ключевым точкам тела
+  // ---------------------------------------------------------------------------
+  const DEFAULT_BODY = {
+    head: [0.5, 0.25],
+    chest: [0.5, 0.37],
+    pelvis: [0.5, 0.57],
+    lS: [0.44, 0.37],
+    rS: [0.56, 0.37],
+    lE: [0.4, 0.48],
+    rE: [0.6, 0.48],
+    lW: [0.36, 0.58],
+    rW: [0.64, 0.58],
+    lH: [0.465, 0.57],
+    rH: [0.535, 0.57],
+    lK: [0.455, 0.7],
+    rK: [0.545, 0.7]
+  };
+
+  // Сглаживание точек тела (тело приходит ~30 Гц, рисуем 60 Гц)
+  const smoothBody = {};
+
+  function getPoint(body, key) {
+    const p = body && body[key];
+    if (p && isFinite(p[0]) && isFinite(p[1])) return p;
+    return null;
+  }
+
+  function resolveBody(body, w, h) {
+    const out = {};
+    const keys = Object.keys(DEFAULT_BODY);
+    // Если тела нет, но есть плечи — достраиваем недостающее по умолчанию относительно плеч
+    for (let i = 0; i < keys.length; i++) {
+      const k = keys[i];
+      let p = getPoint(body, k);
+      if (!p) p = DEFAULT_BODY[k];
+      // Тот же reach-масштаб, что и у перчаток в game.js (updateGlovesFromStableSlots), чтобы кисти совпадали с мечами
+      const tx = (0.5 + (p[0] - 0.5) * 1.35) * w;
+      const ty = (0.52 + (p[1] - 0.52) * 1.3) * h;
+      const prev = smoothBody[k];
+      if (prev && Math.abs(prev[0] - tx) < w * 0.5) {
+        prev[0] += (tx - prev[0]) * 0.5;
+        prev[1] += (ty - prev[1]) * 0.5;
+      } else {
+        smoothBody[k] = [tx, ty];
+      }
+      out[k] = [smoothBody[k][0], smoothBody[k][1]];
+    }
+    // Достраиваем недостающие опорные точки
+    if (!getPoint(body, 'chest')) out.chest = [(out.lS[0] + out.rS[0]) / 2, (out.lS[1] + out.rS[1]) / 2];
+    if (!getPoint(body, 'pelvis')) out.pelvis = [(out.lH[0] + out.rH[0]) / 2, (out.lH[1] + out.rH[1]) / 2];
+    return out;
+  }
+
+  function dist(a, b) {
+    return Math.hypot(a[0] - b[0], a[1] - b[1]);
+  }
+
+  function lerpP(a, b, t) {
+    return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
+  }
+
+  function capsule(ctx, a, b, width, color) {
+    ctx.strokeStyle = color;
+    ctx.lineWidth = Math.max(1, width);
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(a[0], a[1]);
+    ctx.lineTo(b[0], b[1]);
+    ctx.stroke();
+  }
+
+  // Четырёхугольная пластина вдоль отрезка a→b с шириной wa (у a) и wb (у b)
+  function plate(ctx, a, b, wa, wb) {
+    const dx = b[0] - a[0];
+    const dy = b[1] - a[1];
+    const len = Math.max(0.001, Math.hypot(dx, dy));
+    const nx = -dy / len;
+    const ny = dx / len;
+    ctx.beginPath();
+    ctx.moveTo(a[0] + nx * wa, a[1] + ny * wa);
+    ctx.lineTo(b[0] + nx * wb, b[1] + ny * wb);
+    ctx.lineTo(b[0] - nx * wb, b[1] - ny * wb);
+    ctx.lineTo(a[0] - nx * wa, a[1] - ny * wa);
+    ctx.closePath();
+  }
+
+  function drawLeg(ctx, hip, knee, s) {
+    const ankle = [knee[0] + (knee[0] - hip[0]) * 0.85, knee[1] + Math.max(s * 0.6, (knee[1] - hip[1]) * 0.9)];
+    // Хакама (широкие штаны-юбка)
+    const grad = ctx.createLinearGradient(hip[0], hip[1], ankle[0], ankle[1]);
+    grad.addColorStop(0, '#1f2a4d');
+    grad.addColorStop(1, '#0c1226');
+    ctx.fillStyle = grad;
+    plate(ctx, hip, ankle, s * 0.24, s * 0.42);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(0, 240, 255, 0.35)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    // Складки
+    ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+    ctx.lineWidth = 2;
+    for (let i = -1; i <= 1; i++) {
+      const a = lerpP(hip, ankle, 0.1);
+      const b = lerpP(hip, ankle, 0.95);
+      ctx.beginPath();
+      ctx.moveTo(a[0] + i * s * 0.1, a[1]);
+      ctx.lineTo(b[0] + i * s * 0.2, b[1]);
+      ctx.stroke();
+    }
+    // Наколенник (сунэатэ)
+    ctx.fillStyle = '#2b3448';
+    plate(ctx, lerpP(knee, ankle, 0.15), lerpP(knee, ankle, 0.7), s * 0.13, s * 0.11);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255, 184, 0, 0.55)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  }
+
+  function drawArm(ctx, shoulder, elbow, wrist, s, accent) {
+    // Рукав кимоно (плечо → локоть)
+    capsule(ctx, shoulder, elbow, s * 0.3, '#151b2e');
+    capsule(ctx, shoulder, elbow, s * 0.3 - 4, '#222b45');
+    // Наруч (котэ): локоть → кисть
+    capsule(ctx, elbow, wrist, s * 0.22, '#0f1320');
+    capsule(ctx, elbow, wrist, s * 0.22 - 4, '#3a445c');
+    // Золотые полосы на наруче
+    for (let t = 0.3; t < 0.9; t += 0.22) {
+      const p = lerpP(elbow, wrist, t);
+      const dx = wrist[0] - elbow[0];
+      const dy = wrist[1] - elbow[1];
+      const len = Math.max(0.001, Math.hypot(dx, dy));
+      const nx = (-dy / len) * s * 0.09;
+      const ny = (dx / len) * s * 0.09;
+      ctx.strokeStyle = 'rgba(255, 184, 0, 0.75)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(p[0] + nx, p[1] + ny);
+      ctx.lineTo(p[0] - nx, p[1] - ny);
+      ctx.stroke();
+    }
+    // Неоновый кант на локте
+    ctx.fillStyle = accent;
+    ctx.beginPath();
+    ctx.arc(elbow[0], elbow[1], Math.max(2, s * 0.06), 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  function drawSode(ctx, shoulder, elbow, s, outwardSign) {
+    // Наплечник (содэ): пластины, свисающие вдоль плеча
+    const end = lerpP(shoulder, elbow, 0.55);
+    const a = [shoulder[0] + outwardSign * s * 0.06, shoulder[1] - s * 0.04];
+    const grad = ctx.createLinearGradient(a[0], a[1], end[0], end[1]);
+    grad.addColorStop(0, '#d0183a');
+    grad.addColorStop(1, '#6a0a1c');
+    ctx.fillStyle = grad;
+    plate(ctx, a, end, s * 0.2, s * 0.26);
+    ctx.fill();
+    ctx.strokeStyle = '#ffb800';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    // Шнуровка
+    ctx.strokeStyle = 'rgba(255, 220, 140, 0.55)';
+    ctx.lineWidth = 1.5;
+    for (let t = 0.3; t < 1; t += 0.25) {
+      const p = lerpP(a, end, t);
+      const dx = end[0] - a[0];
+      const dy = end[1] - a[1];
+      const len = Math.max(0.001, Math.hypot(dx, dy));
+      const wv = s * (0.2 + 0.06 * t);
+      const nx = (-dy / len) * wv;
+      const ny = (dx / len) * wv;
+      ctx.beginPath();
+      ctx.moveTo(p[0] + nx, p[1] + ny);
+      ctx.lineTo(p[0] - nx, p[1] - ny);
+      ctx.stroke();
+    }
+  }
+
+  function drawTorso(ctx, b, s) {
+    const sw = s * 0.12;
+    const lS = [b.lS[0] - sw, b.lS[1]];
+    const rS = [b.rS[0] + sw, b.rS[1]];
+    const lH = [b.lH[0] - s * 0.1, b.lH[1]];
+    const rH = [b.rH[0] + s * 0.1, b.rH[1]];
+
+    // Кимоно под бронёй (тёмный ворот)
+    ctx.fillStyle = '#141a2e';
+    ctx.beginPath();
+    ctx.moveTo(lS[0], lS[1]);
+    ctx.lineTo(rS[0], rS[1]);
+    ctx.lineTo(rH[0], rH[1]);
+    ctx.lineTo(lH[0], lH[1]);
+    ctx.closePath();
+    ctx.fill();
+
+    // Кираса (до)
+    const top = Math.min(lS[1], rS[1]);
+    const bottom = Math.max(lH[1], rH[1]);
+    const grad = ctx.createLinearGradient(0, top, 0, bottom);
+    grad.addColorStop(0, '#c5163a');
+    grad.addColorStop(0.55, '#8c0f28');
+    grad.addColorStop(1, '#4d0816');
+    ctx.fillStyle = grad;
+    const inset = s * 0.08;
+    const cTop = lerpP(lS, rS, 0.5);
+    ctx.beginPath();
+    ctx.moveTo(lS[0] + inset, lS[1] + s * 0.12);
+    ctx.quadraticCurveTo(cTop[0], cTop[1] + s * 0.02, rS[0] - inset, rS[1] + s * 0.12);
+    ctx.lineTo(rH[0] - inset * 0.5, rH[1] - s * 0.06);
+    ctx.lineTo(lH[0] + inset * 0.5, lH[1] - s * 0.06);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = '#ffb800';
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+
+    // Горизонтальные ламели брони
+    ctx.strokeStyle = 'rgba(255, 210, 120, 0.45)';
+    ctx.lineWidth = 2;
+    for (let i = 1; i <= 4; i++) {
+      const t = 0.3 + i * 0.13;
+      const l = lerpP([lS[0] + inset, lS[1]], [lH[0] + inset * 0.5, lH[1]], t);
+      const r = lerpP([rS[0] - inset, rS[1]], [rH[0] - inset * 0.5, rH[1]], t);
+      ctx.beginPath();
+      ctx.moveTo(l[0], l[1]);
+      ctx.lineTo(r[0], r[1]);
+      ctx.stroke();
+    }
+
+    // V-образный ворот кимоно
+    const neck = lerpP(b.lS, b.rS, 0.5);
+    ctx.fillStyle = '#f2e8d8';
+    ctx.beginPath();
+    ctx.moveTo(neck[0] - s * 0.16, neck[1] - s * 0.02);
+    ctx.lineTo(neck[0], neck[1] + s * 0.28);
+    ctx.lineTo(neck[0] + s * 0.16, neck[1] - s * 0.02);
+    ctx.lineTo(neck[0] + s * 0.08, neck[1] - s * 0.02);
+    ctx.lineTo(neck[0], neck[1] + s * 0.16);
+    ctx.lineTo(neck[0] - s * 0.08, neck[1] - s * 0.02);
+    ctx.closePath();
+    ctx.fill();
+
+    // Мон (герб) на груди
+    const mon = lerpP(cTop, lerpP(lH, rH, 0.5), 0.36);
+    const mr = Math.max(4, s * 0.13);
+    ctx.fillStyle = '#ffb800';
+    ctx.beginPath();
+    ctx.arc(mon[0], mon[1], mr, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#8c0f28';
+    for (let i = 0; i < 3; i++) {
+      const a = (i / 3) * Math.PI * 2 - Math.PI / 2;
+      ctx.beginPath();
+      ctx.arc(mon[0] + Math.cos(a) * mr * 0.42, mon[1] + Math.sin(a) * mr * 0.42, mr * 0.32, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Пояс оби с узлом
+    const ol = lerpP(lH, lS, 0.08);
+    const orr = lerpP(rH, rS, 0.08);
+    ctx.strokeStyle = '#1b1b1b';
+    ctx.lineWidth = Math.max(4, s * 0.16);
+    ctx.lineCap = 'butt';
+    ctx.beginPath();
+    ctx.moveTo(ol[0], ol[1]);
+    ctx.lineTo(orr[0], orr[1]);
+    ctx.stroke();
+    ctx.strokeStyle = '#ffb800';
+    ctx.lineWidth = Math.max(1.5, s * 0.04);
+    ctx.beginPath();
+    ctx.moveTo(ol[0], ol[1]);
+    ctx.lineTo(orr[0], orr[1]);
+    ctx.stroke();
+
+    // Кусадзури (юбка-пластины брони)
+    const skirtTop = [lerpP(ol, orr, 0), lerpP(ol, orr, 1)];
+    for (let i = 0; i < 4; i++) {
+      const a = lerpP(skirtTop[0], skirtTop[1], i / 4 + 0.02);
+      const c = lerpP(skirtTop[0], skirtTop[1], (i + 1) / 4 - 0.02);
+      ctx.fillStyle = i % 2 === 0 ? '#9d1230' : '#7a0d24';
+      ctx.beginPath();
+      ctx.moveTo(a[0], a[1] + s * 0.06);
+      ctx.lineTo(c[0], c[1] + s * 0.06);
+      ctx.lineTo(c[0] + (i - 1.5) * s * 0.03, c[1] + s * 0.46);
+      ctx.lineTo(a[0] + (i - 1.5) * s * 0.03, a[1] + s * 0.46);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(255, 184, 0, 0.6)';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    }
+
+    // Неоновый контур (rim light)
+    ctx.strokeStyle = 'rgba(0, 240, 255, 0.35)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(lS[0], lS[1]);
+    ctx.lineTo(lH[0], lH[1]);
+    ctx.moveTo(rS[0], rS[1]);
+    ctx.lineTo(rH[0], rH[1]);
+    ctx.stroke();
+  }
+
+  function drawHead(ctx, b, s, now) {
+    const neck = lerpP(b.lS, b.rS, 0.5);
+    let head = b.head;
+    // Голова (нос) должна быть выше шеи
+    if (head[1] > neck[1] - s * 0.3) head = [head[0], neck[1] - s * 0.55];
+    const r = Math.max(6, s * 0.36);
+    const tilt = Math.atan2(b.rS[1] - b.lS[1], b.rS[0] - b.lS[0]) * 0.6;
+    const hc = [head[0], head[1] - r * 0.15];
+
+    // Шея
+    capsule(ctx, neck, hc, s * 0.2, '#1a1f2e');
+
+    ctx.save();
+    ctx.translate(hc[0], hc[1]);
+    ctx.rotate(tilt);
+
+    // Сасимоно (флажок за спиной)
+    ctx.strokeStyle = '#2a1a10';
+    ctx.lineWidth = Math.max(2, r * 0.1);
+    ctx.beginPath();
+    ctx.moveTo(r * 0.9, r * 1.6);
+    ctx.lineTo(r * 1.25, -r * 2.0);
+    ctx.stroke();
+    const wave = Math.sin(now * 0.004) * r * 0.12;
+    ctx.fillStyle = '#c5163a';
+    ctx.beginPath();
+    ctx.moveTo(r * 1.25, -r * 2.0);
+    ctx.lineTo(r * 2.1 + wave, -r * 1.95);
+    ctx.lineTo(r * 2.0 - wave, -r * 0.85);
+    ctx.lineTo(r * 1.15, -r * 0.9);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = '#ffb800';
+    ctx.beginPath();
+    ctx.arc(r * 1.62, -r * 1.42, r * 0.26, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Сикоро (нащёчник шлема)
+    ctx.fillStyle = '#1b2236';
+    ctx.beginPath();
+    ctx.moveTo(-r * 1.0, -r * 0.1);
+    ctx.lineTo(r * 1.0, -r * 0.1);
+    ctx.lineTo(r * 1.45, r * 0.75);
+    ctx.lineTo(-r * 1.45, r * 0.75);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = '#ffb800';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(255, 184, 0, 0.4)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(-r * 1.15, r * 0.2);
+    ctx.lineTo(r * 1.15, r * 0.2);
+    ctx.moveTo(-r * 1.3, r * 0.48);
+    ctx.lineTo(r * 1.3, r * 0.48);
+    ctx.stroke();
+
+    // Лицо-маска (мэмпо)
+    ctx.fillStyle = '#7a0d24';
+    ctx.beginPath();
+    ctx.arc(0, r * 0.1, r * 0.78, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#0b0b10';
+    ctx.fillRect(-r * 0.62, -r * 0.18, r * 1.24, r * 0.34);
+    // Светящиеся глаза
+    ctx.save();
+    ctx.shadowColor = '#00f0ff';
+    ctx.shadowBlur = 10;
+    ctx.fillStyle = '#7ff8ff';
+    ctx.beginPath();
+    ctx.moveTo(-r * 0.5, -r * 0.05);
+    ctx.lineTo(-r * 0.12, -r * 0.1);
+    ctx.lineTo(-r * 0.15, r * 0.04);
+    ctx.closePath();
+    ctx.moveTo(r * 0.5, -r * 0.05);
+    ctx.lineTo(r * 0.12, -r * 0.1);
+    ctx.lineTo(r * 0.15, r * 0.04);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+    // Усы маски
+    ctx.strokeStyle = '#d8d8d8';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(-r * 0.12, r * 0.38);
+    ctx.quadraticCurveTo(-r * 0.4, r * 0.42, -r * 0.55, r * 0.62);
+    ctx.moveTo(r * 0.12, r * 0.38);
+    ctx.quadraticCurveTo(r * 0.4, r * 0.42, r * 0.55, r * 0.62);
+    ctx.stroke();
+
+    // Купол шлема (кабуто)
+    const dome = ctx.createLinearGradient(0, -r * 1.1, 0, -r * 0.1);
+    dome.addColorStop(0, '#3b4560');
+    dome.addColorStop(1, '#141a2a');
+    ctx.fillStyle = dome;
+    ctx.beginPath();
+    ctx.arc(0, -r * 0.15, r * 0.95, Math.PI, Math.PI * 2);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.18)';
+    ctx.lineWidth = 1.5;
+    for (let i = -2; i <= 2; i++) {
+      ctx.beginPath();
+      ctx.moveTo(0, -r * 1.1);
+      ctx.lineTo(i * r * 0.38, -r * 0.18);
+      ctx.stroke();
+    }
+    // Козырёк
+    ctx.fillStyle = '#0d111c';
+    ctx.fillRect(-r * 1.05, -r * 0.24, r * 2.1, r * 0.14);
+    ctx.fillStyle = '#ffb800';
+    ctx.fillRect(-r * 1.05, -r * 0.24, r * 2.1, r * 0.04);
+
+    // Маэдатэ — золотой полумесяц
+    ctx.save();
+    ctx.shadowColor = '#ffb800';
+    ctx.shadowBlur = 12;
+    ctx.fillStyle = '#ffcf40';
+    ctx.beginPath();
+    ctx.moveTo(0, -r * 0.55);
+    ctx.quadraticCurveTo(-r * 1.2, -r * 0.9, -r * 1.3, -r * 1.6);
+    ctx.quadraticCurveTo(-r * 0.85, -r * 1.1, 0, -r * 0.85);
+    ctx.quadraticCurveTo(r * 0.85, -r * 1.1, r * 1.3, -r * 1.6);
+    ctx.quadraticCurveTo(r * 1.2, -r * 0.9, 0, -r * 0.55);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+    ctx.fillStyle = '#c5163a';
+    ctx.beginPath();
+    ctx.arc(0, -r * 0.62, r * 0.14, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore();
+  }
+
+  // gloves: массив перчаток хоста (px). Кисти рисуем в позициях перчаток, чтобы руки точно вели к мечу/перчатке.
+  function drawSamurai(ctx, body, gloves, w, h, now, alpha) {
+    const b = resolveBody(body, w, h);
+    if (gloves && gloves.length === 2) {
+      if (gloves[0] && isFinite(gloves[0].x)) b.lW = [gloves[0].x, gloves[0].y];
+      if (gloves[1] && isFinite(gloves[1].x)) b.rW = [gloves[1].x, gloves[1].y];
+    }
+    // s — базовая единица пропорций персонажа (~60% ширины плеч), чтобы самурай не закрывал игровое поле
+    let s = dist(b.lS, b.rS) * 0.45;
+    s = Math.max(w * 0.03, Math.min(w * 0.1, fin(s, w * 0.06)));
+    // Голова не должна уходить под верхнюю панель HUD
+    const minHeadY = h * 0.2;
+    if (b.head[1] < minHeadY) {
+      const shift = minHeadY - b.head[1];
+      b.head = [b.head[0], minHeadY];
+      // Плечи не выше головы + шея
+      if (b.lS[1] < minHeadY + s * 0.6) b.lS = [b.lS[0], Math.max(b.lS[1], b.lS[1] + shift * 0.6)];
+      if (b.rS[1] < minHeadY + s * 0.6) b.rS = [b.rS[0], Math.max(b.rS[1], b.rS[1] + shift * 0.6)];
+    }
+
+    // Чтобы руки не «рвались» при reach-масштабе — подтягиваем локоть к середине плечо→кисть, если рука слишком вытянута
+    const fixElbow = function (sh, el, wr) {
+      const full = dist(sh, wr);
+      const seg = dist(sh, el) + dist(el, wr);
+      if (full > seg * 0.98) {
+        const mid = lerpP(sh, wr, 0.5);
+        const dx = wr[0] - sh[0];
+        const dy = wr[1] - sh[1];
+        const len = Math.max(0.001, Math.hypot(dx, dy));
+        return [mid[0] + (-dy / len) * s * 0.12, mid[1] + (dx / len) * s * 0.12];
+      }
+      return el;
+    };
+    b.lE = fixElbow(b.lS, b.lE, b.lW);
+    b.rE = fixElbow(b.rS, b.rE, b.rW);
+
+    ctx.save();
+    ctx.globalAlpha = typeof alpha === 'number' && isFinite(alpha) ? Math.max(0.1, Math.min(1, alpha)) : 0.92;
+    // Тень на полу
+    const footY = Math.min(h * 0.98, Math.max(b.lK[1], b.rK[1]) + s * 0.9);
+    const shadow = ctx.createRadialGradient(b.pelvis[0], footY, 4, b.pelvis[0], footY, s * 1.6);
+    shadow.addColorStop(0, 'rgba(0,0,0,0.55)');
+    shadow.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = shadow;
+    ctx.beginPath();
+    ell(ctx, b.pelvis[0], footY, s * 1.6, s * 0.35, 0);
+    ctx.fill();
+
+    drawLeg(ctx, b.lH, b.lK, s);
+    drawLeg(ctx, b.rH, b.rK, s);
+    drawTorso(ctx, b, s);
+    drawHead(ctx, b, s, now);
+    drawArm(ctx, b.lS, b.lE, b.lW, s, '#00d2ff');
+    drawArm(ctx, b.rS, b.rE, b.rW, s, '#ff3b4b');
+    drawSode(ctx, b.lS, b.lE, s, -1);
+    drawSode(ctx, b.rS, b.rE, s, 1);
+    ctx.restore();
+    return b;
+  }
+
+  // ---------------------------------------------------------------------------
+  // 3. КАТАНА (вместо простой «палки»): изогнутый клинок, хамон, цуба, оплётка
+  // ---------------------------------------------------------------------------
+  function drawKatana(ctx, glove, w, h) {
+    const L = Math.min(w, h) * 0.25;
+    const dirAngle = fin(glove.angle, 0) - Math.PI * 0.5;
+    const hx = fin(glove.x, w * 0.5);
+    const hy = fin(glove.y, h * 0.7);
+    const edgeColor = glove.id === 'left' ? '#00f0ff' : '#ff2a5f';
+    const speed = fin(glove.speed, 0);
+
+    ctx.save();
+    // Шлейф взмаха (ленточный)
+    if (glove.trail && glove.trail.length > 2) {
+      ctx.fillStyle = edgeColor;
+      for (let i = 1; i < glove.trail.length; i++) {
+        const p0 = glove.trail[i - 1];
+        const p1 = glove.trail[i];
+        const ratio = i / glove.trail.length;
+        ctx.globalAlpha = ratio * Math.min(0.45, 0.1 + speed * 0.02);
+        const c = Math.cos(dirAngle);
+        const sn = Math.sin(dirAngle);
+        ctx.beginPath();
+        ctx.moveTo(p0.x + c * L * 0.15, p0.y + sn * L * 0.15);
+        ctx.lineTo(p0.x + c * L, p0.y + sn * L);
+        ctx.lineTo(p1.x + c * L, p1.y + sn * L);
+        ctx.lineTo(p1.x + c * L * 0.15, p1.y + sn * L * 0.15);
+        ctx.closePath();
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+    }
+
+    ctx.translate(hx, hy);
+    ctx.rotate(dirAngle);
+    ctx.globalAlpha = glove.active ? 1 : 0.6;
+    const bw = L * 0.05; // ширина клинка у основания
+    const sori = L * 0.06 * (glove.id === 'left' ? -1 : 1); // изгиб клинка
+
+    // Неоновое свечение лезвия
+    ctx.save();
+    ctx.shadowColor = edgeColor;
+    ctx.shadowBlur = 22 + Math.min(20, speed);
+    ctx.strokeStyle = edgeColor;
+    ctx.lineWidth = Math.max(3, bw * 0.55);
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(L * 0.06, bw * 0.5);
+    ctx.quadraticCurveTo(L * 0.55, bw * 0.5 + sori, L, sori * 0.2);
+    ctx.stroke();
+    ctx.restore();
+
+    // Клинок (сталь)
+    const steel = ctx.createLinearGradient(0, -bw, 0, bw);
+    steel.addColorStop(0, '#8a94a6');
+    steel.addColorStop(0.45, '#f8fafc');
+    steel.addColorStop(0.6, '#cbd5e1');
+    steel.addColorStop(1, '#f1f5f9');
+    ctx.fillStyle = steel;
+    ctx.beginPath();
+    ctx.moveTo(L * 0.06, -bw * 0.5);
+    ctx.quadraticCurveTo(L * 0.55, -bw * 0.45 + sori, L * 0.94, sori * 0.2 - bw * 0.25);
+    ctx.lineTo(L, sori * 0.2); // кончик (киссаки)
+    ctx.quadraticCurveTo(L * 0.55, bw * 0.5 + sori, L * 0.06, bw * 0.5);
+    ctx.closePath();
+    ctx.fill();
+    // Хамон (волнистая линия закалки)
+    ctx.strokeStyle = 'rgba(255,255,255,0.9)';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    for (let i = 0; i <= 10; i++) {
+      const t = 0.08 + (i / 10) * 0.82;
+      const yC = sori * 4 * t * (1 - t) * 0.95;
+      const y = yC + bw * 0.18 + Math.sin(i * 1.7) * bw * 0.08;
+      if (i === 0) ctx.moveTo(L * t, y);
+      else ctx.lineTo(L * t, y);
+    }
+    ctx.stroke();
+    // Хабаки
+    ctx.fillStyle = '#ffcf40';
+    ctx.fillRect(L * 0.03, -bw * 0.6, L * 0.045, bw * 1.2);
+
+    // Цуба (гарда)
+    const tr = Math.max(4, L * 0.07);
+    const tsuba = ctx.createRadialGradient(0, 0, 1, 0, 0, tr * 1.1);
+    tsuba.addColorStop(0, '#ffe08a');
+    tsuba.addColorStop(1, '#8a5a00');
+    ctx.fillStyle = tsuba;
+    ctx.beginPath();
+    ell(ctx, L * 0.02, 0, tr * 0.32, tr, 0);
+    ctx.fill();
+    ctx.strokeStyle = '#3a2600';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // Рукоять (цука) с ромбической оплёткой
+    const hl = L * 0.3;
+    ctx.fillStyle = '#16121a';
+    ctx.fillRect(-hl, -bw * 0.7, hl, bw * 1.4);
+    ctx.strokeStyle = edgeColor;
+    ctx.globalAlpha = (glove.active ? 1 : 0.6) * 0.85;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    const steps = 6;
+    for (let i = 0; i < steps; i++) {
+      const x0 = -hl + (i / steps) * hl;
+      const x1 = -hl + ((i + 1) / steps) * hl;
+      ctx.moveTo(x0, -bw * 0.7);
+      ctx.lineTo(x1, bw * 0.7);
+      ctx.moveTo(x0, bw * 0.7);
+      ctx.lineTo(x1, -bw * 0.7);
+    }
+    ctx.stroke();
+    ctx.globalAlpha = glove.active ? 1 : 0.6;
+    // Кашира (навершие)
+    ctx.fillStyle = '#ffcf40';
+    ctx.fillRect(-hl - L * 0.025, -bw * 0.75, L * 0.025, bw * 1.5);
+
+    // Кулак в перчатке-котэ поверх рукояти
+    ctx.fillStyle = '#2b3448';
+    ctx.strokeStyle = glove.id === 'left' ? '#00d2ff' : '#ff3b4b';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.arc(-hl * 0.45, 0, Math.max(5, bw * 1.25), 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  window.ArenaVisuals = {
+    drawBackground: drawBackground,
+    drawSamurai: drawSamurai,
+    drawKatana: drawKatana,
+    ellipse: ell
+  };
+})();
+
+</script>
+  <script>
+// ============================================================================
+// MOTION ARENA TV v6 — 3 motion mini-game plugins
+//   brainwall  : BRAIN WALL 3D  (впишись в силуэт летящей стены)
+//   laserdodge : LASER MATRIX   (прыгай / приседай / шагай от лазеров)
+//   beatdojo   : RHYTHM DOJO    (ритм-бокс по мишеням)
+// Plain ES2017, no modules, no ctx.ellipse/roundRect/filter, no ?. / ??.
+// All game state lives on the plugin objects. Helpers live in this closure.
+// Optional host hook: api.reportError(err) — called when frame() catches.
+// ============================================================================
+(function () {
+  'use strict';
+  var AG = window.ArenaGames = window.ArenaGames || {};
+
+  var COL = {
+    bg: '#0b0e14', cyan: '#00f0ff', crimson: '#ff2a5f', gold: '#ffb800',
+    jade: '#18e299', blue: '#00d2ff', red: '#ff3b4b', white: '#ffffff'
+  };
+
+  // ---------------------------------------------------------------- helpers
+  function fin(v) { return typeof v === 'number' && isFinite(v); }
+  function clamp(v, a, b) { return v < a ? a : (v > b ? b : v); }
+  function lerp(a, b, t) { return a + (b - a) * t; }
+  function P(p) { return (p && fin(p[0]) && fin(p[1])) ? p : null; }
+  function hexA(hex, a) {
+    var n = parseInt(hex.slice(1), 16);
+    return 'rgba(' + ((n >> 16) & 255) + ',' + ((n >> 8) & 255) + ',' + (n & 255) + ',' + clamp(fin(a) ? a : 0, 0, 1).toFixed(3) + ')';
+  }
+  function F(px) { return "900 " + Math.max(10, Math.round(px)) + "px 'Russo One', sans-serif"; }
+  // Top edge below the host DOM HUD (api.topInset px, default 14% of h) + 8px margin.
+  function topY(api) {
+    var ti = (api && fin(api.topInset) && api.topInset >= 0) ? api.topInset : Math.round((api && fin(api.h) ? api.h : 720) * 0.14);
+    return ti + 8;
+  }
+  function bigPx(api, k) { return Math.max(28, Math.round(api.h * k)); }
+  function radGrad(ctx, x, y, r0, r1) {
+    if (!fin(x)) x = 0; if (!fin(y)) y = 0;
+    r0 = fin(r0) ? Math.max(0, r0) : 0;
+    r1 = fin(r1) ? Math.max(r0 + 1, r1, 1) : r0 + 1;
+    return ctx.createRadialGradient(x, y, r0, x, y, r1);
+  }
+  function rrect(api, ctx, x, y, w, h, r) {
+    if (api.safeRoundRect) api.safeRoundRect(ctx, x, y, Math.max(1, w), Math.max(1, h), Math.max(0, r));
+    else ctx.rect(x, y, w, h);
+  }
+  function circle(ctx, x, y, r) { ctx.arc(x, y, Math.max(0.5, r), 0, Math.PI * 2); }
+  function reportErr(api, self, e) {
+    self._errCount = (self._errCount || 0) + 1;
+    try { if (api && typeof api.reportError === 'function') api.reportError(e); } catch (e2) {}
+    if (self._errCount < 5 && window.console) console.error('[ArenaGames ' + self.id + ']', e);
+  }
+  function rnd(a, b) { return a + Math.random() * (b - a); }
+  function pick(arr) { return arr[Math.floor(Math.random() * arr.length) % arr.length]; }
+
+  // Big glowing text with dark outline (readable from 3 m).
+  function glowText(ctx, txt, x, y, px, color, alpha, align) {
+    if (!fin(x) || !fin(y)) return;
+    ctx.save();
+    ctx.globalAlpha = clamp(alpha === undefined ? 1 : alpha, 0, 1);
+    ctx.font = F(px);
+    ctx.textAlign = align || 'center';
+    ctx.textBaseline = 'middle';
+    ctx.lineJoin = 'round';
+    ctx.lineWidth = Math.max(4, px * 0.16);
+    ctx.strokeStyle = 'rgba(4,6,14,0.88)';
+    ctx.strokeText(txt, x, y);
+    ctx.shadowColor = color;
+    ctx.shadowBlur = Math.max(6, px * 0.45);
+    ctx.fillStyle = color;
+    ctx.fillText(txt, x, y);
+    ctx.restore();
+  }
+
+  // ---- shared FX state (popups, flashes, glitch, shards) on plugin `S`
+  function fxInit(S) { S.fx = []; S.flash = null; S.glitch = 0; }
+  function popText(S, now, txt, x, y, color, px) {
+    S.fx.push({ txt: txt, x: x, y: y, color: color, t0: now, px: px || 0 });
+    if (S.fx.length > 6) S.fx.shift();
+  }
+  function doFlash(S, now, color, dur) { S.flash = { color: color, t0: now, dur: dur || 420 }; }
+  function drawFx(api, S) {
+    var ctx = api.ctx, now = api.now;
+    for (var i = S.fx.length - 1; i >= 0; i--) {
+      var f = S.fx[i], t = (now - f.t0) / 1000;
+      if (t > 1.15 || t < 0) { S.fx.splice(i, 1); continue; }
+      var pop = t < 0.14 ? 0.55 + (t / 0.14) * 0.6 : 1.15 - Math.min(0.15, (t - 0.14) * 0.6);
+      var a = t > 0.8 ? 1 - (t - 0.8) / 0.35 : 1;
+      var px = (f.px || bigPx(api, 0.075)) * pop;
+      var fy = Math.max(topY(api) + px * 0.6, f.y - t * api.h * 0.06);
+      glowText(ctx, f.txt, f.x, fy, px, f.color, a);
+    }
+  }
+  function drawFlash(api, S) {
+    var ctx = api.ctx, w = api.w, h = api.h;
+    if (S.flash) {
+      var t = (api.now - S.flash.t0) / S.flash.dur;
+      if (t >= 1 || t < 0) S.flash = null;
+      else {
+        var a = (1 - t);
+        ctx.save();
+        var g = radGrad(ctx, w / 2, h / 2, Math.min(w, h) * 0.25, Math.max(w, h) * 0.75);
+        g.addColorStop(0, hexA(S.flash.color, 0.0));
+        g.addColorStop(1, hexA(S.flash.color, 0.55 * a));
+        ctx.fillStyle = g;
+        ctx.fillRect(0, 0, w, h);
+        ctx.fillStyle = hexA(S.flash.color, 0.12 * a);
+        ctx.fillRect(0, 0, w, h);
+        ctx.restore();
+      }
+    }
+    if (S.glitch > 0) {
+      S.glitch -= api.dt;
+      var k = clamp(S.glitch / 450, 0, 1);
+      ctx.save();
+      for (var i = 0; i < 7; i++) {
+        var yy = Math.random() * h, hh = h * rnd(0.01, 0.05);
+        ctx.fillStyle = (i % 2) ? hexA(COL.crimson, 0.35 * k) : hexA(COL.cyan, 0.22 * k);
+        ctx.fillRect(rnd(-0.1, 0.1) * w, yy, w, hh);
+      }
+      ctx.restore();
+    }
+  }
+
+  // Instruction banner (first ~3.4 s of a round).
+  function drawBanner(api, S, title, lines, color) {
+    var t = (api.now - S.t0) / 1000;
+    if (t > 3.6 || t < 0) return;
+    var a = t < 0.3 ? t / 0.3 : (t > 3.0 ? Math.max(0, (3.6 - t) / 0.6) : 1);
+    var ctx = api.ctx, w = api.w, h = api.h;
+    var tp = bigPx(api, 0.085), lp = bigPx(api, 0.044);
+    // size panel to the widest line; shrink type if it would not fit
+    ctx.save();
+    ctx.font = F(lp);
+    var mw = 0;
+    for (var li = 0; li < lines.length; li++) mw = Math.max(mw, ctx.measureText(lines[li]).width);
+    ctx.font = F(tp);
+    var tw = ctx.measureText(title).width;
+    ctx.restore();
+    var maxW = w * 0.9;
+    if (mw + lp * 2 > maxW) { lp = Math.max(22, lp * maxW / (mw + lp * 2)); mw = Math.min(mw, maxW - lp * 2); }
+    var bw = Math.min(maxW, Math.max(w * 0.45, mw + lp * 2.4, tw + tp * 1.2)), bh = tp * 1.5 + lines.length * lp * 1.45 + h * 0.05;
+    var top = topY(api), bx = (w - bw) / 2, by = Math.max(top, (top + h) / 2 - bh / 2) - (1 - a) * h * 0.03;
+    ctx.save();
+    ctx.globalAlpha = a;
+    var g = ctx.createLinearGradient(0, by, 0, by + bh);
+    g.addColorStop(0, 'rgba(14,20,40,0.90)');
+    g.addColorStop(1, 'rgba(6,8,18,0.92)');
+    ctx.beginPath(); rrect(api, ctx, bx, by, bw, bh, h * 0.03);
+    ctx.fillStyle = g; ctx.fill();
+    ctx.shadowColor = color; ctx.shadowBlur = 24;
+    ctx.lineWidth = 3; ctx.strokeStyle = hexA(color, 0.9); ctx.stroke();
+    ctx.shadowBlur = 0;
+    // accent bars
+    ctx.fillStyle = color;
+    ctx.fillRect(bx + bw * 0.38, by - 3, bw * 0.24, 6);
+    ctx.fillRect(bx + bw * 0.38, by + bh - 3, bw * 0.24, 6);
+    ctx.restore();
+    glowText(ctx, title, w / 2, by + h * 0.025 + tp * 0.7, tp, color, a);
+    for (var i = 0; i < lines.length; i++) {
+      glowText(ctx, lines[i], w / 2, by + h * 0.025 + tp * 1.5 + lp * (0.75 + i * 1.45), lp, '#e8f4ff', a);
+    }
+  }
+
+  // ---- body reading with glove fallback. Returns points normalized 0..1.
+  // `l*` = arm on the SCREEN-LEFT side (mirror view), `r*` = screen-right.
+  function readBody(api) {
+    var w = Math.max(1, api.w), h = Math.max(1, api.h), gl = api.gloves || [];
+    var L = null, R = null;
+    for (var i = 0; i < gl.length; i++) {
+      var g = gl[i]; if (!g) continue;
+      if (g.id === 'left') L = g; else if (g.id === 'right') R = g;
+    }
+    var gL = (L && fin(L.x) && fin(L.y)) ? [L.x / w, L.y / h] : [0.32, 0.72];
+    var gR = (R && fin(R.x) && fin(R.y)) ? [R.x / w, R.y / h] : [0.68, 0.72];
+    var b = api.body, o;
+    if (b && P(b.head) && (P(b.lS) || P(b.rS))) {
+      o = {
+        real: true, head: P(b.head), lS: P(b.lS), rS: P(b.rS), lE: P(b.lE), rE: P(b.rE),
+        lW: P(b.lW), rW: P(b.rW), chest: P(b.chest), pelvis: P(b.pelvis),
+        lH: P(b.lH), rH: P(b.rH), lK: P(b.lK), rK: P(b.rK)
+      };
+      if (!o.lS) o.lS = [o.rS[0] - 0.12, o.rS[1]];
+      if (!o.rS) o.rS = [o.lS[0] + 0.12, o.lS[1]];
+      if (o.lS[0] > o.rS[0]) { // normalize so l = screen-left
+        var t;
+        t = o.lS; o.lS = o.rS; o.rS = t; t = o.lE; o.lE = o.rE; o.rE = t;
+        t = o.lW; o.lW = o.rW; o.rW = t; t = o.lK; o.lK = o.rK; o.rK = t; t = o.lH; o.lH = o.rH; o.rH = t;
+      }
+      if (!o.lW) o.lW = gL[0] < gR[0] ? gL : gR;
+      if (!o.rW) o.rW = gL[0] < gR[0] ? gR : gL;
+      if (!o.chest) o.chest = [(o.lS[0] + o.rS[0]) / 2, (o.lS[1] + o.rS[1]) / 2 + 0.06];
+      if (!o.pelvis) o.pelvis = (o.lH && o.rH) ? [(o.lH[0] + o.rH[0]) / 2, (o.lH[1] + o.rH[1]) / 2] : [o.chest[0], o.chest[1] + 0.2];
+      o.cx = (o.chest[0] + o.pelvis[0]) / 2;
+      o.shW = Math.max(0.05, Math.abs(o.rS[0] - o.lS[0]));
+      o.kneeY = (o.lK && o.rK) ? Math.min(o.lK[1], o.rK[1]) : (o.lK ? o.lK[1] : (o.rK ? o.rK[1] : null));
+      return o;
+    }
+    var a = gL[0] < gR[0] ? gL : gR, c = gL[0] < gR[0] ? gR : gL;
+    var ax = (gL[0] + gR[0]) / 2, ay = (gL[1] + gR[1]) / 2, cx = clamp(ax, 0.15, 0.85);
+    var hy = ay - 0.40; // head estimate follows hands (raise hands = "jump")
+    o = {
+      real: false, lW: a, rW: c, lE: null, rE: null,
+      lS: [cx - 0.08, 0.42], rS: [cx + 0.08, 0.42], head: [cx, hy], chest: [cx, hy + 0.17],
+      pelvis: [cx, hy + 0.36], lK: [cx - 0.04, hy + 0.52], rK: [cx + 0.04, hy + 0.52],
+      cx: cx, shW: 0.16, gAvgY: ay
+    };
+    o.kneeY = hy + 0.52;
+    return o;
+  }
+
+  // ==========================================================================
+  // 1. BRAIN WALL 3D
+  // ==========================================================================
+  // Pose templates in "h-units" relative to screen center (x scaled by h).
+  var STAND = {
+    head: [0, -0.30], neck: [0, -0.205], lS: [-0.105, -0.19], rS: [0.105, -0.19],
+    pel: [0, 0.07], lH: [-0.06, 0.08], rH: [0.06, 0.08],
+    lK: [-0.075, 0.27], rK: [0.075, 0.27], lF: [-0.085, 0.46], rF: [0.085, 0.46]
+  };
+  var POSES = {
+    Y: { name: 'РУКИ ВВЕРХ', sub: 'Обе руки вверх — буква Y', arms: [[-0.2, -0.36], [-0.29, -0.52], [0.2, -0.36], [0.29, -0.52]] },
+    T: { name: 'БУКВА Т', sub: 'Руки прямо в стороны', arms: [[-0.25, -0.19], [-0.40, -0.19], [0.25, -0.19], [0.40, -0.19]] },
+    LUP: { name: 'ЛЕВАЯ ВВЕРХ', sub: 'Левая рука вверх', arms: [[-0.16, -0.35], [-0.2, -0.52], [0.15, -0.04], [0.17, 0.11]] },
+    RUP: { name: 'ПРАВАЯ ВВЕРХ', sub: 'Правая рука вверх', arms: [[-0.15, -0.04], [-0.17, 0.11], [0.16, -0.35], [0.2, -0.52]] },
+    SQUAT: { name: 'ПРИСЕДАЙ!', sub: 'Присядь пониже', squat: true, arms: [[-0.16, 0.0], [-0.13, 0.12], [0.16, 0.0], [0.13, 0.12]] },
+    LEANL: { name: 'НАКЛОН ВЛЕВО', sub: 'Наклони корпус влево', lean: -1, arms: [[-0.17, -0.34], [-0.21, -0.5], [0.17, -0.34], [0.21, -0.5]] },
+    LEANR: { name: 'НАКЛОН ВПРАВО', sub: 'Наклони корпус вправо', lean: 1, arms: [[-0.17, -0.34], [-0.21, -0.5], [0.17, -0.34], [0.21, -0.5]] }
+  };
+  var EASY = ['T', 'Y', 'LUP', 'RUP'];
+  var HARD = ['T', 'Y', 'LUP', 'RUP', 'SQUAT', 'LEANL', 'LEANR'];
+
+  // Builds skeleton segments [ [x1,y1,x2,y2,thick], ... ] + head [x,y,r]
+  function poseSkeleton(id) {
+    var p = POSES[id] || POSES.T, s = STAND, k;
+    var pts = {};
+    for (k in s) pts[k] = [s[k][0], s[k][1]];
+    pts.lE = p.arms[0].slice(); pts.lW = p.arms[1].slice(); pts.rE = p.arms[2].slice(); pts.rW = p.arms[3].slice();
+    if (p.squat) {
+      var dy = 0.13;
+      ['head', 'neck', 'lS', 'rS', 'lE', 'rE', 'lW', 'rW', 'pel', 'lH', 'rH'].forEach(function (n) { pts[n][1] += dy; });
+      pts.lH[0] = -0.08; pts.rH[0] = 0.08;
+      pts.lK = [-0.19, 0.27]; pts.rK = [0.19, 0.27];
+      pts.lF = [-0.13, 0.46]; pts.rF = [0.13, 0.46];
+    }
+    if (p.lean) {
+      var ang = p.lean * 0.36, ca = Math.cos(ang), sa = Math.sin(ang), pv = pts.pel;
+      ['head', 'neck', 'lS', 'rS', 'lE', 'rE', 'lW', 'rW'].forEach(function (n) {
+        var x = pts[n][0] - pv[0], y = pts[n][1] - pv[1];
+        pts[n] = [pv[0] + x * ca - y * sa, pv[1] + x * sa + y * ca];
+      });
+    }
+    var L = 0.075;
+    var segs = [
+      [pts.neck, pts.pel, 0.17],
+      [pts.lS, pts.rS, 0.09],
+      [pts.lS, pts.lE, L], [pts.lE, pts.lW, L], [pts.rS, pts.rE, L], [pts.rE, pts.rW, L],
+      [pts.lH, pts.lK, 0.085], [pts.lK, pts.lF, 0.08], [pts.rH, pts.rK, 0.085], [pts.rK, pts.rF, 0.08]
+    ];
+    return { segs: segs, head: [pts.head[0], pts.head[1], 0.08], pts: pts };
+  }
+
+  function strokeSkeleton(ctx, sk, map, scale, extra) {
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    for (var i = 0; i < sk.segs.length; i++) {
+      var sg = sk.segs[i], a = map(sg[0]), b = map(sg[1]);
+      ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]);
+      ctx.lineWidth = Math.max(1, sg[2] * scale + extra); ctx.stroke();
+    }
+    var hd = map(sk.head);
+    ctx.beginPath(); circle(ctx, hd[0], hd[1], sk.head[2] * scale + extra / 2); ctx.fill();
+  }
+
+  // Classify an arm. S/E/W normalized points, aspect = w/h. Returns 'up'|'out'|'down'|'mid'
+  function armState(S, W, otherS, aspect, u) {
+    var dx = (W[0] - S[0]) * aspect * (S[0] < otherS[0] ? -1 : 1); // outward +
+    var dy = W[1] - S[1]; // + = down
+    if (dy < -0.55 * u) return 'up';
+    if (Math.abs(dy) < 0.6 * u && dx > 0.65 * u) return 'out';
+    if (dy > 0.3 * u) return 'down';
+    return 'mid';
+  }
+
+  function poseMatch(id, B, aspect, baseHead) {
+    var u = Math.max(0.1, B.shW * aspect);
+    var la = armState(B.lS, B.lW, B.rS, aspect, u), ra = armState(B.rS, B.rW, B.lS, aspect, u);
+    var c = [];
+    if (id === 'Y') { c.push(la === 'up', ra === 'up'); }
+    else if (id === 'T') { c.push(la === 'out', ra === 'out'); }
+    else if (id === 'LUP') { c.push(la === 'up', ra !== 'up'); }
+    else if (id === 'RUP') { c.push(ra === 'up', la !== 'up'); }
+    else if (id === 'SQUAT') { var drop = B.head[1] - baseHead; c.push(drop > 0.07, drop > 0.04); }
+    else if (id === 'LEANL' || id === 'LEANR') {
+      var lean = (B.head[0] - B.pelvis[0]) * aspect / u, sgn = id === 'LEANL' ? -1 : 1;
+      c.push(lean * sgn > 0.32, lean * sgn > 0.15);
+    }
+    var ok = 0; for (var i = 0; i < c.length; i++) if (c[i]) ok++;
+    return { ok: ok === c.length, frac: c.length ? ok / c.length : 0 };
+  }
+
+  AG.brainwall = {
+    id: 'brainwall', title: 'BRAIN WALL 3D', icon: '🧱', hands: 'none',
+    reset: function (api) {
+      fxInit(this);
+      this.t0 = api ? api.now : 0;
+      this.wall = null;
+      this.shards = [];
+      this.passed = 0;
+      this.wallCount = 0;
+      this.nextAt = this.t0 + 2600;
+      this.lastPose = '';
+      this.baseHead = null;
+      this.texKey = '';
+      this._errCount = 0;
+    },
+    spawn: function (api, B) {
+      var list = (this.passed < 3 || !B.real) ? EASY : HARD;
+      var id = pick(list), guard = 0;
+      while (id === this.lastPose && guard++ < 8) id = pick(list);
+      this.lastPose = id;
+      var dur = Math.max(2800, 5200 - this.passed * 160);
+      this.wallCount++;
+      this.wall = { id: this.wallCount, pose: id, t0: api.now, dur: dur, z: 1, sk: poseSkeleton(id), hist: [], state: 'fly', tEnd: 0, matchFrac: 0 };
+      this.buildTex(api, this.wall);
+    },
+    buildTex: function (api, wall) {
+      var TW = 480, TH = Math.max(120, Math.round(TW * api.h / Math.max(1, api.w)));
+      var cv = this.tex;
+      if (!cv) { cv = this.tex = document.createElement('canvas'); }
+      cv.width = TW; cv.height = TH;
+      var c = cv.getContext('2d');
+      c.clearRect(0, 0, TW, TH);
+      // translucent glass with vertical gradient
+      var g = c.createLinearGradient(0, 0, 0, TH);
+      g.addColorStop(0, 'rgba(40,80,180,0.42)');
+      g.addColorStop(0.55, 'rgba(30,40,120,0.40)');
+      g.addColorStop(1, 'rgba(70,20,110,0.50)');
+      c.fillStyle = g; c.fillRect(0, 0, TW, TH);
+      // brick / panel grid
+      c.strokeStyle = 'rgba(0,240,255,0.22)'; c.lineWidth = 1.5;
+      var rowH = TH / 9, colW = TW / 10, r, x;
+      c.beginPath();
+      for (r = 1; r < 9; r++) { c.moveTo(0, r * rowH); c.lineTo(TW, r * rowH); }
+      for (r = 0; r < 9; r++) {
+        var off = (r % 2) ? colW / 2 : 0;
+        for (x = off; x < TW; x += colW) { c.moveTo(x, r * rowH); c.lineTo(x, (r + 1) * rowH); }
+      }
+      c.stroke();
+      // diagonal sheen
+      var sh = c.createLinearGradient(0, 0, TW, TH);
+      sh.addColorStop(0, 'rgba(255,255,255,0.10)');
+      sh.addColorStop(0.35, 'rgba(255,255,255,0.0)');
+      sh.addColorStop(0.6, 'rgba(255,255,255,0.06)');
+      sh.addColorStop(0.62, 'rgba(255,255,255,0.0)');
+      c.fillStyle = sh; c.fillRect(0, 0, TW, TH);
+      // frame
+      c.lineWidth = 10; c.strokeStyle = 'rgba(0,240,255,0.85)';
+      c.shadowColor = COL.cyan; c.shadowBlur = 18;
+      c.strokeRect(5, 5, TW - 10, TH - 10);
+      c.shadowBlur = 0;
+      c.lineWidth = 3; c.strokeStyle = 'rgba(255,184,0,0.8)';
+      c.strokeRect(16, 16, TW - 32, TH - 32);
+      // hole rim (glow) then cut
+      var map = function (p) { return [TW * 0.5 + p[0] * TH, TH * 0.5 + p[1] * TH]; };
+      c.strokeStyle = 'rgba(4,6,14,0.85)'; c.fillStyle = 'rgba(4,6,14,0.85)';
+      strokeSkeleton(c, wall.sk, map, TH, 26);
+      c.shadowColor = COL.gold; c.shadowBlur = 16;
+      c.strokeStyle = 'rgba(255,214,90,1)'; c.fillStyle = 'rgba(255,214,90,1)';
+      strokeSkeleton(c, wall.sk, map, TH, 15);
+      c.shadowBlur = 0;
+      c.strokeStyle = '#ffffff'; c.fillStyle = '#ffffff';
+      strokeSkeleton(c, wall.sk, map, TH, 5);
+      c.shadowBlur = 0;
+      c.globalCompositeOperation = 'destination-out';
+      c.strokeStyle = '#000'; c.fillStyle = '#000';
+      strokeSkeleton(c, wall.sk, map, TH, 0);
+      c.globalCompositeOperation = 'source-over';
+      // solid silhouette masks for the live match highlight (no overlap seams)
+      var mk = function (color) {
+        var m = document.createElement('canvas');
+        m.width = TW; m.height = TH;
+        var mc = m.getContext('2d');
+        mc.strokeStyle = color; mc.fillStyle = color;
+        strokeSkeleton(mc, wall.sk, map, TH, -TH * 0.012);
+        return m;
+      };
+      this.maskOk = mk(COL.jade);
+      this.maskBad = mk(COL.crimson);
+    },
+    wallRect: function (api, z) {
+      var w = api.w, h = api.h, D = 5.2;
+      var s = 1 / (1 + Math.max(-0.15, z) * D), s1 = 1 / (1 + D);
+      var k = (s - s1) / (1 - s1);
+      var cx = lerp(w * 0.5, w * 0.5, k), cy = lerp(h * 0.43, h * 0.5, k);
+      var ww = w * s, hh = h * s;
+      return { x: cx - ww / 2, y: cy - hh / 2, w: ww, h: hh, s: s, cx: cx, cy: cy };
+    },
+    judge: function (api, B) {
+      var wall = this.wall, h = api.h, w = api.w;
+      var n = 0, okc = 0;
+      for (var i = 0; i < wall.hist.length; i++) { if (api.now - wall.hist[i][0] < 650) { n++; if (wall.hist[i][1]) okc++; } }
+      var ratio = n ? okc / n : 0;
+      var nowOk = poseMatch(wall.pose, B, api.w / Math.max(1, api.h), this.baseHead).ok;
+      var pass = nowOk || ratio >= 0.4;
+      wall.state = pass ? 'pass' : 'fail';
+      wall.tEnd = api.now;
+      var cx = w / 2, cy = h * 0.42;
+      if (pass) {
+        var perfect = ratio >= 0.8;
+        this.passed++;
+        api.addScore(perfect ? 150 : 100, cx, cy, perfect ? 'ИДЕАЛЬНО!' : 'ПРОШЁЛ!');
+        popText(this, api.now, perfect ? 'ИДЕАЛЬНО!' : 'ПРОШЁЛ!', cx, h * 0.3, perfect ? COL.gold : COL.jade, bigPx(api, 0.11));
+        doFlash(this, api.now, COL.jade, 450);
+        api.particles(cx, cy, COL.cyan, 26);
+        api.particles(cx, cy, COL.gold, 14);
+        api.shake(8);
+        api.sfx.hit(true);
+        this.makeShards(api, COL.cyan);
+      } else {
+        api.loseLife(cx, cy, 'СТЕНА!');
+        popText(this, api.now, 'СТЕНА!', cx, h * 0.3, COL.crimson, bigPx(api, 0.11));
+        doFlash(this, api.now, COL.crimson, 600);
+        this.glitch = 380;
+        api.particles(cx, cy, COL.crimson, 30);
+        api.shake(22);
+        api.sfx.bomb();
+        api.comboReset();
+        this.makeShards(api, COL.crimson);
+      }
+      this.wall = null;
+      this.nextAt = api.now + 1500;
+    },
+    makeShards: function (api, color) {
+      var w = api.w, h = api.h, cols = 6, rows = 4;
+      this.shards = [];
+      for (var r = 0; r < rows; r++) {
+        for (var c = 0; c < cols; c++) {
+          var x0 = (c + rnd(0.1, 0.4)) * w / cols, y0 = (r + rnd(0.1, 0.4)) * h / rows;
+          var sx = w / cols * rnd(0.5, 0.9), sy = h / rows * rnd(0.5, 0.9);
+          var cx = x0 + sx / 2, cy = y0 + sy / 2;
+          var dx = cx - w / 2, dy = cy - h * 0.45, dl = Math.max(1, Math.sqrt(dx * dx + dy * dy));
+          this.shards.push({
+            x: cx, y: cy, vx: dx / dl * rnd(4, 11), vy: dy / dl * rnd(3, 9) - rnd(1, 4),
+            rot: 0, vr: rnd(-0.12, 0.12),
+            pts: [[-sx / 2, -sy * rnd(0.3, 0.5)], [sx * rnd(0.2, 0.5), -sy / 2], [sx / 2, sy * rnd(0.1, 0.5)], [-sx * rnd(0.1, 0.4), sy / 2]],
+            color: color, life: 1
+          });
+        }
+      }
+    },
+    drawShards: function (api) {
+      var ctx = api.ctx, k = api.dt / 16.67;
+      for (var i = this.shards.length - 1; i >= 0; i--) {
+        var s = this.shards[i];
+        s.x += s.vx * k; s.y += s.vy * k; s.vy += 0.35 * k; s.rot += s.vr * k; s.life -= 0.018 * k;
+        if (s.life <= 0) { this.shards.splice(i, 1); continue; }
+        ctx.save();
+        ctx.translate(s.x, s.y); ctx.rotate(s.rot);
+        var sc = 1 + (1 - s.life) * 0.5; ctx.scale(sc, sc);
+        ctx.globalAlpha = clamp(s.life, 0, 1);
+        ctx.beginPath();
+        ctx.moveTo(s.pts[0][0], s.pts[0][1]);
+        for (var j = 1; j < 4; j++) ctx.lineTo(s.pts[j][0], s.pts[j][1]);
+        ctx.closePath();
+        ctx.fillStyle = hexA(s.color, 0.22); ctx.fill();
+        ctx.lineWidth = 2.5; ctx.strokeStyle = hexA(s.color, 0.95); ctx.stroke();
+        ctx.restore();
+      }
+    },
+    drawTunnel: function (api, pulse) {
+      var ctx = api.ctx, w = api.w, h = api.h, vx = w * 0.5, vy = h * 0.43;
+      ctx.save();
+      ctx.strokeStyle = 'rgba(0,240,255,0.16)'; ctx.lineWidth = 2;
+      ctx.beginPath();
+      var corners = [[0, 0], [w, 0], [0, h], [w, h], [w * 0.25, h], [w * 0.75, h]];
+      for (var i = 0; i < corners.length; i++) { ctx.moveTo(vx, vy); ctx.lineTo(corners[i][0], corners[i][1]); }
+      ctx.stroke();
+      // moving depth frames
+      var ph = (api.now / 1400) % 1;
+      for (var j = 0; j < 4; j++) {
+        var z = 1 - ((j / 4 + ph) % 1);
+        var R = this.wallRect(api, z);
+        ctx.globalAlpha = 0.25 * (1 - z) * (0.6 + pulse * 0.4);
+        ctx.strokeStyle = j % 2 ? COL.crimson : COL.cyan;
+        ctx.strokeRect(R.x, R.y, R.w, R.h);
+      }
+      ctx.restore();
+    },
+    drawPoseCard: function (api, wall, live) {
+      var ctx = api.ctx, w = api.w, h = api.h;
+      var p = POSES[wall.pose];
+      var np = bigPx(api, 0.08);
+      var prog = clamp((api.now - wall.t0) / wall.dur, 0, 1);
+      // title band
+      ctx.save();
+      var bw = Math.min(w * 0.6, np * 9), bx = w / 2 - bw / 2, by = topY(api), bh = np * 2.15;
+      var g = ctx.createLinearGradient(bx, 0, bx + bw, 0);
+      g.addColorStop(0, 'rgba(8,12,26,0.0)'); g.addColorStop(0.15, 'rgba(8,12,26,0.88)');
+      g.addColorStop(0.85, 'rgba(8,12,26,0.88)'); g.addColorStop(1, 'rgba(8,12,26,0.0)');
+      ctx.fillStyle = g; ctx.fillRect(bx, by, bw, bh);
+      // timer bar
+      var tw = bw * 0.62, tx = w / 2 - tw / 2, ty = by + bh - np * 0.32;
+      ctx.fillStyle = 'rgba(255,255,255,0.12)'; ctx.fillRect(tx, ty, tw, 8);
+      var tc = prog > 0.75 ? COL.crimson : COL.gold;
+      ctx.fillStyle = tc; ctx.shadowColor = tc; ctx.shadowBlur = 10;
+      ctx.fillRect(tx, ty, tw * (1 - prog), 8);
+      ctx.restore();
+      glowText(ctx, p.name, w / 2, by + np * 0.72, np, live ? COL.jade : COL.gold, 1);
+      glowText(ctx, p.sub, w / 2, by + np * 1.42, bigPx(api, 0.036), '#dfefff', 0.95);
+      // preview icon (top-right)
+      var ps = h * 0.2, px = w - ps * 0.85 - w * 0.025, py = topY(api);
+      ctx.save();
+      ctx.beginPath(); rrect(api, ctx, px - ps * 0.42, py, ps * 0.84, ps * 1.1, 14);
+      ctx.fillStyle = 'rgba(8,12,26,0.88)'; ctx.fill();
+      ctx.lineWidth = 3; ctx.strokeStyle = live ? COL.jade : hexA(COL.cyan, 0.8); ctx.stroke();
+      var cxp = px, cyp = py + ps * 0.55, sc = ps * 0.95;
+      var map = function (q) { return [cxp + q[0] * sc, cyp + q[1] * sc]; };
+      ctx.strokeStyle = live ? COL.jade : COL.cyan; ctx.fillStyle = live ? COL.jade : COL.cyan;
+      ctx.shadowColor = ctx.strokeStyle; ctx.shadowBlur = 8;
+      strokeSkeleton(ctx, wall.sk, map, sc * 0.45, 2);
+      ctx.restore();
+      // match meter under icon
+      var mw = ps * 0.84, mx = px - mw / 2, my = py + ps * 1.1 + 10;
+      ctx.save();
+      ctx.fillStyle = 'rgba(255,255,255,0.12)'; ctx.fillRect(mx, my, mw, 10);
+      ctx.fillStyle = live ? COL.jade : COL.gold;
+      ctx.fillRect(mx, my, mw * clamp(wall.matchFrac, 0, 1), 10);
+      ctx.restore();
+    },
+    frame: function (api) {
+      try {
+        if (!this.fx) this.reset(api);
+        var ctx = api.ctx, w = api.w, h = api.h, now = api.now;
+        var aspect = w / Math.max(1, h);
+        var B = readBody(api);
+        var squatWall = this.wall && this.wall.pose === 'SQUAT' && this.wall.z < 0.75;
+        if (this.baseHead === null) this.baseHead = B.head[1];
+        else if (!squatWall) this.baseHead = lerp(this.baseHead, B.head[1], 1 - Math.exp(-api.dt / 900));
+        var beat = 0.5 + 0.5 * Math.sin(now / 300);
+        this.drawTunnel(api, beat);
+
+        if (!this.wall && api.isPlaying && now >= this.nextAt) this.spawn(api, B);
+        var wall = this.wall, live = false;
+        if (wall && wall.state === 'fly') {
+          var prog = clamp((now - wall.t0) / wall.dur, 0, 1);
+          wall.z = 1 - prog;
+          var m = poseMatch(wall.pose, B, aspect, this.baseHead);
+          live = m.ok;
+          wall.matchFrac = lerp(wall.matchFrac, m.frac, 1 - Math.exp(-api.dt / 120));
+          if (wall.z < 0.35) { wall.hist.push([now, m.ok]); if (wall.hist.length > 80) wall.hist.shift(); }
+          var R = this.wallRect(api, wall.z);
+          var alpha = clamp((1 - wall.z) * 3.5, 0, 1);
+          ctx.save();
+          // floor shadow / glow below wall
+          ctx.globalAlpha = alpha * 0.5;
+          var fg = radGrad(ctx, R.cx, R.y + R.h, 1, R.w * 0.5);
+          fg.addColorStop(0, hexA(live ? COL.jade : COL.cyan, 0.45)); fg.addColorStop(1, hexA(COL.cyan, 0));
+          ctx.fillStyle = fg; ctx.fillRect(R.cx - R.w * 0.5, R.y + R.h - R.w * 0.08, R.w, R.w * 0.16);
+          ctx.globalAlpha = alpha * (wall.z < 0.12 ? 0.82 : 0.95);
+          if (this.tex) ctx.drawImage(this.tex, R.x, R.y, R.w, R.h);
+          // live hole highlight
+          var mask = live ? this.maskOk : this.maskBad;
+          ctx.globalAlpha = alpha * (live ? 0.32 + 0.15 * beat : 0.14);
+          if (mask) ctx.drawImage(mask, R.x, R.y, R.w, R.h);
+          ctx.restore();
+          if (wall.z < 0.3) { // incoming warning edge
+            ctx.save();
+            ctx.globalAlpha = (0.3 - wall.z) / 0.3 * 0.5;
+            ctx.lineWidth = 8; ctx.strokeStyle = live ? COL.jade : COL.crimson;
+            ctx.strokeRect(4, 4, w - 8, h - 8);
+            ctx.restore();
+          }
+          if (prog >= 1) this.judge(api, B);
+        }
+        this.drawShards(api);
+        if (this.wall) this.drawPoseCard(api, this.wall, live);
+        else if (api.isPlaying && !this.fx.length && (api.now - this.t0) > 3600 && this.nextAt - now > 300) {
+          glowText(ctx, 'ГОТОВЬСЯ…', w / 2, topY(api) + bigPx(api, 0.05) * 0.7, bigPx(api, 0.05), hexA(COL.cyan, 0.9), 0.6 + 0.4 * beat);
+        }
+        drawFx(api, this);
+        drawFlash(api, this);
+        drawBanner(api, this, 'BRAIN WALL 3D', B.real ?
+          ['Стена летит на тебя!', 'Повтори позу из окна — пролезь в дыру'] :
+          ['Стена летит на тебя!', 'Подними руки как показано в окне'], COL.cyan);
+      } catch (e) { reportErr(api, this, e); }
+    }
+  };
+
+  // ==========================================================================
+  // 2. LASER MATRIX
+  // ==========================================================================
+  AG.laserdodge = {
+    id: 'laserdodge', title: 'LASER MATRIX', icon: '🔴', hands: 'none',
+    reset: function (api) {
+      fxInit(this);
+      this.t0 = api ? api.now : 0;
+      this.beams = [];
+      this.sparks = [];
+      this.survived = 0;
+      this.beamCount = 0;
+      this.nextAt = this.t0 + 3000;
+      this.base = null;
+      this.lastType = '';
+      this._errCount = 0;
+    },
+    spawn: function (api) {
+      var n = this.survived, b = this.base;
+      var types = n < 4 ? ['low', 'high'] : ['low', 'high', 'vert'];
+      var t = pick(types), g = 0;
+      while (t === this.lastType && g++ < 4 && Math.random() < 0.7) t = pick(types);
+      this.lastType = t;
+      var warn = Math.max(750, 1350 - n * 30);
+      this.addBeam(api, t, warn);
+      if (n >= 14 && Math.random() < 0.3) {
+        var t2 = t === 'vert' ? pick(['low', 'high']) : 'vert';
+        this.addBeam(api, t2, warn);
+      }
+    },
+    addBeam: function (api, type, warn) {
+      var b = this.base, pos, side = 0;
+      if (type === 'low') pos = clamp(b.knee !== null ? b.knee + 0.01 : b.head + 0.5, 0.62, 0.92);
+      else if (type === 'high') pos = clamp(b.head + 0.01, 0.1, 0.55);
+      else {
+        side = b.x < 0.42 ? 1 : (b.x > 0.58 ? -1 : (Math.random() < 0.5 ? -1 : 1)); // dodge direction
+        pos = clamp(b.x - side * 0.02, 0.12, 0.88);
+      }
+      this.beamCount++;
+      this.beams.push({ id: this.beamCount, type: type, pos: pos, side: side, t0: api.now, warn: warn, act: 650, state: 'warn', acc: 0, hit: false });
+    },
+    inBeam: function (bm, B) {
+      var b = this.base;
+      if (bm.type === 'low') {
+        var rise = b.head - B.head[1];
+        var kneeUp = B.kneeY !== null && B.kneeY < bm.pos - 0.05;
+        return !(rise > 0.035 || kneeUp);
+      }
+      if (bm.type === 'high') return (B.head[1] - b.head) < 0.06;
+      return Math.abs(B.cx - bm.pos) < 0.105;
+    },
+    drawEmitter: function (ctx, x, y, r, color, a) {
+      var g = radGrad(ctx, x, y, 0, r * 2.4);
+      g.addColorStop(0, hexA('#ffffff', a)); g.addColorStop(0.25, hexA(color, a)); g.addColorStop(1, hexA(color, 0));
+      ctx.fillStyle = g;
+      ctx.beginPath(); circle(ctx, x, y, r * 2.4); ctx.fill();
+    },
+    beamLine: function (api, bm) {
+      var w = api.w, h = api.h;
+      if (bm.type === 'vert') return [bm.pos * w, 0, bm.pos * w, h];
+      return [0, bm.pos * h, w, bm.pos * h];
+    },
+    drawBeam: function (api, bm) {
+      var ctx = api.ctx, w = api.w, h = api.h, now = api.now;
+      var L = this.beamLine(api, bm), x1 = L[0], y1 = L[1], x2 = L[2], y2 = L[3];
+      var t = now - bm.t0, vert = bm.type === 'vert';
+      var halfBand = vert ? 0.105 * w : 0.05 * h;
+      ctx.save();
+      if (bm.state === 'warn') {
+        var k = clamp(t / bm.warn, 0, 1);
+        var blink = (Math.floor(t / (k > 0.6 ? 70 : 130)) % 2) ? 1 : 0.35;
+        // danger zone band
+        ctx.fillStyle = hexA(COL.crimson, 0.07 + 0.08 * k * blink);
+        if (vert) ctx.fillRect(x1 - halfBand, 0, halfBand * 2, h); else ctx.fillRect(0, y1 - halfBand, w, halfBand * 2);
+        // dashed aim line
+        ctx.setLineDash([18, 14]);
+        ctx.lineDashOffset = -now / 20;
+        ctx.lineWidth = 3; ctx.strokeStyle = hexA(COL.crimson, 0.5 + 0.5 * blink);
+        ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+        ctx.setLineDash([]);
+        // charging emitters
+        this.drawEmitter(ctx, x1, y1, 8 + 14 * k, COL.crimson, 0.6 + 0.4 * blink);
+        this.drawEmitter(ctx, x2, y2, 8 + 14 * k, COL.crimson, 0.6 + 0.4 * blink);
+        // instruction label
+        var lp = bigPx(api, 0.07), label, lx, ly;
+        if (bm.type === 'low') { label = '↑ ПРЫГАЙ! ↑'; lx = w / 2; ly = y1 - lp * 1.1; }
+        else if (bm.type === 'high') { label = '↓ ПРИСЯДЬ! ↓'; lx = w / 2; ly = y1 + lp * 1.2; }
+        else { label = bm.side > 0 ? 'ШАГ ВПРАВО →' : '← ШАГ ВЛЕВО'; lx = clamp(x1 + bm.side * w * 0.22, w * 0.2, w * 0.8); ly = h * 0.24; }
+        ly = Math.max(ly, topY(api) + lp * 0.85);
+        ctx.save();
+        ctx.font = F(lp);
+        var lw = ctx.measureText(label).width + lp * 1.2;
+        ctx.beginPath(); rrect(api, ctx, lx - lw / 2, ly - lp * 0.8, lw, lp * 1.6, lp * 0.4);
+        ctx.fillStyle = 'rgba(8,10,22,0.82)'; ctx.fill();
+        ctx.lineWidth = 3; ctx.strokeStyle = hexA(k > 0.6 ? COL.crimson : COL.gold, 0.5 + 0.5 * blink); ctx.stroke();
+        ctx.restore();
+        glowText(ctx, label, lx, ly, lp, k > 0.6 ? '#ff5c80' : COL.gold, 0.75 + 0.25 * blink);
+        // countdown ring at center of beam
+        var cx = vert ? x1 : w / 2, cy = vert ? h * 0.5 : y1, rr = h * 0.035;
+        ctx.lineWidth = 6; ctx.strokeStyle = COL.gold;
+        ctx.beginPath(); ctx.arc(cx, cy, rr, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * (1 - k)); ctx.stroke();
+      } else if (bm.state === 'active') {
+        var ka = clamp((t - bm.warn) / bm.act, 0, 1);
+        var fl = 0.85 + 0.15 * Math.sin(now / 18);
+        var wob = Math.sin(now / 40) * 1.5;
+        ctx.lineCap = 'round';
+        ctx.globalAlpha = ka > 0.85 ? (1 - ka) / 0.15 : 1;
+        ctx.lineWidth = 50 * fl; ctx.strokeStyle = 'rgba(255,42,95,0.16)';
+        ctx.beginPath(); ctx.moveTo(x1, y1 + (vert ? 0 : wob)); ctx.lineTo(x2, y2 + (vert ? 0 : wob)); ctx.stroke();
+        ctx.shadowColor = COL.crimson; ctx.shadowBlur = 24;
+        ctx.lineWidth = 20 * fl; ctx.strokeStyle = COL.crimson;
+        ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+        ctx.shadowBlur = 0;
+        ctx.lineWidth = 7; ctx.strokeStyle = '#ffffff';
+        ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+        this.drawEmitter(ctx, x1, y1, 22, COL.crimson, 1);
+        this.drawEmitter(ctx, x2, y2, 22, COL.crimson, 1);
+        // scanning spark spawn
+        if (this.sparks.length < 40) {
+          for (var i = 0; i < 2; i++) {
+            var u = Math.random();
+            this.sparks.push({ x: lerp(x1, x2, u), y: lerp(y1, y2, u), vx: rnd(-3, 3), vy: rnd(-4, 2), life: 1 });
+          }
+        }
+      }
+      ctx.restore();
+    },
+    drawSparks: function (api) {
+      var ctx = api.ctx, k = api.dt / 16.67;
+      if (!this.sparks.length) return;
+      ctx.save();
+      ctx.strokeStyle = '#ffd0dc'; ctx.lineWidth = 2;
+      ctx.beginPath();
+      for (var i = this.sparks.length - 1; i >= 0; i--) {
+        var s = this.sparks[i];
+        s.x += s.vx * k; s.y += s.vy * k; s.vy += 0.2 * k; s.life -= 0.05 * k;
+        if (s.life <= 0) { this.sparks.splice(i, 1); continue; }
+        ctx.moveTo(s.x, s.y); ctx.lineTo(s.x - s.vx * 2, s.y - s.vy * 2);
+      }
+      ctx.stroke();
+      ctx.restore();
+    },
+    drawBaseline: function (api, B) {
+      var ctx = api.ctx, w = api.w, h = api.h, b = this.base;
+      ctx.save();
+      // head-level ticks on both edges + live head marker
+      var y = b.head * h, hy = B.head[1] * h;
+      ctx.fillStyle = hexA(COL.cyan, 0.7);
+      ctx.fillRect(0, y - 2, w * 0.03, 4); ctx.fillRect(w * 0.97, y - 2, w * 0.03, 4);
+      ctx.fillStyle = COL.jade;
+      ctx.beginPath(); ctx.moveTo(w * 0.035, hy); ctx.lineTo(w * 0.015, hy - 10); ctx.lineTo(w * 0.015, hy + 10); ctx.closePath(); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(w * 0.965, hy); ctx.lineTo(w * 0.985, hy - 10); ctx.lineTo(w * 0.985, hy + 10); ctx.closePath(); ctx.fill();
+      // floor position marker
+      var fx = B.cx * w, fy = h * 0.965;
+      var g = radGrad(ctx, fx, fy, 1, w * 0.07);
+      g.addColorStop(0, hexA(COL.jade, 0.5)); g.addColorStop(1, hexA(COL.jade, 0));
+      ctx.fillStyle = g; ctx.fillRect(fx - w * 0.07, fy - h * 0.03, w * 0.14, h * 0.06);
+      ctx.restore();
+    },
+    frame: function (api) {
+      try {
+        if (!this.fx) this.reset(api);
+        var ctx = api.ctx, w = api.w, h = api.h, now = api.now;
+        var B = readBody(api);
+        var busy = this.beams.length > 0;
+        if (!this.base) this.base = { head: B.head[1], x: B.cx, knee: B.kneeY };
+        else if (!busy) {
+          var a = 1 - Math.exp(-api.dt / 700);
+          this.base.head = lerp(this.base.head, B.head[1], a);
+          this.base.x = lerp(this.base.x, B.cx, a);
+          if (B.kneeY !== null) this.base.knee = this.base.knee === null ? B.kneeY : lerp(this.base.knee, B.kneeY, a);
+        }
+        if (!busy && api.isPlaying && now >= this.nextAt) this.spawn(api);
+
+        for (var i = this.beams.length - 1; i >= 0; i--) {
+          var bm = this.beams[i], t = now - bm.t0;
+          if (bm.state === 'warn' && t >= bm.warn) { bm.state = 'active'; api.sfx.slash(false); api.shake(4); }
+          if (bm.state === 'active') {
+            if (!bm.hit && t > bm.warn + 90 && t < bm.warn + bm.act - 60) {
+              if (this.inBeam(bm, B)) bm.acc += api.dt; else bm.acc = Math.max(0, bm.acc - api.dt * 0.5);
+              if (bm.acc > 170 && api.isPlaying) {
+                bm.hit = true;
+                var hx = bm.type === 'vert' ? bm.pos * w : B.cx * w, hy = bm.type === 'vert' ? B.chest[1] * h : bm.pos * h;
+                api.loseLife(hx, hy, 'ОЖОГ!');
+                api.comboReset();
+                api.particles(hx, hy, COL.crimson, 28);
+                api.shake(20); api.sfx.bomb();
+                popText(this, now, 'ОЖОГ!', w / 2, h * 0.4, COL.crimson, bigPx(api, 0.1));
+                doFlash(this, now, COL.crimson, 550);
+                this.glitch = 450;
+              }
+            }
+            if (t >= bm.warn + bm.act) {
+              if (!bm.hit && api.isPlaying) {
+                this.survived++;
+                var pts = bm.type === 'vert' ? 70 : 60;
+                var lbl = pick(['УВЕРНУЛСЯ!', 'ЧИСТО!', 'НИНДЗЯ!']);
+                api.addScore(pts, B.cx * w, B.head[1] * h, lbl);
+                popText(this, now, lbl, w / 2, h * 0.36, COL.jade, bigPx(api, 0.09));
+                doFlash(this, now, COL.jade, 300);
+                api.particles(B.cx * w, B.chest[1] * h, COL.jade, 16);
+                api.sfx.bell();
+              }
+              this.beams.splice(i, 1);
+              if (!this.beams.length) this.nextAt = now + Math.max(650, 2000 - this.survived * 70);
+            }
+          }
+        }
+        this.drawBaseline(api, B);
+        for (var j = 0; j < this.beams.length; j++) this.drawBeam(api, this.beams[j]);
+        this.drawSparks(api);
+        // survived counter (small, top-right)
+        glowText(ctx, 'x' + this.survived, w * 0.95, topY(api) + bigPx(api, 0.045) * 0.7, bigPx(api, 0.045), COL.cyan, 0.9, 'right');
+        drawFx(api, this);
+        drawFlash(api, this);
+        drawBanner(api, this, 'LASER MATRIX', B.real ?
+          ['Низкий луч — ПРЫГАЙ', 'Высокий луч — ПРИСЯДЬ', 'Вертикальный — ШАГ В СТОРОНУ'] :
+          ['Без камеры: руки ВВЕРХ = прыжок', 'Руки ВНИЗ = присед, руки в сторону = шаг'], COL.crimson);
+      } catch (e) { reportErr(api, this, e); }
+    }
+  };
+
+  // ==========================================================================
+  // 3. RHYTHM DOJO
+  // ==========================================================================
+  var ZCOLS = [1 / 6, 3 / 6, 5 / 6], ZROWS = [0.32, 0.70];
+  AG.beatdojo = {
+    id: 'beatdojo', title: 'RHYTHM DOJO', icon: '🥁', hands: 'gloves',
+    reset: function (api) {
+      fxInit(this);
+      this.t0 = api ? api.now : 0;
+      this.beatMs = 600; // 100 BPM
+      this.songStart = this.t0 + 2400;
+      this.targets = [];
+      this.rings = [];
+      this.hits = 0;
+      this.missStreak = 0;
+      this.spawned = 0;
+      this.nextBeat = 4; // first target hits on beat 4 after start
+      this.lastZone = -1;
+      this.lastBeatIdx = -1;
+      this.glovePrev = {};
+      this.cool = { left: 0, right: 0 };
+      this._errCount = 0;
+    },
+    level: function () {
+      var n = this.hits;
+      return {
+        every: n < 10 ? 2 : (n < 24 ? 2 : 1),
+        approach: n < 10 ? 1300 : (n < 24 ? 1200 : 1050),
+        maxVis: n < 24 ? 2 : 3,
+        cross: n >= 30 ? 0.25 : 0
+      };
+    },
+    radius: function (api) { return Math.max(34, Math.min(api.w, api.h) * 0.085); },
+    spawnDue: function (api) {
+      var lv = this.level(), now = api.now;
+      var hitT = this.songStart + this.nextBeat * this.beatMs;
+      if (now < hitT - lv.approach) return;
+      var vis = 0;
+      for (var i = 0; i < this.targets.length; i++) if (!this.targets[i].done) vis++;
+      if (vis >= lv.maxVis) { this.nextBeat += lv.every; return; }
+      var zone, g = 0;
+      do { zone = Math.floor(Math.random() * 6); } while ((zone === this.lastZone) && g++ < 6);
+      this.lastZone = zone;
+      var col = zone % 3, row = Math.floor(zone / 3);
+      var color = col === 0 ? 'left' : (col === 2 ? 'right' : 'any');
+      if (lv.cross && color !== 'any' && Math.random() < lv.cross) color = color === 'left' ? 'right' : 'left';
+      if (this.hits < 4 && col === 1) color = 'any';
+      this.spawned++;
+      this.targets.push({ id: this.spawned, zone: zone, x: ZCOLS[col], y: ZROWS[row], color: color, hitT: hitT, appr: lv.approach, done: false, res: '', tDone: 0 });
+      this.nextBeat += lv.every;
+    },
+    tcolor: function (c) { return c === 'left' ? COL.blue : (c === 'right' ? COL.red : COL.gold); },
+    resolve: function (api, tg, res, gl) {
+      var w = api.w, h = api.h, x = tg.x * w, y = tg.y * h, now = api.now, col = this.tcolor(tg.color);
+      tg.done = true; tg.res = res; tg.tDone = now;
+      if (res === 'perfect' || res === 'good') {
+        var perfect = res === 'perfect';
+        this.hits++; this.missStreak = 0;
+        api.addScore(perfect ? 100 : 50, x, y, perfect ? 'ИДЕАЛЬНО' : 'ХОРОШО');
+        popText(this, now, perfect ? 'ИДЕАЛЬНО' : 'ХОРОШО', x, y - this.radius(api) * 1.6, perfect ? COL.gold : COL.jade, bigPx(api, 0.06));
+        api.particles(x, y, col, perfect ? 22 : 12);
+        if (perfect) api.particles(x, y, '#ffffff', 8);
+        api.sfx.hit(false);
+        api.shake(perfect ? 6 : 3);
+        this.rings.push({ x: x, y: y, t0: now, color: col, big: perfect });
+      } else if (res === 'wrong') {
+        this.missStreak = 0;
+        api.comboReset();
+        popText(this, now, 'НЕ ТА РУКА', x, y - this.radius(api) * 1.6, COL.crimson, bigPx(api, 0.05));
+        api.particles(x, y, '#888888', 8);
+      } else { // miss
+        this.missStreak++;
+        api.comboReset();
+        popText(this, now, 'МИМО', x, y - this.radius(api) * 1.6, '#9aa4b8', bigPx(api, 0.05));
+        if (this.missStreak >= 3) {
+          this.missStreak = 0;
+          api.loseLife(x, y, '3 ПРОМАХА');
+          api.shake(14); api.sfx.bomb();
+          doFlash(this, now, COL.crimson, 500);
+          popText(this, now, '3 ПРОМАХА!', w / 2, h * 0.5, COL.crimson, bigPx(api, 0.09));
+        }
+      }
+      if (this.rings.length > 8) this.rings.shift();
+    },
+    drawZones: function (api, pulse) {
+      var ctx = api.ctx, w = api.w, h = api.h, r = this.radius(api);
+      ctx.save();
+      ctx.lineWidth = 2;
+      for (var z = 0; z < 6; z++) {
+        var x = ZCOLS[z % 3] * w, y = ZROWS[Math.floor(z / 3)] * h;
+        ctx.strokeStyle = hexA(COL.cyan, 0.10 + 0.12 * pulse);
+        ctx.beginPath();
+        for (var k = 0; k < 6; k++) { // hexagon marker
+          var a = Math.PI / 6 + k * Math.PI / 3, rx = x + Math.cos(a) * r * 1.15, ry = y + Math.sin(a) * r * 1.15;
+          if (k === 0) ctx.moveTo(rx, ry); else ctx.lineTo(rx, ry);
+        }
+        ctx.closePath(); ctx.stroke();
+      }
+      ctx.restore();
+    },
+    drawTarget: function (api, tg) {
+      var ctx = api.ctx, w = api.w, h = api.h, r = this.radius(api), now = api.now;
+      var x = tg.x * w, y = tg.y * h, col = this.tcolor(tg.color);
+      var tt = tg.hitT - now; // ms until perfect
+      var appear = clamp(1 - (tt - tg.appr * 0.85) / (tg.appr * 0.15), 0, 1);
+      var near = Math.abs(tt) < 160;
+      ctx.save();
+      ctx.globalAlpha = appear;
+      // glow halo
+      var g = radGrad(ctx, x, y, r * 0.3, r * (near ? 2.1 : 1.7));
+      g.addColorStop(0, hexA(col, near ? 0.55 : 0.35)); g.addColorStop(1, hexA(col, 0));
+      ctx.fillStyle = g; ctx.beginPath(); circle(ctx, x, y, r * (near ? 2.1 : 1.7)); ctx.fill();
+      // body disc
+      var d = radGrad(ctx, x - r * 0.3, y - r * 0.35, r * 0.1, r * 1.05);
+      d.addColorStop(0, '#ffffff'); d.addColorStop(0.25, col); d.addColorStop(1, hexA(col, 0.35));
+      ctx.fillStyle = d; ctx.beginPath(); circle(ctx, x, y, r); ctx.fill();
+      ctx.lineWidth = Math.max(3, r * 0.1); ctx.strokeStyle = near ? '#ffffff' : 'rgba(255,255,255,0.75)';
+      ctx.stroke();
+      ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(255,255,255,0.45)';
+      ctx.beginPath(); circle(ctx, x, y, r * 0.62); ctx.stroke();
+      ctx.restore();
+      var label = tg.color === 'left' ? 'Л' : (tg.color === 'right' ? 'П' : '★');
+      glowText(ctx, label, x, y + r * 0.04, Math.max(28, r * 0.85), '#ffffff', appear);
+      // approach ring
+      if (tt > -120) {
+        var k = clamp(tt / tg.appr, 0, 1);
+        var rr = r * (1 + 2.3 * k);
+        ctx.save();
+        ctx.globalAlpha = clamp(0.35 + (1 - k) * 0.65, 0, 1) * appear;
+        ctx.lineWidth = Math.max(4, r * 0.12) + 7;
+        ctx.strokeStyle = 'rgba(4,6,14,0.7)';
+        ctx.beginPath(); circle(ctx, x, y, rr); ctx.stroke();
+        ctx.lineWidth = Math.max(5, r * 0.14);
+        ctx.strokeStyle = near ? '#ffffff' : col;
+        ctx.shadowColor = col; ctx.shadowBlur = near ? 18 : 8;
+        ctx.beginPath(); circle(ctx, x, y, rr); ctx.stroke();
+        ctx.restore();
+      }
+    },
+    drawRings: function (api) {
+      var ctx = api.ctx, now = api.now, r = this.radius(api);
+      for (var i = this.rings.length - 1; i >= 0; i--) {
+        var g = this.rings[i], t = (now - g.t0) / 450;
+        if (t >= 1 || t < 0) { this.rings.splice(i, 1); continue; }
+        ctx.save();
+        ctx.globalAlpha = 1 - t;
+        ctx.lineWidth = (g.big ? 12 : 7) * (1 - t) + 1;
+        ctx.strokeStyle = g.color;
+        ctx.beginPath(); circle(ctx, g.x, g.y, r * (1 + t * (g.big ? 1.8 : 1.2))); ctx.stroke();
+        ctx.restore();
+      }
+    },
+    drawBeatBar: function (api, beatIdx, phase) {
+      var ctx = api.ctx, w = api.w, h = api.h;
+      var y = h * 0.955, gap = h * 0.05, x0 = w / 2 - gap * 1.5;
+      ctx.save();
+      for (var i = 0; i < 4; i++) {
+        var on = ((beatIdx % 4) + 4) % 4 === i;
+        var rad = on ? h * 0.014 * (1 + 0.5 * (1 - phase)) : h * 0.009;
+        ctx.fillStyle = on ? (i === 0 ? COL.gold : COL.cyan) : 'rgba(255,255,255,0.25)';
+        ctx.beginPath(); circle(ctx, x0 + i * gap, y, rad); ctx.fill();
+      }
+      ctx.restore();
+    },
+    frame: function (api) {
+      try {
+        if (!this.fx) this.reset(api);
+        var ctx = api.ctx, w = api.w, h = api.h, now = api.now;
+        var sT = now - this.songStart;
+        var beatIdx = Math.floor(sT / this.beatMs);
+        var phase = ((sT % this.beatMs) + this.beatMs) % this.beatMs / this.beatMs; // 0 at beat
+        var pulse = Math.pow(1 - phase, 3);
+        // background beat pulse (soft, translucent)
+        if (sT > 0) {
+          ctx.save();
+          var bg = radGrad(ctx, w / 2, h * 0.5, h * 0.1, Math.max(w, h) * 0.7);
+          bg.addColorStop(0, hexA(COL.cyan, 0.0));
+          bg.addColorStop(1, hexA(beatIdx % 4 === 0 ? COL.gold : COL.cyan, 0.10 * pulse));
+          ctx.fillStyle = bg; ctx.fillRect(0, 0, w, h);
+          ctx.restore();
+        }
+        this.drawZones(api, sT > 0 ? pulse : 0);
+        if (api.isPlaying) this.spawnDue(api);
+
+        // hit detection
+        var gl = api.gloves || [], r = this.radius(api);
+        for (var gi = 0; gi < gl.length; gi++) {
+          var g = gl[gi];
+          if (!g || !fin(g.x) || !fin(g.y)) continue;
+          var sp = fin(g.speed) ? g.speed : 0;
+          if (sp < 8 || !api.isPlaying) continue;
+          if (this.cool[g.id] && now < this.cool[g.id]) continue;
+          var best = null, bestTT = 1e9;
+          for (var ti = 0; ti < this.targets.length; ti++) {
+            var tg = this.targets[ti];
+            if (tg.done) continue;
+            var dx = g.x - tg.x * w, dy = g.y - tg.y * h;
+            if (dx * dx + dy * dy > (r * 1.35) * (r * 1.35)) continue;
+            var tt = tg.hitT - now;
+            if (tt > 480 || tt < -300) continue;
+            if (Math.abs(tt) < Math.abs(bestTT)) { best = tg; bestTT = tt; }
+          }
+          if (best) {
+            this.cool[g.id] = now + 160;
+            if (best.color !== 'any' && best.color !== g.id) this.resolve(api, best, 'wrong', g);
+            else this.resolve(api, best, Math.abs(bestTT) < 150 ? 'perfect' : 'good', g);
+          }
+        }
+        // misses + cleanup
+        for (var mi = this.targets.length - 1; mi >= 0; mi--) {
+          var t2 = this.targets[mi];
+          if (!t2.done && now - t2.hitT > 300) {
+            if (api.isPlaying) this.resolve(api, t2, 'miss', null); else { t2.done = true; t2.tDone = now; t2.res = 'idle'; }
+          }
+          if (t2.done && now - t2.tDone > 250) this.targets.splice(mi, 1);
+        }
+        // draw: later targets underneath, soonest on top
+        var order = this.targets.slice().sort(function (a, b) { return b.hitT - a.hitT; });
+        for (var di = 0; di < order.length; di++) {
+          var tg2 = order[di];
+          if (tg2.done) {
+            var k = clamp((now - tg2.tDone) / 250, 0, 1);
+            if (tg2.res === 'perfect' || tg2.res === 'good') continue;
+            ctx.save(); ctx.globalAlpha = 1 - k;
+            ctx.strokeStyle = tg2.res === 'wrong' ? COL.crimson : '#5a6478'; ctx.lineWidth = 4;
+            ctx.beginPath(); circle(ctx, tg2.x * w, tg2.y * h, r * (1 - 0.3 * k)); ctx.stroke();
+            ctx.restore();
+          } else this.drawTarget(api, tg2);
+        }
+        this.drawRings(api);
+        if (sT > 0) this.drawBeatBar(api, beatIdx, phase);
+        if (this.missStreak > 0) {
+          glowText(ctx, 'ПРОМАХИ: ' + this.missStreak + '/3', w * 0.95, topY(api) + bigPx(api, 0.038) * 0.7, bigPx(api, 0.038), COL.crimson, 0.9, 'right');
+        }
+        drawFx(api, this);
+        drawFlash(api, this);
+        drawBanner(api, this, 'RHYTHM DOJO', ['Бей мишень, когда кольцо сожмётся', 'СИНЯЯ — левой, КРАСНАЯ — правой, ★ — любой'], COL.gold);
+      } catch (e) { reportErr(api, this, e); }
+    }
+  };
+})();
 
 </script>
   <script>
@@ -1835,50 +3902,178 @@ function resizeCanvas() {
 window.addEventListener('resize', resizeCanvas);
 resizeCanvas();
 
+// --- Реестр игр (v6): 2 встроенные + 3 из пайплайна (плагины window.ArenaGames) ---
+const GAME_LIST = [
+  { id: 'saber3d', icon: '⚔️', title: '3D SABER SLICER', desc: 'Предметы летят на тебя из 6 зон. Руби катанами, когда они подлетят близко и подсветятся зелёным кольцом.' },
+  { id: 'boxfruit', icon: '🥊', title: 'BOXFRUIT 2D', desc: 'Боксёрский поединок: бей перчатками по фруктам, не трогай бомбы.' },
+  { id: 'brainwall', icon: '🧱', title: 'BRAIN WALL 3D', desc: 'На тебя летит стена с вырезом-позой. Успей принять позу всем телом!' },
+  { id: 'laserdodge', icon: '⚡', title: 'LASER MATRIX', desc: 'Прыгай, приседай и уходи в сторону от лазерных лучей.' },
+  { id: 'beatdojo', icon: '🥁', title: 'RHYTHM DOJO', desc: 'Бей по мишеням в ритм: синие — левой, красные — правой рукой.' }
+];
+
+function getPluginGame(id) {
+  if (id === 'saber3d' || id === 'boxfruit') return null;
+  const reg = window.ArenaGames;
+  const g = reg && reg[id];
+  return g && typeof g.frame === 'function' ? g : null;
+}
+
+function isGameAvailable(id) {
+  return id === 'boxfruit' || (id === 'saber3d' && Boolean(window.Saber3DEngine)) || Boolean(getPluginGame(id));
+}
+
+let pluginLastFrameAt = 0;
+function buildPluginApi(nowTime) {
+  const dt = pluginLastFrameAt ? Math.max(0, Math.min(50, nowTime - pluginLastFrameAt)) : 16;
+  pluginLastFrameAt = nowTime;
+  return {
+    ctx,
+    w: canvas.width,
+    h: canvas.height,
+    topInset: Math.round(canvas.height * 0.14), // зона под DOM-панелью HUD
+    now: nowTime,
+    dt,
+    isPlaying: state.isPlaying,
+    score: state.score,
+    combo: state.combo,
+    gloves: state.gloves,
+    body: state.bodySilhouette,
+    addScore: pluginAddScore,
+    loseLife: pluginLoseLife,
+    comboReset() {
+      state.combo = 0;
+      updateHUD();
+    },
+    particles(x, y, color, count) {
+      createExplosionParticles(x, y, color, Math.min(40, count || 12));
+    },
+    shake(amount) {
+      state.screenShake = Math.max(state.screenShake, Math.min(30, amount || 10));
+    },
+    sfx: {
+      hit(heavy) {
+        sfx.playPunch(Boolean(heavy));
+      },
+      bomb() {
+        sfx.playBomb();
+      },
+      bell() {
+        sfx.playBell();
+      },
+      slash(crit) {
+        if (window.playKatanaSlashSound) window.playKatanaSlashSound(sfx, Boolean(crit));
+        else sfx.playPunch(Boolean(crit));
+      }
+    },
+    safeEllipse,
+    safeRoundRect
+  };
+}
+
+function pluginAddScore(points, x, y, label) {
+  if (!state.isPlaying) return;
+  state.combo++;
+  state.punchesCount++;
+  state.kcal = +(state.punchesCount * 0.16).toFixed(1);
+  const comboMult = state.combo >= 10 ? 3 : state.combo >= 5 ? 2 : 1;
+  const gained = Math.max(0, Math.round((points || 0) * comboMult));
+  state.score += gained;
+  if (state.score > state.bestScore) {
+    state.bestScore = state.score;
+    localStorage.setItem('boxfruit_best', String(state.bestScore));
+  }
+  state.floatingTexts.push({
+    text: (label ? label + ' ' : '') + '+' + gained + (comboMult > 1 ? ' (x' + comboMult + ')' : ''),
+    x: Number.isFinite(x) ? x : canvas.width * 0.5,
+    y: Number.isFinite(y) ? y : canvas.height * 0.4,
+    color: '#ffffff',
+    alpha: 1,
+    vy: -2.6,
+    scale: 1.15
+  });
+  updateHUD();
+}
+
+function pluginLoseLife(x, y, label) {
+  if (!state.isPlaying) return;
+  state.combo = 0;
+  state.lives = Math.max(0, state.lives - 1);
+  state.screenShake = Math.max(state.screenShake, 18);
+  state.floatingTexts.push({
+    text: label || '-1 ЩИТ',
+    x: Number.isFinite(x) ? x : canvas.width * 0.5,
+    y: Number.isFinite(y) ? y : canvas.height * 0.4,
+    color: '#ff3b4b',
+    alpha: 1,
+    vy: -3,
+    scale: 1.3
+  });
+  updateHUD();
+  if (state.lives <= 0) endRound('Закончились щиты!');
+}
+
+function resetActiveGame() {
+  if (window.Saber3DEngine) window.Saber3DEngine.reset();
+  const pg = getPluginGame(state.activeGame);
+  if (pg && typeof pg.reset === 'function') {
+    try {
+      pg.reset(buildPluginApi(performance.now()));
+    } catch (e) {}
+  }
+}
+
 function setGameMode(gameId) {
-  state.activeGame = gameId === 'boxfruit' ? 'boxfruit' : 'saber3d';
+  state.activeGame = isGameAvailable(gameId) ? gameId : 'saber3d';
   if (window.Saber3DEngine) {
     window.Saber3DEngine.selectedGameId = state.activeGame;
-    window.Saber3DEngine.reset();
   }
   state.fruits = [];
   state.halves = [];
+  resetActiveGame();
 
-  const btnSaber = document.getElementById('btn-select-saber3d');
-  const btnBox = document.getElementById('btn-select-boxfruit');
+  const info = GAME_LIST.find((g) => g.id === state.activeGame) || GAME_LIST[0];
+  document.querySelectorAll('[data-game-id]').forEach((btn) => {
+    const selected = btn.getAttribute('data-game-id') === state.activeGame;
+    btn.classList.toggle('selected', selected);
+  });
   const descEl = document.getElementById('selected-game-desc');
-
-  if (btnSaber && btnBox) {
-    if (state.activeGame === 'saber3d') {
-      btnSaber.className = 'btn btn-blue';
-      btnSaber.textContent = '⚔️ Игра 2: 3D SABER SLICER (Сабли из 3D-глубины) ✓';
-      btnBox.className = 'btn btn-secondary';
-      btnBox.textContent = '🥊 Игра 1: BOXFRUIT 2D (Боксёрские перчатки)';
-      if (descEl) {
-        descEl.innerHTML =
-          '<strong>Выбрана игра: ⚔️ 3D SABER SLICER.</strong> Предметы вылетают из глубины 3D-туннеля прямо на тебя и растут в размере — руби их светящимися плазменными саблями!';
-      }
-    } else {
-      btnBox.className = 'btn btn-gold';
-      btnBox.textContent = '🥊 Игра 1: BOXFRUIT 2D (Боксёрские перчатки) ✓';
-      btnSaber.className = 'btn btn-secondary';
-      btnSaber.textContent = '⚔️ Игра 2: 3D SABER SLICER (Сабли из 3D-глубины)';
-      if (descEl) {
-        descEl.innerHTML =
-          '<strong>Выбрана игра: 🥊 BOXFRUIT 2D.</strong> Классический боксёрский поединок с яркими векторными фруктами, перчатками и минами (а рядом можно включить 3D Сабли!).';
-      }
-    }
+  if (descEl) {
+    descEl.innerHTML = '<strong>Выбрана игра: ' + info.icon + ' ' + info.title + '.</strong> ' + info.desc;
   }
 
   if (hudSwitchGameBtn) {
-    hudSwitchGameBtn.textContent =
-      state.activeGame === 'saber3d' ? '⚔️ Режим: 3D Сабли' : '🥊 Режим: 2D Бокс';
+    hudSwitchGameBtn.textContent = info.icon + ' ' + info.title + ' ▸';
     hudSwitchGameBtn.className = state.activeGame === 'saber3d' ? 'btn btn-blue' : 'btn btn-gold';
   }
   state.lastSpawnAt = 0;
   if (!state.isPlaying && state.mode !== 'phone') {
     state.isPlaying = true;
   }
+}
+
+function nextGameId() {
+  const ids = GAME_LIST.map((g) => g.id).filter(isGameAvailable);
+  const idx = ids.indexOf(state.activeGame);
+  return ids[(idx + 1) % ids.length] || 'saber3d';
+}
+
+function buildGameSelector() {
+  const wrap = document.getElementById('game-selector');
+  if (!wrap) return;
+  wrap.innerHTML = '';
+  GAME_LIST.forEach((g) => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'game-chip';
+    btn.setAttribute('data-game-id', g.id);
+    btn.innerHTML = '<span class="game-chip-icon">' + g.icon + '</span><span class="game-chip-title">' + g.title + '</span>';
+    if (!isGameAvailable(g.id)) {
+      btn.disabled = true;
+      btn.title = 'Модуль игры не загрузился';
+    }
+    btn.addEventListener('click', () => setGameMode(g.id));
+    wrap.appendChild(btn);
+  });
 }
 
 // --- Auto-Derive 4-Digit Room Code from Shared Home Wi-Fi Public IP ---
@@ -2033,7 +4228,7 @@ function handleIncomingRemotePayload(payload) {
     }
   } else if (payload.type === 'SWITCH_GAME') {
     if (state.mode !== 'phone') {
-      setGameMode(state.activeGame === 'saber3d' ? 'boxfruit' : 'saber3d');
+      setGameMode(nextGameId());
     }
   }
 }
@@ -2695,21 +4890,18 @@ function gameLoop(timestamp) {
     const nowTime = performance.now();
     ctx.save();
 
-  ctx.fillStyle = '#0b0e14';
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-  const grad = ctx.createRadialGradient(
-    canvas.width * 0.5,
-    canvas.height * 0.25,
-    40,
-    canvas.width * 0.5,
-    canvas.height * 0.5,
-    canvas.width * 0.75
-  );
-  grad.addColorStop(0, 'rgba(36, 48, 72, 0.48)');
-  grad.addColorStop(1, 'rgba(11, 14, 20, 0.95)');
-  ctx.fillStyle = grad;
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  // Фон: ночное неон-додзё (кэшируется). Фоллбэк — тёмная заливка.
+  if (window.ArenaVisuals) {
+    try {
+      window.ArenaVisuals.drawBackground(ctx, canvas.width, canvas.height, nowTime, state.combo);
+    } catch (e) {
+      ctx.fillStyle = '#0b0e14';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+  } else {
+    ctx.fillStyle = '#0b0e14';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  }
 
   if (state.screenShake > 0.4) {
     const dx = (Math.random() - 0.5) * state.screenShake;
@@ -2731,36 +4923,31 @@ function gameLoop(timestamp) {
     state.lastSpawnAt = 0;
   }
 
+  const pluginGame = getPluginGame(state.activeGame);
+
   // Draw 3D tunnel grid if in 3D Saber Slicer mode, or illuminated 2D Boxing Ring in 2D mode
   const is3DSaberMode = state.activeGame === 'saber3d' && Boolean(window.Saber3DEngine);
   if (is3DSaberMode) {
     try {
       window.Saber3DEngine.draw3DArenaBackdrop(ctx, canvas.width, canvas.height, state.combo);
     } catch (e) {}
-  } else {
-    // Подсветка 2D боксёрского ринга (чтобы экран ТВ никогда не казался пустым тёмным фоном)
+  } else if (!pluginGame) {
+    // Канаты боксёрского ринга
     ctx.save();
-    ctx.strokeStyle = 'rgba(0, 210, 255, 0.14)';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(canvas.width * 0.5, canvas.height * 0.54, Math.min(canvas.width, canvas.height) * 0.34, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.strokeStyle = 'rgba(255, 184, 0, 0.12)';
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.moveTo(0, canvas.height * 0.84);
-    ctx.lineTo(canvas.width, canvas.height * 0.84);
-    ctx.stroke();
-    ctx.restore();
-  }
-
-  if (state.bodySilhouette) {
-    try {
-      drawArenaBodySilhouette(ctx, state.bodySilhouette);
-    } catch (e) {
-      lastRenderError = 'silhouette: ' + (e && e.message ? e.message : String(e));
-      try { ctx.restore(); } catch (e2) {}
+    const ropeColors = ['rgba(255, 59, 75, 0.35)', 'rgba(255, 255, 255, 0.22)', 'rgba(0, 210, 255, 0.35)'];
+    for (let r = 0; r < 3; r++) {
+      const y = canvas.height * (0.56 + r * 0.06);
+      ctx.strokeStyle = ropeColors[r];
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(canvas.width * 0.04, y);
+      ctx.quadraticCurveTo(canvas.width * 0.5, y + 14, canvas.width * 0.96, y);
+      ctx.stroke();
     }
+    ctx.fillStyle = 'rgba(255, 184, 0, 0.5)';
+    ctx.fillRect(canvas.width * 0.035, canvas.height * 0.53, 10, canvas.height * 0.2);
+    ctx.fillRect(canvas.width * 0.965 - 10, canvas.height * 0.53, 10, canvas.height * 0.2);
+    ctx.restore();
   }
 
   // Ultra-fast 60fps hand/saber tracking with velocity lead prediction
@@ -2800,7 +4987,35 @@ function gameLoop(timestamp) {
     if (g.trail.length > 7) g.trail.shift();
   });
 
-  if (is3DSaberMode) {
+  // Персонаж-самурай: рисуется по скелету с телефона (или в стойке по умолчанию, пока телефон не подключён)
+  if (state.mode !== 'phone' && window.ArenaVisuals) {
+    try {
+      // В 3D-сабле самурай — полупрозрачная голограмма, чтобы не закрывать центральную зону с летящими предметами
+      const samuraiAlpha = is3DSaberMode ? 0.42 : pluginGame ? 0.55 : 0.7;
+      window.ArenaVisuals.drawSamurai(ctx, state.bodySilhouette, state.gloves, canvas.width, canvas.height, nowTime, samuraiAlpha);
+    } catch (e) {
+      lastRenderError = 'samurai: ' + (e && e.message ? e.message : String(e));
+    }
+  } else if (state.bodySilhouette) {
+    try {
+      drawArenaBodySilhouette(ctx, state.bodySilhouette);
+    } catch (e) {}
+  }
+
+  if (pluginGame) {
+    // --- PIPELINE GAMES (Brain Wall / Laser Matrix / Rhythm Dojo) ---
+    try {
+      pluginGame.frame(buildPluginApi(nowTime));
+    } catch (e) {
+      lastRenderError = pluginGame.id + ': ' + (e && e.message ? e.message : String(e));
+    }
+    state.gloves.forEach((g) => {
+      try {
+        if (pluginGame.hands === 'gloves') drawBoxingGlove(ctx, g);
+        else if (pluginGame.hands === 'katana' && window.ArenaVisuals) window.ArenaVisuals.drawKatana(ctx, g, canvas.width, canvas.height);
+      } catch (e) {}
+    });
+  } else if (is3DSaberMode) {
     // --- 3D SABER SLICER MODE (Objects fly from z=1.0 toward z=0.0) ---
     const eng = window.Saber3DEngine;
     const sabers = state.gloves.map((g) => eng.computeSaberSegment(g, canvas.width, canvas.height));
@@ -2822,22 +5037,21 @@ function gameLoop(timestamp) {
     for (let i = eng.objects3D.length - 1; i >= 0; i--) {
       const obj = eng.objects3D[i];
       obj.z -= obj.zSpeed;
-      const progress = 1 - obj.z;
-      // Smoothly interpolate X/Y from vanishing point toward player's strike zone with an arc lift
-      obj.worldX = obj.targetWorldX * progress;
-      obj.worldY = obj.targetWorldY * progress - Math.sin(progress * Math.PI) * obj.arcLift;
       obj.rotation += obj.vRotation;
 
-      const proj = eng.project3D(obj.worldX, obj.worldY, obj.z, canvas.width, canvas.height);
-      const radius = Math.max(12, obj.baseRadius * proj.scale);
+      // Проекция в одной из 6 зон экрана: предмет вылетает из глубины своей зоны и растёт по мере приближения
+      const proj = eng.projectLane(obj, canvas.width, canvas.height);
+      const radius = Math.max(10, obj.baseRadius * proj.scale);
 
-      // Check saber blade collision when object is within reachable 3D depth (z < 0.52)
-      if (obj.z < 0.52 && obj.z > 0.03) {
+      // Проверка глубины: резать можно ТОЛЬКО когда предмет подлетел близко (z <= STRIKE_Z) и стал крупным.
+      // Далёкие маленькие предметы сабля пролетает насквозь, даже если в 2D-проекции касается их.
+      obj.inStrikeZone = obj.z <= eng.STRIKE_Z && obj.z > 0.02;
+      if (obj.inStrikeZone) {
         for (let gIdx = 0; gIdx < state.gloves.length; gIdx++) {
           const g = state.gloves[gIdx];
           if (!g.active) continue;
           const sb = sabers[gIdx];
-          if (eng.segmentCircleHit(sb.handleX, sb.handleY, sb.tipX, sb.tipY, proj.screenX, proj.screenY, radius + 24)) {
+          if (eng.segmentCircleHit(sb.handleX, sb.handleY, sb.tipX, sb.tipY, proj.screenX, proj.screenY, radius + 8)) {
             trigger3DSaberSlice(obj, proj.screenX, proj.screenY, radius, g, sb);
             break;
           }
@@ -2850,7 +5064,7 @@ function gameLoop(timestamp) {
       }
 
       // Passed behind the camera / screen
-      if (obj.z <= 0.03) {
+      if (obj.z <= 0.02) {
         if (!obj.isBomb && state.isPlaying) {
           state.combo = 0;
           updateHUD();
@@ -2888,10 +5102,11 @@ function gameLoop(timestamp) {
       } catch (e) {}
     }
 
-    // Draw glowing Plasma Sabers in player's hands
+    // Draw katanas (or plasma sabers as fallback) in player's hands
     state.gloves.forEach((g) => {
       try {
-        eng.drawPlasmaSaber(ctx, g, canvas.width, canvas.height);
+        if (window.ArenaVisuals) window.ArenaVisuals.drawKatana(ctx, g, canvas.width, canvas.height);
+        else eng.drawPlasmaSaber(ctx, g, canvas.width, canvas.height);
       } catch (e) {}
     });
   } else {
@@ -3083,9 +5298,7 @@ function startRound() {
   state.halves = [];
   state.particles = [];
   state.floatingTexts = [];
-  if (window.Saber3DEngine) {
-    window.Saber3DEngine.reset();
-  }
+  resetActiveGame();
   // Важно: не спавним синхронно и не вычитаем 900мс из performance.now(),
   // потому что в gameLoop(timestamp) на части браузеров timestamp < performance.now(),
   // из-за чего (timestamp - state.lastSpawnAt) становится отрицательным и фрукты никогда не спавнятся!
@@ -3220,17 +5433,11 @@ function connectPhonePeerJs(roomCode) {
 }
 
 // --- Wire Up UI Buttons ---
-const btnSelectSaber = document.getElementById('btn-select-saber3d');
-if (btnSelectSaber) {
-  btnSelectSaber.addEventListener('click', () => setGameMode('saber3d'));
-}
-const btnSelectBox = document.getElementById('btn-select-boxfruit');
-if (btnSelectBox) {
-  btnSelectBox.addEventListener('click', () => setGameMode('boxfruit'));
-}
+buildGameSelector();
+setGameMode('saber3d');
 if (hudSwitchGameBtn) {
   hudSwitchGameBtn.addEventListener('click', () => {
-    setGameMode(state.activeGame === 'saber3d' ? 'boxfruit' : 'saber3d');
+    setGameMode(nextGameId());
   });
 }
 const btnPhoneSwitchGame = document.getElementById('btn-phone-switch-game');
