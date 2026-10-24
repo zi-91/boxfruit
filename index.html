@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>MOTION ARENA TV v7.0 3D PRO — 3D Saber Slicer & BoxFruit</title>
-  <meta name="description" content="Игровая ТВ-консоль со смартфоном (MediaPipe Pose 60 FPS): 3D Saber Slicer (предметы летят из глубины экрана на игрока) и BoxFruit Arena." />
+  <title>MOTION ARENA TV v8.0 ARCANE 3D — WebGL Three.js & 3D Saber Slicer</title>
+  <meta name="description" content="Игровая ТВ-консоль со смартфоном (MediaPipe Pose 60 FPS + Three.js WebGL 3D Arcane Shader): 3D Saber Slicer и BoxFruit Arena." />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚔️</text></svg>" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -541,14 +541,18 @@ h1.game-title {
 }
 
 </style>
-  <!-- MediaPipe Pose (Full Body 33 Landmarks), MQTT over WSS, PeerJS (WebRTC), and QRCode.js -->
+  <!-- Three.js WebGL 3D Engine + GLTFLoader + MediaPipe Pose + MQTT + PeerJS + QRCode -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/mqtt@5.10.1/dist/mqtt.min.js" crossorigin="anonymous"></script>
   <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js" crossorigin="anonymous"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" crossorigin="anonymous"></script>
 </head>
 <body>
-  <!-- Fullscreen Arena Canvas -->
+  <!-- Dedicated Three.js WebGL 3D Viewport (Arcane Shader Engine) -->
+  <div id="webgl-mount" style="position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+  <!-- Fullscreen Arena 2D Overlay / Fallback Canvas -->
   <canvas id="game-canvas"></canvas>
 
   <!-- Top HUD Bar (During Active Game) -->
@@ -559,6 +563,9 @@ h1.game-title {
       </button>
       <button id="btn-hud-switch-game" class="btn btn-gold" type="button">
         🥊 Режим: 2D Бокс
+      </button>
+      <button id="btn-hud-camera-3d" class="btn btn-secondary" type="button" style="border-color: #00f0ff; color: #00f0ff;">
+        🎥 3D: Ракурс Arcane (3/4)
       </button>
       <div class="hud-stat">
         <span class="hud-label">Счёт</span>
@@ -606,7 +613,7 @@ h1.game-title {
             <h1 class="game-title">
               MOTION ARENA TV
               <span style="display: inline-block; font-size: 18px; background: var(--accent-gold); color: #0b0e14; padding: 5px 12px; border-radius: 8px; vertical-align: middle; margin-left: 8px; font-weight: 900;">
-                ВЕРСИЯ: v7.0 3D PRO
+                ВЕРСИЯ: v8.0 ARCANE 3D (WebGL)
               </span>
             </h1>
           </div>
@@ -3360,6 +3367,1470 @@ window.playKatanaSlashSound = playKatanaSlashSound;
 </script>
   <script>
 // ============================================================================
+// MOTION ARENA TV v8.0 — 🎬 TRUE WEBGL 3D ENGINE (THREE.JS + ARCANE SHADER)
+// ============================================================================
+// Настоящий 3D-движок на Three.js (WebGL) со стилизацией под Fortiche "ARCANE",
+// "Hi-Fi Rush", "Ghostrunner" и "Beat Saber":
+// 1. Полноценный 3D-персонаж:
+//    - Загрузка настоящего 3D SkinnedMesh (Xbot.glb с костями mixamorig) +
+//      детализированный скульптурный 3D Кибер-Самурай (3D-броня, маска Они со
+//      светящимся визором, 3D-шлем Кабуто с рогами Кувагата, Hextech-ядро в груди,
+//      развевающийся в 3D плащ на синусоидальной физике и парные 3D-катаны в руках).
+//    - Реальный 3D-скелет (Плечи, Локти, Кисти, Позвоночник, Голова), управляемый
+//      в реальном времени от MediaPipe Pose (с телефона или веб-камеры).
+// 2. Кастомный шейдер в стиле "ARCANE" (Fortiche Production):
+//    - Процедурная текстура живописных мазков кисти (Painterly Brushstroke Map)
+//    - Ступенчатый 3-тоновый шейдинг (Cel/Painterly Shading)
+//    - Двухцветный Fresnel Rim Light (Hextech Cyan #00f0ff слева + Shimmer Magenta #ff1e6b справа)
+//    - Контурная 3D-обводка тушью (Inverted Hull BackSide Ink Outline)
+// 3. Настоящая 3D-сцена и 3D-объекты:
+//    - Мокрый неоновый пол с отражениями и реальными 3D-тенями (PCFSoftShadowMap)
+//    - 3D-ворота Тории и колонны Зауна / Нео-Токио в перспективе с объёмным туманом
+//    - 3D-объекты (Hextech-кристалл с гироскопами, 3D-драгонфрут с шипами, 3D-мина,
+//      3D-арбуз с рельефными дольками), которые разлетаются на две настоящие
+//      3D-полусферы с внутренней мякотью и 3D-искрами при ударе катаной!
+// ============================================================================
+
+(function () {
+  if (typeof window === 'undefined') return;
+
+  const ArcaneWebGL3D = {
+    active: true,
+    initialized: false,
+    renderer: null,
+    scene: null,
+    camera: null,
+    clock: null,
+
+    // 3 режима 3D-камеры (переключаются кнопкой в HUD)
+    cameraModeIdx: 0,
+    cameraModes: [
+      {
+        id: 'arcane34',
+        label: '🎥 3D: Ракурс Arcane (3/4)',
+        pos: { x: -1.55, y: 1.82, z: 4.15 },
+        look: { x: 0.28, y: 1.32, z: -5.5 },
+        charPos: { x: -0.68, y: 0.0, z: 1.05 },
+        charRotY: Math.PI - 0.42 // 3/4 разворот: видна и 3D-грудь/маска Они, и 3D-коридор впереди!
+      },
+      {
+        id: 'heroFront',
+        label: '🎥 3D: Лицом (Боевая стойка)',
+        pos: { x: 0.0, y: 1.68, z: 4.35 },
+        look: { x: 0.0, y: 1.28, z: -6.0 },
+        charPos: { x: -0.82, y: 0.0, z: 0.65 },
+        charRotY: -0.52 // Персонаж стоит вполоборота лицом к зрителю и рубит летящие цели!
+      },
+      {
+        id: 'shoulderVR',
+        label: '🎥 3D: Из-за плеча (Спина)',
+        pos: { x: 0.0, y: 2.08, z: 4.55 },
+        look: { x: 0.0, y: 1.25, z: -8.0 },
+        charPos: { x: 0.0, y: 0.0, z: 1.25 },
+        charRotY: Math.PI // Классический вид со спины
+      }
+    ],
+
+    // Ссылки на 3D-узлы персонажа
+    characterRoot: null,
+    proceduralRig: null,
+    gltfModel: null,
+    gltfBones: {},
+    capeMesh: null,
+    capeBasePositions: null,
+    leftBladeTipWorld: null,
+    rightBladeTipWorld: null,
+    leftBladeBaseWorld: null,
+    rightBladeBaseWorld: null,
+    leftTrailMesh: null,
+    rightTrailMesh: null,
+    leftTrailHistory: [],
+    rightTrailHistory: [],
+
+    // Пул 3D-объектов, половинок и 3D-частиц
+    targetMeshes: new Map(),
+    halfMeshes: [],
+    sparkParticles: [],
+    floorGridTex: null,
+    painterlyTex: null,
+    toriiPulseLights: [],
+
+    cycleCameraMode() {
+      this.cameraModeIdx = (this.cameraModeIdx + 1) % this.cameraModes.length;
+      const mode = this.cameraModes[this.cameraModeIdx];
+      const btn = document.getElementById('btn-hud-camera-3d');
+      if (btn) btn.textContent = mode.label;
+      return mode;
+    },
+
+    // Генерация процедурной текстуры живописных мазков кисти в стиле Fortiche / Arcane
+    createPainterlyBrushTexture() {
+      const c = document.createElement('canvas');
+      c.width = 256;
+      c.height = 256;
+      const g = c.getContext('2d');
+      g.fillStyle = '#808080';
+      g.fillRect(0, 0, 256, 256);
+
+      // Мазки кисти разного тона для рельефа и шероховатости (Gouache / Oil Brushstrokes)
+      for (let i = 0; i < 420; i++) {
+        const x = Math.random() * 256;
+        const y = Math.random() * 256;
+        const w = 14 + Math.random() * 42;
+        const h = 3 + Math.random() * 9;
+        const angle = (Math.random() - 0.5) * 0.45;
+        const lum = Math.floor(90 + Math.random() * 110);
+        g.save();
+        g.translate(x, y);
+        g.rotate(angle);
+        g.fillStyle = ` rgba(${lum},${lum},${lum},0.28)`.trim();
+        g.fillRect(-w * 0.5, -h * 0.5, w, h);
+        g.restore();
+      }
+      const tex = new THREE.CanvasTexture(c);
+      tex.wrapS = THREE.RepeatWrapping;
+      tex.wrapT = THREE.RepeatWrapping;
+      tex.repeat.set(2, 2);
+      return tex;
+    },
+
+    // Генерация неонового мокрого покрытия пола Додзё / моста Зауна
+    createNeonFloorTexture() {
+      const c = document.createElement('canvas');
+      c.width = 512;
+      c.height = 512;
+      const g = c.getContext('2d');
+
+      // Тёмный мокрый базальт/индиго
+      g.fillStyle = '#070913';
+      g.fillRect(0, 0, 512, 512);
+
+      // Живописные мазки камня/досок
+      for (let i = 0; i < 260; i++) {
+        g.fillStyle = i % 2 === 0 ? 'rgba(18, 26, 48, 0.35)' : 'rgba(8, 12, 24, 0.45)';
+        g.fillRect(Math.random() * 512, Math.random() * 512, 25 + Math.random() * 90, 4 + Math.random() * 14);
+      }
+
+      // Неоновые энергетические швы Hextech
+      g.strokeStyle = 'rgba(0, 240, 255, 0.32)';
+      g.lineWidth = 3;
+      g.strokeRect(4, 4, 504, 504);
+
+      g.strokeStyle = 'rgba(255, 30, 120, 0.16)';
+      g.lineWidth = 2;
+      g.beginPath();
+      g.moveTo(256, 0);
+      g.lineTo(256, 512);
+      g.moveTo(0, 256);
+      g.lineTo(512, 256);
+      g.stroke();
+
+      const tex = new THREE.CanvasTexture(c);
+      tex.wrapS = THREE.RepeatWrapping;
+      tex.wrapT = THREE.RepeatWrapping;
+      tex.repeat.set(10, 22);
+      return tex;
+    },
+
+    // Кастомный материал в стиле Fortiche "ARCANE":
+    // Ступенчатый свет + двухцветный Fresnel Rim Light (Cyan слева, Magenta справа) + мазки кисти
+    createArcaneMaterial(opts = {}) {
+      if (!this.painterlyTex) this.painterlyTex = this.createPainterlyBrushTexture();
+      const baseColor = new THREE.Color(opts.color !== undefined ? opts.color : 0x263248);
+      const rimColorLeft = new THREE.Color(opts.rimLeft !== undefined ? opts.rimLeft : 0x00f0ff);
+      const rimColorRight = new THREE.Color(opts.rimRight !== undefined ? opts.rimRight : 0xff1e78);
+      const rimPower = opts.rimPower !== undefined ? opts.rimPower : 2.15;
+      const rimStrength = opts.rimStrength !== undefined ? opts.rimStrength : 0.85;
+
+      const mat = new THREE.MeshStandardMaterial({
+        color: baseColor,
+        roughness: opts.roughness !== undefined ? opts.roughness : 0.48,
+        metalness: opts.metalness !== undefined ? opts.metalness : 0.25,
+        roughnessMap: this.painterlyTex,
+        bumpMap: this.painterlyTex,
+        bumpScale: opts.bumpScale !== undefined ? opts.bumpScale : 0.018,
+        emissive: new THREE.Color(opts.emissive !== undefined ? opts.emissive : 0x000000),
+        emissiveIntensity: opts.emissiveIntensity !== undefined ? opts.emissiveIntensity : 1.0,
+        skinning: Boolean(opts.skinning),
+        side: opts.side || THREE.FrontSide
+      });
+
+      mat.onBeforeCompile = (shader) => {
+        shader.uniforms.uRimLeft = { value: rimColorLeft };
+        shader.uniforms.uRimRight = { value: rimColorRight };
+        shader.uniforms.uRimPower = { value: rimPower };
+        shader.uniforms.uRimStrength = { value: rimStrength };
+
+        shader.fragmentShader =
+          `
+          uniform vec3 uRimLeft;
+          uniform vec3 uRimRight;
+          uniform float uRimPower;
+          uniform float uRimStrength;
+          ` + shader.fragmentShader;
+
+        // Инъекция двухцветного Arcane Fresnel Rim Light и контрастного разделения светотени
+        shader.fragmentShader = shader.fragmentShader.replace(
+          '#include <dithering_fragment>',
+          `
+          vec3 arcaneViewDir = normalize(vViewPosition);
+          vec3 arcaneNormal = normalize(normal);
+          float fresnel = 1.0 - max(dot(arcaneViewDir, arcaneNormal), 0.0);
+          float rimBand = smoothstep(0.32, 0.88, pow(fresnel, uRimPower));
+          vec3 sideRimColor = mix(uRimLeft, uRimRight, clamp(arcaneNormal.x * 0.5 + 0.5, 0.0, 1.0));
+          // Контрастный живописный тон (Arcane S-curve contrast)
+          gl_FragColor.rgb = mix(gl_FragColor.rgb * 0.82, smoothstep(0.02, 0.98, gl_FragColor.rgb) * 1.14, 0.65);
+          gl_FragColor.rgb += sideRimColor * rimBand * uRimStrength;
+          #include <dithering_fragment>
+          `
+        );
+      };
+
+      return mat;
+    },
+
+    // Добавление контурной 3D-обводки тушью (Inverted Hull Ink Outline как в Arcane / Guilty Gear / Hi-Fi Rush)
+    addInkOutline(mesh, thickness = 0.018, outlineColor = 0x05030c) {
+      if (!mesh || !mesh.geometry) return;
+      const outlineMat = new THREE.MeshBasicMaterial({
+        color: outlineColor,
+        side: THREE.BackSide
+      });
+      outlineMat.onBeforeCompile = (shader) => {
+        shader.uniforms.uOutlineThickness = { value: thickness };
+        shader.vertexShader =
+          'uniform float uOutlineThickness;\n' +
+          shader.vertexShader.replace(
+            '#include <begin_vertex>',
+            '#include <begin_vertex>\n transformed += normal * uOutlineThickness;'
+          );
+      };
+      const outlineMesh = new THREE.Mesh(mesh.geometry, outlineMat);
+      outlineMesh.name = 'inkOutline';
+      mesh.add(outlineMesh);
+    },
+
+    init() {
+      if (this.initialized || typeof THREE === 'undefined') return false;
+      const mount = document.getElementById('webgl-mount');
+      if (!mount) return false;
+
+      this.initialized = true;
+      this.clock = new THREE.Clock();
+
+      const w = Math.max(window.innerWidth || 1280, 320);
+      const h = Math.max(window.innerHeight || 720, 240);
+
+      // 1. WebGLRenderer с ACESFilmicToneMapping и мягкими 3D-тенями
+      this.renderer = new THREE.WebGLRenderer({
+        antialias: true,
+        alpha: false,
+        powerPreference: 'high-performance'
+      });
+      this.renderer.setSize(w, h);
+      this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+      this.renderer.shadowMap.enabled = true;
+      this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      if (THREE.ACESFilmicToneMapping !== undefined) {
+        this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        this.renderer.toneMappingExposure = 1.18;
+      }
+      if (THREE.sRGBEncoding !== undefined) {
+        this.renderer.outputEncoding = THREE.sRGBEncoding;
+      }
+
+      mount.innerHTML = '';
+      mount.appendChild(this.renderer.domElement);
+
+      // 2. 3D-Сцена и атмосферный туман Зауна / Кибер-Додзё
+      this.scene = new THREE.Scene();
+      this.scene.background = new THREE.Color(0x070614);
+      this.scene.fog = new THREE.FogExp2(0x09071a, 0.032);
+
+      // 3. Перспективная 3D-камера
+      this.camera = new THREE.PerspectiveCamera(50, w / h, 0.1, 160);
+      const initialCam = this.cameraModes[this.cameraModeIdx];
+      this.camera.position.set(initialCam.pos.x, initialCam.pos.y, initialCam.pos.z);
+      this.camera.lookAt(initialCam.look.x, initialCam.look.y, initialCam.look.z);
+
+      // 4. Трёхточечное драматическое освещение в стиле Arcane
+      this.setupLighting();
+
+      // 5. Архитектура 3D-Арены (Мокрый неоновый мост, 3D-ворота Тории, колонны, Hextech-портал)
+      this.build3DArenaEnvironment();
+
+      // 6. Полноценный 3D-Персонаж (Скульптурный 3D Кибер-Самурай + подгрузка Xbot.glb SkinnedMesh)
+      this.build3DHeroCharacter();
+      this.loadGLTFCharacterOverlay();
+
+      // 7. 3D-ленты взмахов катан
+      this.init3DSlashTrails();
+
+      window.addEventListener('resize', () => this.onResize());
+      return true;
+    },
+
+    onResize() {
+      if (!this.renderer || !this.camera) return;
+      const w = Math.max(window.innerWidth || 1280, 320);
+      const h = Math.max(window.innerHeight || 720, 240);
+      this.renderer.setSize(w, h);
+      this.camera.aspect = w / h;
+      this.camera.updateProjectionMatrix();
+    },
+
+    setupLighting() {
+      // Мягкий полусферический свет (небо Индиго vs. отблеск пола Маджента/Циан)
+      const hemi = new THREE.HemisphereLight(0x4f75ff, 0x1a0b2e, 0.65);
+      hemi.position.set(0, 15, 0);
+      this.scene.add(hemi);
+
+      // Главный драматический рисующий свет (Key Light с 3D-тенями)
+      const dirLight = new THREE.DirectionalLight(0xffe6b8, 1.55);
+      dirLight.position.set(5.5, 11.0, 6.5);
+      dirLight.castShadow = true;
+      dirLight.shadow.mapSize.width = 1024;
+      dirLight.shadow.mapSize.height = 1024;
+      dirLight.shadow.camera.near = 0.5;
+      dirLight.shadow.camera.far = 38;
+      const d = 10;
+      dirLight.shadow.camera.left = -d;
+      dirLight.shadow.camera.right = d;
+      dirLight.shadow.camera.top = d;
+      dirLight.shadow.camera.bottom = -d;
+      dirLight.shadow.bias = -0.0008;
+      this.scene.add(dirLight);
+
+      // Контурный Hextech Cyan свет слева-сзади (как в Arcane)
+      const cyanRimLight = new THREE.PointLight(0x00f0ff, 2.8, 18, 1.6);
+      cyanRimLight.position.set(-4.2, 2.8, -1.5);
+      this.scene.add(cyanRimLight);
+
+      // Контурный Shimmer Magenta свет справа-сзади
+      const magentaRimLight = new THREE.PointLight(0xff1e78, 2.6, 18, 1.6);
+      magentaRimLight.position.set(4.2, 2.6, -1.5);
+      this.scene.add(magentaRimLight);
+    },
+
+    build3DArenaEnvironment() {
+      // 1. Мокрый отражающий 3D-пол арены (принимает настоящие 3D-тени!)
+      this.floorGridTex = this.createNeonFloorTexture();
+      const floorGeo = new THREE.PlaneGeometry(26, 60);
+      const floorMat = new THREE.MeshStandardMaterial({
+        color: 0xffffff,
+        map: this.floorGridTex,
+        roughness: 0.22,
+        metalness: 0.35,
+        bumpMap: this.floorGridTex,
+        bumpScale: 0.02
+      });
+      const floorMesh = new THREE.Mesh(floorGeo, floorMat);
+      floorMesh.rotation.x = -Math.PI / 2;
+      floorMesh.position.set(0, 0, -14);
+      floorMesh.receiveShadow = true;
+      this.scene.add(floorMesh);
+
+      // 2. Светящиеся боковые 3D-рельсы арены
+      const railGeo = new THREE.BoxGeometry(0.14, 0.14, 52);
+      const leftRailMat = new THREE.MeshBasicMaterial({ color: 0x00f0ff });
+      const rightRailMat = new THREE.MeshBasicMaterial({ color: 0xff1e78 });
+
+      const leftRail = new THREE.Mesh(railGeo, leftRailMat);
+      leftRail.position.set(-4.6, 0.08, -14);
+      this.scene.add(leftRail);
+
+      const rightRail = new THREE.Mesh(railGeo, rightRailMat);
+      rightRail.position.set(4.6, 0.08, -14);
+      this.scene.add(rightRail);
+
+      // 3. Ряд объёмных 3D-колонн с неоновыми фонарями, уходящих в глубину
+      const pillarGeo = new THREE.CylinderGeometry(0.24, 0.30, 5.8, 12);
+      const pillarMat = this.createArcaneMaterial({
+        color: 0x181e34,
+        rimLeft: 0x00f0ff,
+        rimRight: 0xff1e78,
+        roughness: 0.45
+      });
+      const lanternGeo = new THREE.OctahedronGeometry(0.28, 1);
+
+      [-4.5, -10.5, -16.5, -22.5].forEach((zPos, idx) => {
+        [-5.2, 5.2].forEach((xPos, sideIdx) => {
+          const p = new THREE.Mesh(pillarGeo, pillarMat);
+          p.position.set(xPos, 2.9, zPos);
+          p.castShadow = true;
+          p.receiveShadow = true;
+          this.scene.add(p);
+
+          // Светящийся Hextech-кристалл/фонарь на каждой колонне
+          const isCyan = (idx + sideIdx) % 2 === 0;
+          const lMat = new THREE.MeshBasicMaterial({
+            color: isCyan ? 0x00f0ff : 0xff2a6d
+          });
+          const lantern = new THREE.Mesh(lanternGeo, lMat);
+          lantern.position.set(xPos * 0.84, 3.6, zPos);
+          this.scene.add(lantern);
+        });
+      });
+
+      // 4. Монументальные 3D-ворота Тории (Hextech Portal на глубине z = -21)
+      const toriiGroup = new THREE.Group();
+      toriiGroup.position.set(0, 0, -21);
+
+      const toriiMat = this.createArcaneMaterial({
+        color: 0xb91c1c,
+        emissive: 0x450a0a,
+        rimLeft: 0xffb800,
+        rimRight: 0xff2a5f,
+        roughness: 0.35
+      });
+
+      const colGeo = new THREE.CylinderGeometry(0.38, 0.46, 7.6, 16);
+      const leftCol = new THREE.Mesh(colGeo, toriiMat);
+      leftCol.position.set(-3.4, 3.8, 0);
+      leftCol.castShadow = true;
+      toriiGroup.add(leftCol);
+
+      const rightCol = new THREE.Mesh(colGeo, toriiMat);
+      rightCol.position.set(3.4, 3.8, 0);
+      rightCol.castShadow = true;
+      toriiGroup.add(rightCol);
+
+      // Верхняя перекладина Касаги с изогнутыми концами
+      const topBeamGeo = new THREE.BoxGeometry(9.6, 0.55, 0.65);
+      const topBeam = new THREE.Mesh(topBeamGeo, toriiMat);
+      topBeam.position.set(0, 7.3, 0);
+      toriiGroup.add(topBeam);
+
+      const lowerBeamGeo = new THREE.BoxGeometry(7.8, 0.38, 0.48);
+      const lowerBeam = new THREE.Mesh(lowerBeamGeo, toriiMat);
+      lowerBeam.position.set(0, 5.8, 0);
+      toriiGroup.add(lowerBeam);
+
+      // Hextech-кольцо портала внутри ворот Тории (откуда вылетают 3D-предметы!)
+      const portalTorusGeo = new THREE.TorusGeometry(2.45, 0.10, 16, 48);
+      const portalTorusMat = new THREE.MeshBasicMaterial({ color: 0x00f0ff });
+      this.portalRingMesh = new THREE.Mesh(portalTorusGeo, portalTorusMat);
+      this.portalRingMesh.position.set(0, 3.3, 0.2);
+      toriiGroup.add(this.portalRingMesh);
+
+      const innerPortalGeo = new THREE.TorusGeometry(1.75, 0.06, 12, 36);
+      const innerPortalMat = new THREE.MeshBasicMaterial({ color: 0xff1e78 });
+      this.innerPortalRingMesh = new THREE.Mesh(innerPortalGeo, innerPortalMat);
+      this.innerPortalRingMesh.position.set(0, 3.3, 0.3);
+      toriiGroup.add(this.innerPortalRingMesh);
+
+      this.scene.add(toriiGroup);
+
+      // 5. Огромная объёмная луна Нео-Токио / Пилтовера в небе
+      const moonGeo = new THREE.SphereGeometry(5.5, 32, 32);
+      const moonMat = new THREE.MeshBasicMaterial({ color: 0xe2e8ff });
+      const moonMesh = new THREE.Mesh(moonGeo, moonMat);
+      moonMesh.position.set(11, 14, -46);
+      this.scene.add(moonMesh);
+    },
+
+    // ========================================================================
+    // ПОСТРОЕНИЕ СКУЛЬПТУРНОГО 3D-ПЕРСОНАЖА В СТИЛЕ "ARCANE" + XBOT SKINNED MESH
+    // ========================================================================
+    build3DHeroCharacter() {
+      this.characterRoot = new THREE.Group();
+      const camPreset = this.cameraModes[this.cameraModeIdx];
+      this.characterRoot.position.set(camPreset.charPos.x, camPreset.charPos.y, camPreset.charPos.z);
+      this.characterRoot.rotation.y = camPreset.charRotY;
+      this.scene.add(this.characterRoot);
+
+      // 3D-пьедестал под ногами бойца (голографическое кольцо на полу)
+      const pedGeo = new THREE.RingGeometry(0.68, 0.82, 36);
+      const pedMat = new THREE.MeshBasicMaterial({
+        color: 0x00f0ff,
+        side: THREE.DoubleSide,
+        transparent: true,
+        opacity: 0.65
+      });
+      const pedMesh = new THREE.Mesh(pedGeo, pedMat);
+      pedMesh.rotation.x = -Math.PI / 2;
+      pedMesh.position.y = 0.02;
+      this.characterRoot.add(pedMesh);
+
+      // Материалы в стиле Fortiche "Arcane"
+      const darkArmorMat = this.createArcaneMaterial({
+        color: 0x1b2338,
+        rimLeft: 0x00f0ff,
+        rimRight: 0xff1e78,
+        roughness: 0.38,
+        metalness: 0.42
+      });
+      const crimsonArmorMat = this.createArcaneMaterial({
+        color: 0x991b2e,
+        rimLeft: 0x00f0ff,
+        rimRight: 0xffb800,
+        roughness: 0.35,
+        metalness: 0.32
+      });
+      const goldTrimMat = this.createArcaneMaterial({
+        color: 0xf59e0b,
+        emissive: 0x451a03,
+        rimLeft: 0xffffff,
+        rimRight: 0xffb800,
+        roughness: 0.25,
+        metalness: 0.75
+      });
+      const clothMat = this.createArcaneMaterial({
+        color: 0x13192b,
+        rimLeft: 0x00f0ff,
+        rimRight: 0xff1e78,
+        roughness: 0.78,
+        metalness: 0.08,
+        side: THREE.DoubleSide
+      });
+      const cyanGlowMat = new THREE.MeshBasicMaterial({ color: 0x00f0ff });
+      const magentaGlowMat = new THREE.MeshBasicMaterial({ color: 0xff1e78 });
+
+      // Иерархический 3D-скелет (Pelvis -> Spine -> Chest -> Neck -> Head + Shoulder -> Arm -> ForeArm -> Hand)
+      const rigGroup = new THREE.Group();
+      this.characterRoot.add(rigGroup);
+
+      // 1. ТАЗ (Pelvis) и боевая стойка ног
+      const pelvis = new THREE.Group();
+      pelvis.position.set(0, 0.96, 0);
+      rigGroup.add(pelvis);
+
+      const hipMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.21, 0.18, 0.22, 14), darkArmorMat);
+      hipMesh.castShadow = true;
+      this.addInkOutline(hipMesh, 0.014);
+      pelvis.add(hipMesh);
+
+      // Золотой пояс Оби + 4 пластины набедренной брони Кусадзури
+      const beltMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.225, 0.225, 0.07, 16), goldTrimMat);
+      beltMesh.position.y = 0.06;
+      pelvis.add(beltMesh);
+
+      for (let i = 0; i < 4; i++) {
+        const angle = (i * Math.PI) / 2 + Math.PI / 4;
+        const tasset = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.24, 0.04), crimsonArmorMat);
+        tasset.position.set(Math.sin(angle) * 0.20, -0.10, Math.cos(angle) * 0.18);
+        tasset.rotation.y = angle;
+        tasset.rotation.x = -0.18;
+        this.addInkOutline(tasset, 0.01);
+        pelvis.add(tasset);
+      }
+
+      // Функция создания анатомического 3D-сегмента конечности через LatheGeometry (мышцы + броня)
+      const makeSculptedLimb = (len, rTop, rMid, rBot, mat) => {
+        const pts = [
+          new THREE.Vector2(0.001, 0),
+          new THREE.Vector2(rTop, -len * 0.12),
+          new THREE.Vector2(rMid, -len * 0.48),
+          new THREE.Vector2(rBot, -len * 0.88),
+          new THREE.Vector2(0.001, -len)
+        ];
+        const geo = new THREE.LatheGeometry(pts, 14);
+        const m = new THREE.Mesh(geo, mat);
+        m.castShadow = true;
+        m.receiveShadow = true;
+        this.addInkOutline(m, 0.014);
+        return m;
+      };
+
+      // Ноги в боевой стойке
+      [-1, 1].forEach((side) => {
+        const upLeg = new THREE.Group();
+        upLeg.position.set(side * 0.14, -0.06, 0);
+        upLeg.rotation.z = side * 0.11;
+        upLeg.rotation.x = side < 0 ? -0.14 : 0.12;
+        pelvis.add(upLeg);
+
+        upLeg.add(makeSculptedLimb(0.46, 0.11, 0.125, 0.085, clothMat));
+
+        const lowerLeg = new THREE.Group();
+        lowerLeg.position.set(0, -0.45, 0);
+        lowerLeg.rotation.x = 0.16;
+        upLeg.add(lowerLeg);
+
+        // Поножи Сунеатэ с неоновой полосой
+        lowerLeg.add(makeSculptedLimb(0.46, 0.09, 0.095, 0.065, darkArmorMat));
+
+        const kneeGuard = new THREE.Mesh(new THREE.OctahedronGeometry(0.075, 1), goldTrimMat);
+        kneeGuard.position.set(0, 0, 0.07);
+        lowerLeg.add(kneeGuard);
+
+        const foot = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.09, 0.26), darkArmorMat);
+        foot.position.set(0, -0.45, 0.05);
+        this.addInkOutline(foot, 0.01);
+        lowerLeg.add(foot);
+      });
+
+      // 2. ТОРС (Spine -> Chest) со скульптурной кирасой ДО, Hextech-ядром в груди и 6 узлами позвоночника
+      const spine = new THREE.Group();
+      spine.position.set(0, 0.10, 0);
+      pelvis.add(spine);
+
+      // Анатомический 3D-торс (узкая талия -> широкая грудная клетка)
+      const torsoPts = [
+        new THREE.Vector2(0.17, 0.0),
+        new THREE.Vector2(0.19, 0.16),
+        new THREE.Vector2(0.27, 0.38),
+        new THREE.Vector2(0.24, 0.54),
+        new THREE.Vector2(0.12, 0.58)
+      ];
+      const torsoGeo = new THREE.LatheGeometry(torsoPts, 16);
+      torsoGeo.scale(1.18, 1.0, 0.78); // Анатомическое 3D-сечение грудной клетки
+      const torsoMesh = new THREE.Mesh(torsoGeo, crimsonArmorMat);
+      torsoMesh.castShadow = true;
+      torsoMesh.receiveShadow = true;
+      this.addInkOutline(torsoMesh, 0.016);
+      spine.add(torsoMesh);
+
+      // Нагрудные 3D-пластины и светящийся Hextech-реактор спереди (виден в ракурсах 3/4 и анфас!)
+      const chestPlate = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.26, 0.24), darkArmorMat);
+      chestPlate.position.set(0, 0.36, 0.02);
+      this.addInkOutline(chestPlate, 0.012);
+      spine.add(chestPlate);
+
+      const frontCoreRing = new THREE.Mesh(new THREE.TorusGeometry(0.085, 0.018, 10, 24), goldTrimMat);
+      frontCoreRing.position.set(0, 0.37, 0.145);
+      spine.add(frontCoreRing);
+
+      const frontCoreGem = new THREE.Mesh(new THREE.OctahedronGeometry(0.065, 1), cyanGlowMat);
+      frontCoreGem.position.set(0, 0.37, 0.155);
+      spine.add(frontCoreGem);
+
+      // Спинной 6-узловой реактор позвоночника (Cyber-Spine, как в Cyberpunk / Ghostrunner)
+      for (let n = 0; n < 6; n++) {
+        const nodeMesh = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.042, 0.042, 0.035, 12),
+          n === 0 ? goldTrimMat : cyanGlowMat
+        );
+        nodeMesh.rotation.x = Math.PI / 2;
+        nodeMesh.position.set(0, 0.48 - n * 0.075, -0.155);
+        spine.add(nodeMesh);
+      }
+
+      // 3. РАЗВЕВАЮЩИЙСЯ 3D-ПЛАЩ / ШАРФ В СТИЛЕ "ARCANE" (Анимируемая сетка вершин)
+      const capeGeo = new THREE.PlaneGeometry(0.56, 0.92, 10, 14);
+      this.capeMesh = new THREE.Mesh(capeGeo, clothMat);
+      this.capeMesh.position.set(0, 0.10, -0.21);
+      this.capeMesh.rotation.x = 0.22;
+      this.capeMesh.castShadow = true;
+      this.capeBasePositions = capeGeo.attributes.position.array.slice();
+      spine.add(this.capeMesh);
+
+      // 4. ГОЛОВА, МАСКА ОНИ, СВЕТЯЩИЙСЯ ВИЗОР И 3D-ШЛЕМ КАБУТО
+      const neck = new THREE.Group();
+      neck.position.set(0, 0.58, 0);
+      spine.add(neck);
+
+      const headGroup = new THREE.Group();
+      headGroup.position.set(0, 0.08, 0);
+      neck.add(headGroup);
+
+      // Скульптурная 3D-голова и лицевая маска Они (Menpo)
+      const headSkull = new THREE.Mesh(new THREE.SphereGeometry(0.145, 20, 20), darkArmorMat);
+      headSkull.scale.set(0.92, 1.08, 0.98);
+      this.addInkOutline(headSkull, 0.012);
+      headGroup.add(headSkull);
+
+      // Светящийся неоновый V-образный кибер-визор (глаза как у Ekko/Raiden/Genji)
+      const visorLeft = new THREE.Mesh(new THREE.BoxGeometry(0.068, 0.022, 0.03), cyanGlowMat);
+      visorLeft.position.set(0.048, 0.02, 0.135);
+      visorLeft.rotation.z = -0.18;
+      headGroup.add(visorLeft);
+
+      const visorRight = new THREE.Mesh(new THREE.BoxGeometry(0.068, 0.022, 0.03), cyanGlowMat);
+      visorRight.position.set(-0.048, 0.02, 0.135);
+      visorRight.rotation.z = 0.18;
+      headGroup.add(visorRight);
+
+      // Рельефное забрало маски Они с золотыми клыками
+      const maskJaw = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.08, 0.11, 10), crimsonArmorMat);
+      maskJaw.position.set(0, -0.055, 0.045);
+      headGroup.add(maskJaw);
+
+      // 3D-купол шлема Кабуто + каскадный воротник Сикоро + золотые рога Кувагата
+      const kabutoDome = new THREE.Mesh(
+        new THREE.SphereGeometry(0.175, 24, 16, 0, Math.PI * 2, 0, Math.PI * 0.58),
+        darkArmorMat
+      );
+      kabutoDome.position.y = 0.02;
+      kabutoDome.castShadow = true;
+      this.addInkOutline(kabutoDome, 0.014);
+      headGroup.add(kabutoDome);
+
+      for (let s = 0; s < 3; s++) {
+        const shikoroRing = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.17 + s * 0.028, 0.195 + s * 0.03, 0.045, 18, 1, true, Math.PI * 0.25, Math.PI * 1.5),
+          crimsonArmorMat
+        );
+        shikoroRing.position.set(0, -0.01 - s * 0.042, -0.02);
+        headGroup.add(shikoroRing);
+      }
+
+      // 3D-изогнутые золотые рога Кувагата
+      [-1, 1].forEach((side) => {
+        const hornCurve = new THREE.CatmullRomCurve3([
+          new THREE.Vector3(0, 0.08, 0.155),
+          new THREE.Vector3(side * 0.13, 0.16, 0.14),
+          new THREE.Vector3(side * 0.24, 0.30, 0.09)
+        ]);
+        const hornGeo = new THREE.TubeGeometry(hornCurve, 12, 0.018, 8, false);
+        const hornMesh = new THREE.Mesh(hornGeo, goldTrimMat);
+        this.addInkOutline(hornMesh, 0.008);
+        headGroup.add(hornMesh);
+      });
+
+      // 5. ПЛЕЧИ (Sode), РУКИ, ПРЕДПЛЕЧЬЯ (Kote) И ПАРНЫЕ 3D-ПЛАЗМЕННЫЕ КАТАНЫ
+      const buildArmChain = (isLeft) => {
+        const side = isLeft ? 1 : -1;
+        const accentMat = isLeft ? cyanGlowMat : magentaGlowMat;
+
+        const shoulderPivot = new THREE.Group();
+        shoulderPivot.position.set(side * 0.31, 0.48, 0.0);
+        spine.add(shoulderPivot);
+
+        // Многослойный 3D-наплечник Содэ с золотой окантовкой
+        const pauldronGroup = new THREE.Group();
+        shoulderPivot.add(pauldronGroup);
+        for (let p = 0; p < 3; p++) {
+          const plate = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.125 + p * 0.01, 0.135 + p * 0.012, 0.075, 12, 1, false, -Math.PI * 0.45, Math.PI * 0.9),
+            p === 0 ? crimsonArmorMat : darkArmorMat
+          );
+          plate.rotation.y = side * Math.PI * 0.5;
+          plate.position.set(side * 0.03, -p * 0.055, 0);
+          this.addInkOutline(plate, 0.01);
+          pauldronGroup.add(plate);
+        }
+
+        // Плечевая кость (Upper Arm)
+        const upperArm = new THREE.Group();
+        shoulderPivot.add(upperArm);
+        upperArm.add(makeSculptedLimb(0.34, 0.088, 0.096, 0.072, darkArmorMat));
+
+        // Светящийся локтевой шарнир
+        const elbowPivot = new THREE.Group();
+        elbowPivot.position.set(0, -0.34, 0);
+        upperArm.add(elbowPivot);
+
+        const elbowOrb = new THREE.Mesh(new THREE.SphereGeometry(0.068, 12, 12), accentMat);
+        elbowPivot.add(elbowOrb);
+
+        // Предплечье (ForeArm / Kote)
+        const foreArm = new THREE.Group();
+        elbowPivot.add(foreArm);
+        foreArm.add(makeSculptedLimb(0.33, 0.078, 0.082, 0.058, crimsonArmorMat));
+
+        // Неоновая шина вдоль предплечья
+        const armStrip = new THREE.Mesh(new THREE.BoxGeometry(0.022, 0.24, 0.025), accentMat);
+        armStrip.position.set(side * 0.065, -0.16, 0.03);
+        foreArm.add(armStrip);
+
+        // Кисть (Hand Socket — масштаб 1:1:1!) и 3D-Катана
+        const handSocket = new THREE.Group();
+        handSocket.position.set(0, -0.33, 0);
+        foreArm.add(handSocket);
+
+        const fistMesh = new THREE.Mesh(new THREE.DodecahedronGeometry(0.068, 1), darkArmorMat);
+        this.addInkOutline(fistMesh, 0.01);
+        handSocket.add(fistMesh);
+
+        // 3D-КАТАНА (Рукоять Цука + Золотая Цуба + Светящийся 3D-клинок)
+        const katanaGroup = this.create3DKatanaMesh(isLeft, goldTrimMat, darkArmorMat, accentMat);
+        handSocket.add(katanaGroup);
+
+        return {
+          shoulderPivot,
+          upperArm,
+          elbowPivot,
+          foreArm,
+          handSocket,
+          katanaGroup,
+          bladeBaseNode: katanaGroup.userData.bladeBaseNode,
+          bladeTipNode: katanaGroup.userData.bladeTipNode
+        };
+      };
+
+      const leftArmChain = buildArmChain(true);
+      const rightArmChain = buildArmChain(false);
+
+      this.proceduralRig = {
+        pelvis,
+        spine,
+        neck,
+        headGroup,
+        leftArmChain,
+        rightArmChain
+      };
+    },
+
+    create3DKatanaMesh(isLeft, goldTrimMat, darkArmorMat, accentMat) {
+      const katanaGroup = new THREE.Group();
+      // Наклон катаны вперёд в боевом хвате
+      katanaGroup.rotation.x = -Math.PI * 0.38;
+      katanaGroup.rotation.z = isLeft ? -0.22 : 0.22;
+
+      // 1. Рукоять Цука
+      const handleMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.026, 0.024, 0.30, 10), darkArmorMat);
+      handleMesh.position.y = -0.10;
+      katanaGroup.add(handleMesh);
+
+      // 2. Золотая круглая гарда Цуба
+      const tsubaMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.085, 0.085, 0.022, 18), goldTrimMat);
+      tsubaMesh.position.y = 0.05;
+      katanaGroup.add(tsubaMesh);
+
+      // 3. Плазменный 3D-клинок катаны (внутреннее белое ядро + неоновая оболочка)
+      const bladeLen = 1.28;
+      const coreGeo = new THREE.BoxGeometry(0.018, bladeLen, 0.042);
+      const coreMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+      const bladeCore = new THREE.Mesh(coreGeo, coreMat);
+      bladeCore.position.y = 0.05 + bladeLen * 0.5;
+      katanaGroup.add(bladeCore);
+
+      const glowGeo = new THREE.BoxGeometry(0.042, bladeLen * 1.02, 0.078);
+      const glowMat = new THREE.MeshBasicMaterial({
+        color: isLeft ? 0x00f0ff : 0xff1e78,
+        transparent: true,
+        opacity: 0.46
+      });
+      const bladeGlow = new THREE.Mesh(glowGeo, glowMat);
+      bladeGlow.position.y = 0.05 + bladeLen * 0.5;
+      katanaGroup.add(bladeGlow);
+
+      // Узлы для трекинга мировых 3D-координат основания и острия клинка
+      const bladeBaseNode = new THREE.Object3D();
+      bladeBaseNode.position.set(0, 0.08, 0);
+      katanaGroup.add(bladeBaseNode);
+
+      const bladeTipNode = new THREE.Object3D();
+      bladeTipNode.position.set(0, 0.05 + bladeLen, 0);
+      katanaGroup.add(bladeTipNode);
+
+      katanaGroup.userData = { bladeBaseNode, bladeTipNode };
+      return katanaGroup;
+    },
+
+    // Опциональная подгрузка высокополигонального SkinnedMesh (Xbot.glb) поверх/внутри 3D-доспеха
+    loadGLTFCharacterOverlay() {
+      if (typeof THREE.GLTFLoader !== 'function') return;
+      try {
+        const loader = new THREE.GLTFLoader();
+        loader.load(
+          'https://raw.githubusercontent.com/mrdoob/three.js/r128/examples/models/gltf/Xbot.glb',
+          (gltf) => {
+            if (!gltf || !gltf.scene || !this.characterRoot) return;
+            const model = gltf.scene;
+            const arcaneBodyMat = this.createArcaneMaterial({
+              color: 0x222c46,
+              rimLeft: 0x00f0ff,
+              rimRight: 0xff1e78,
+              roughness: 0.35,
+              metalness: 0.45,
+              skinning: true
+            });
+            const arcaneJointsMat = this.createArcaneMaterial({
+              color: 0x991b2e,
+              emissive: 0x003344,
+              rimLeft: 0x00f0ff,
+              rimRight: 0xffb800,
+              roughness: 0.28,
+              metalness: 0.65,
+              skinning: true
+            });
+
+            model.traverse((obj) => {
+              if (obj.isMesh) {
+                obj.castShadow = true;
+                obj.receiveShadow = true;
+                obj.material = obj.name.includes('Joints') ? arcaneJointsMat : arcaneBodyMat;
+              }
+              if (obj.isBone && obj.name) {
+                this.gltfBones[obj.name] = obj;
+              }
+            });
+
+            this.gltfModel = model;
+            this.characterRoot.add(model);
+          },
+          undefined,
+          () => {}
+        );
+      } catch (e) {}
+    },
+
+    // Инициализация 3D-лент шлейфа взмаха катан в мировом пространстве (X, Y, Z)
+    init3DSlashTrails() {
+      const makeTrailMesh = (colorHex) => {
+        const maxSegs = 12;
+        const geo = new THREE.BufferGeometry();
+        const positions = new Float32Array(maxSegs * 2 * 3);
+        geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        const indices = [];
+        for (let i = 0; i < maxSegs - 1; i++) {
+          const a = i * 2;
+          const b = i * 2 + 1;
+          const c = (i + 1) * 2;
+          const d = (i + 1) * 2 + 1;
+          indices.push(a, b, c, b, d, c);
+        }
+        geo.setIndex(indices);
+        const mat = new THREE.MeshBasicMaterial({
+          color: colorHex,
+          side: THREE.DoubleSide,
+          transparent: true,
+          opacity: 0.58,
+          depthWrite: false
+        });
+        const m = new THREE.Mesh(geo, mat);
+        m.frustumCulled = false;
+        this.scene.add(m);
+        return m;
+      };
+
+      this.leftTrailMesh = makeTrailMesh(0x00f0ff);
+      this.rightTrailMesh = makeTrailMesh(0xff1e78);
+      this.leftBladeTipWorld = new THREE.Vector3();
+      this.rightBladeTipWorld = new THREE.Vector3();
+      this.leftBladeBaseWorld = new THREE.Vector3();
+      this.rightBladeBaseWorld = new THREE.Vector3();
+    },
+
+    updateTrailRibbon(trailMesh, history, baseVec, tipVec) {
+      if (!trailMesh) return;
+      history.unshift({
+        bx: baseVec.x,
+        by: baseVec.y,
+        bz: baseVec.z,
+        tx: tipVec.x,
+        ty: tipVec.y,
+        tz: tipVec.z
+      });
+      const maxSegs = 12;
+      while (history.length > maxSegs) history.pop();
+
+      const posAttr = trailMesh.geometry.attributes.position;
+      const arr = posAttr.array;
+      for (let i = 0; i < maxSegs; i++) {
+        const sample = history[Math.min(i, history.length - 1)] || {
+          bx: baseVec.x,
+          by: baseVec.y,
+          bz: baseVec.z,
+          tx: tipVec.x,
+          ty: tipVec.y,
+          tz: tipVec.z
+        };
+        const shrink = i / maxSegs;
+        const bx = sample.bx + (sample.tx - sample.bx) * shrink * 0.65;
+        const by = sample.by + (sample.ty - sample.by) * shrink * 0.65;
+        const bz = sample.bz + (sample.tz - sample.bz) * shrink * 0.65;
+
+        const idx = i * 6;
+        arr[idx] = bx;
+        arr[idx + 1] = by;
+        arr[idx + 2] = bz;
+        arr[idx + 3] = sample.tx;
+        arr[idx + 4] = sample.ty;
+        arr[idx + 5] = sample.tz;
+      }
+      posAttr.needsUpdate = true;
+    },
+
+    // ========================================================================
+    // СОЗДАНИЕ НАСТОЯЩИХ 3D-МЕШЕЙ ЛЕТЯЩИХ ЦЕЛЕЙ (С ТЕНЬЮ НА ПОЛУ И ЛАЗЕРОМ)
+    // ========================================================================
+    create3DTargetMeshGroup(obj) {
+      const group = new THREE.Group();
+      const bodyGroup = new THREE.Group();
+      group.add(bodyGroup);
+
+      if (obj.isBomb) {
+        // 3D Шипованная Мина Зауна (Jinx Chomper / Spiked Bomb)
+        const coreMat = this.createArcaneMaterial({
+          color: 0x1e293b,
+          emissive: 0x450a0a,
+          rimLeft: 0xff3b4b,
+          rimRight: 0xffb800,
+          roughness: 0.32,
+          metalness: 0.68
+        });
+        const coreMesh = new THREE.Mesh(new THREE.IcosahedronGeometry(0.46, 2), coreMat);
+        coreMesh.castShadow = true;
+        this.addInkOutline(coreMesh, 0.022);
+        bodyGroup.add(coreMesh);
+
+        // 14 конических 3D-шипов во все стороны
+        const spikeMat = new THREE.MeshStandardMaterial({
+          color: 0xef4444,
+          emissive: 0x991b1b,
+          roughness: 0.25,
+          metalness: 0.5
+        });
+        const spikeDirs = [
+          [1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1],
+          [0.7, 0.7, 0.7], [-0.7, 0.7, 0.7], [0.7, -0.7, 0.7], [-0.7, -0.7, 0.7],
+          [0.7, 0.7, -0.7], [-0.7, 0.7, -0.7], [0.7, -0.7, -0.7], [-0.7, -0.7, -0.7]
+        ];
+        spikeDirs.forEach((d) => {
+          const v = new THREE.Vector3(d[0], d[1], d[2]).normalize();
+          const cone = new THREE.Mesh(new THREE.ConeGeometry(0.095, 0.34, 8), spikeMat);
+          cone.position.copy(v.clone().multiplyScalar(0.52));
+          cone.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), v);
+          bodyGroup.add(cone);
+        });
+
+        // Пульсирующее 3D-кольцо опасности
+        const warnRing = new THREE.Mesh(
+          new THREE.TorusGeometry(0.64, 0.025, 10, 28),
+          new THREE.MeshBasicMaterial({ color: 0xff2a5f })
+        );
+        bodyGroup.add(warnRing);
+      } else if (obj.isBonus || obj.id === 'cybercore') {
+        // HEXTECH ПЛАЗМА-ЯДРО ИЗ "ARCANE" (Кристалл + 2 вращающихся золотых 3D-гироскопа!)
+        const crystalMat = this.createArcaneMaterial({
+          color: 0x00f0ff,
+          emissive: 0x0284c7,
+          emissiveIntensity: 1.4,
+          rimLeft: 0xffffff,
+          rimRight: 0x00f0ff,
+          roughness: 0.15,
+          metalness: 0.2
+        });
+        const crystal = new THREE.Mesh(new THREE.OctahedronGeometry(0.44, 0), crystalMat);
+        crystal.castShadow = true;
+        this.addInkOutline(crystal, 0.02);
+        bodyGroup.add(crystal);
+
+        const gyroMat = this.createArcaneMaterial({
+          color: 0xf59e0b,
+          emissive: 0x78350f,
+          rimLeft: 0xffffff,
+          rimRight: 0xffb800,
+          roughness: 0.25,
+          metalness: 0.85
+        });
+        const ring1 = new THREE.Mesh(new THREE.TorusGeometry(0.58, 0.032, 12, 32), gyroMat);
+        const ring2 = new THREE.Mesh(new THREE.TorusGeometry(0.68, 0.026, 12, 32), gyroMat);
+        ring2.rotation.x = Math.PI / 2;
+        bodyGroup.add(ring1);
+        bodyGroup.add(ring2);
+        group.userData.gyroRings = [ring1, ring2];
+      } else {
+        // 3D Скульптурный Кибер-Фрукт с объёмными 3D-ребрами меридианов и орбитальным кольцом
+        const mainMat = this.createArcaneMaterial({
+          color: obj.outerColor || '#10b981',
+          rimLeft: 0x00f0ff,
+          rimRight: 0xffffff,
+          roughness: 0.34,
+          metalness: 0.18
+        });
+        const ribMat = this.createArcaneMaterial({
+          color: obj.stripeColor || '#047857',
+          rimLeft: 0x18e299,
+          rimRight: 0xffb800,
+          roughness: 0.45,
+          metalness: 0.25
+        });
+
+        const sphere = new THREE.Mesh(new THREE.SphereGeometry(0.48, 24, 20), mainMat);
+        sphere.castShadow = true;
+        this.addInkOutline(sphere, 0.022);
+        bodyGroup.add(sphere);
+
+        // 3 объёмных 3D-меридиана (TorusGeometry), опоясывающих сферу в 3D
+        for (let m = 0; m < 3; m++) {
+          const rib = new THREE.Mesh(new THREE.TorusGeometry(0.485, 0.036, 10, 28), ribMat);
+          rib.rotation.y = (m * Math.PI) / 3;
+          bodyGroup.add(rib);
+        }
+
+        // Орбитальное 3D-кольцо захвата цели (вспыхивает изумрудным в зоне удара!)
+        const lockRingMat = new THREE.MeshBasicMaterial({
+          color: 0x00f0ff,
+          transparent: true,
+          opacity: 0.65
+        });
+        const lockRing = new THREE.Mesh(new THREE.TorusGeometry(0.66, 0.024, 10, 32), lockRingMat);
+        bodyGroup.add(lockRing);
+        group.userData.lockRing = lockRing;
+      }
+
+      // 3D-Проекция тени и неонового кольца на полу Додзё + вертикальный лазерный луч!
+      const shadowDisc = new THREE.Mesh(
+        new THREE.RingGeometry(0.28, 0.56, 24),
+        new THREE.MeshBasicMaterial({
+          color: obj.isBomb ? 0xff3b4b : 0x00f0ff,
+          side: THREE.DoubleSide,
+          transparent: true,
+          opacity: 0.65
+        })
+      );
+      shadowDisc.rotation.x = -Math.PI / 2;
+      this.scene.add(shadowDisc);
+
+      const laserGeo = new THREE.CylinderGeometry(0.016, 0.016, 1.0, 6);
+      const laserMat = new THREE.MeshBasicMaterial({
+        color: obj.isBomb ? 0xff3b4b : 0x00f0ff,
+        transparent: true,
+        opacity: 0.35
+      });
+      const laserTether = new THREE.Mesh(laserGeo, laserMat);
+      this.scene.add(laserTether);
+
+      group.userData.bodyGroup = bodyGroup;
+      group.userData.shadowDisc = shadowDisc;
+      group.userData.laserTether = laserTether;
+
+      this.scene.add(group);
+      return group;
+    },
+
+    // Вычисление мировых 3D-координат (worldX, worldY, worldZ) летящего предмета
+    computeObjectWorld3D(obj, LANES) {
+      const lane = (LANES && LANES[obj.laneIdx]) || { col: 1, row: 0, arcLift: 0.16 };
+      const progress = Math.max(0, Math.min(1.08, 1 - obj.z));
+
+      // Летит из портала Тории (z = -20.5) к плоскости клинков игрока (z = +1.3)
+      const worldZ = -20.5 + progress * 21.8;
+
+      // Поперечный разлёт по 3 колонкам (-1.85м, 0м, +1.85м)
+      const targetX = (lane.col - 1) * 1.75;
+      const worldX = targetX * Math.pow(progress, 0.92);
+
+      // Два эшелона высоты в зоне удара (верхний 2.05м, нижний 1.15м) + баллистическая 3D-парабола!
+      const targetY = lane.row === 0 ? 2.02 : 1.14;
+      const startY = 3.15; // Центр портала Тории
+      const parabola = 4 * progress * Math.max(0, 1 - progress * 0.92);
+      const worldY = startY + (targetY - startY) * progress + parabola * 1.35;
+
+      return { worldX, worldY, worldZ, progress };
+    },
+
+    // Спавн двух настоящих 3D-полусфер с мякотью и 3D-искрами при разрезании катаной
+    spawn3DSlicedHalves(obj, worldPos) {
+      if (!this.scene) return;
+      const outerMat = this.createArcaneMaterial({
+        color: obj.outerColor || '#10b981',
+        rimLeft: 0x00f0ff,
+        rimRight: 0xffffff,
+        roughness: 0.35
+      });
+      const fleshMat = new THREE.MeshBasicMaterial({
+        color: obj.fleshColor || '#ff2a5f',
+        side: THREE.DoubleSide
+      });
+
+      [-1, 1].forEach((side) => {
+        const halfGroup = new THREE.Group();
+        halfGroup.position.set(worldPos.worldX, worldPos.worldY, worldPos.worldZ);
+
+        const domeGeo = new THREE.SphereGeometry(0.46, 20, 12, 0, Math.PI * 2, 0, Math.PI * 0.5);
+        const domeMesh = new THREE.Mesh(domeGeo, outerMat);
+        this.addInkOutline(domeMesh, 0.018);
+        halfGroup.add(domeMesh);
+
+        // Плоский срез с яркой сочной мякотью и белым ободком кожуры
+        const capMesh = new THREE.Mesh(new THREE.CircleGeometry(0.45, 20), fleshMat);
+        capMesh.rotation.x = Math.PI / 2;
+        halfGroup.add(capMesh);
+
+        halfGroup.rotation.z = side * 0.6;
+        this.scene.add(halfGroup);
+
+        this.halfMeshes.push({
+          mesh: halfGroup,
+          vx: side * (2.4 + Math.random() * 1.5),
+          vy: 2.2 + Math.random() * 1.4,
+          vz: -1.5 + Math.random() * 2.0,
+          rx: (Math.random() - 0.5) * 6,
+          ry: (Math.random() - 0.5) * 6,
+          rz: side * 5.5,
+          life: 1.0
+        });
+      });
+
+      // 3D-взрыв кубических искр в стиле Arcane / Hi-Fi Rush
+      const sparkGeo = new THREE.OctahedronGeometry(0.065, 0);
+      const sparkMat = new THREE.MeshBasicMaterial({
+        color: obj.fleshColor || 0x00f0ff
+      });
+      for (let s = 0; s < 18; s++) {
+        const sm = new THREE.Mesh(sparkGeo, sparkMat);
+        sm.position.set(worldPos.worldX, worldPos.worldY, worldPos.worldZ);
+        this.scene.add(sm);
+        this.sparkParticles.push({
+          mesh: sm,
+          vx: (Math.random() - 0.5) * 7.5,
+          vy: 1.5 + Math.random() * 5.5,
+          vz: (Math.random() - 0.5) * 6.5,
+          life: 1.0
+        });
+      }
+    },
+
+    // ========================================================================
+    // АНИМАЦИЯ 3D-СКЕЛЕТА ПЕРСОНАЖА ПО ДАННЫМ MEDIAPIPE POSE И ПЕРЧАТОК/САБЕЛЬ
+    // ========================================================================
+    updateCharacterPose(state, w, h, elapsed) {
+      if (!this.characterRoot || !this.proceduralRig) return;
+
+      // Плавный переход 3D-камеры и позиции персонажа при смене ракурса
+      const camTarget = this.cameraModes[this.cameraModeIdx];
+      this.camera.position.x += (camTarget.pos.x - this.camera.position.x) * 0.12;
+      this.camera.position.y += (camTarget.pos.y - this.camera.position.y) * 0.12;
+      this.camera.position.z += (camTarget.pos.z - this.camera.position.z) * 0.12;
+      this.camera.lookAt(camTarget.look.x, camTarget.look.y, camTarget.look.z);
+
+      // Смещение корпуса игрока влево/вправо от камеры телефона (MediaPipe Pose)
+      let bodyShiftX = 0;
+      let torsoLeanZ = 0;
+      if (state.bodySilhouette && state.bodySilhouette.leftShoulder && state.bodySilhouette.rightShoulder) {
+        const midNormalizedX =
+          (state.bodySilhouette.leftShoulder.x + state.bodySilhouette.rightShoulder.x) * 0.5;
+        bodyShiftX = (midNormalizedX - 0.5) * 1.65;
+        torsoLeanZ = (state.bodySilhouette.leftShoulder.y - state.bodySilhouette.rightShoulder.y) * 0.85;
+      }
+
+      const targetCharX = camTarget.charPos.x + bodyShiftX;
+      this.characterRoot.position.x += (targetCharX - this.characterRoot.position.x) * 0.22;
+      this.characterRoot.position.z += (camTarget.charPos.z - this.characterRoot.position.z) * 0.18;
+      // Живое дыхание в боевой стойке
+      this.characterRoot.position.y = Math.sin(elapsed * 3.2) * 0.025;
+      this.characterRoot.rotation.y += (camTarget.charRotY - this.characterRoot.rotation.y) * 0.15;
+
+      const rig = this.proceduralRig;
+      rig.spine.rotation.z = torsoLeanZ;
+      rig.spine.rotation.x = 0.08 + Math.sin(elapsed * 3.2) * 0.03;
+
+      // Анимация 3D-рук по положению рук игрока (state.gloves[0] = left, state.gloves[1] = right)
+      const leftGlove = (state.gloves && state.gloves[0]) || { x: w * 0.32, y: h * 0.68, angle: -0.25 };
+      const rightGlove = (state.gloves && state.gloves[1]) || { x: w * 0.68, y: h * 0.68, angle: 0.25 };
+
+      const applyArmIK = (chain, glove, isLeft) => {
+        const nx = (glove.x / Math.max(1, w) - 0.5) * 2; // [-1..1]
+        const ny = (glove.y / Math.max(1, h) - 0.5) * 2; // [-1..1] (-1 = верх экрана, +1 = низ экрана)
+
+        const side = isLeft ? 1 : -1;
+        // Подъём плеча и вынос руки вперёд в 3D-пространстве
+        const targetPitch = -0.85 - (0.35 - ny) * 1.25;
+        const targetRoll = side * (0.38 + (isLeft ? -nx : nx) * 0.65);
+        const targetYaw = -nx * 0.55;
+
+        chain.shoulderPivot.rotation.x += (targetPitch - chain.shoulderPivot.rotation.x) * 0.35;
+        chain.shoulderPivot.rotation.z += (targetRoll - chain.shoulderPivot.rotation.z) * 0.35;
+        chain.shoulderPivot.rotation.y += (targetYaw - chain.shoulderPivot.rotation.y) * 0.35;
+
+        // Сгиб локтя и доворот кисти с катаной по углу взмаха (glove.angle)
+        chain.elbowPivot.rotation.x = -0.52 + Math.sin(elapsed * 4 + side) * 0.06;
+        chain.handSocket.rotation.z = (glove.angle || 0) * 0.65;
+      };
+
+      applyArmIK(rig.leftArmChain, leftGlove, true);
+      applyArmIK(rig.rightArmChain, rightGlove, false);
+
+      // Синхронизация костей подгруженного Xbot.glb (если он загрузился)
+      if (this.gltfModel && this.gltfBones['mixamorig:LeftArm']) {
+        const bLA = this.gltfBones['mixamorig:LeftArm'];
+        const bRA = this.gltfBones['mixamorig:RightArm'];
+        bLA.rotation.x = rig.leftArmChain.shoulderPivot.rotation.x * 0.6;
+        bLA.rotation.z = -0.55;
+        if (bRA) {
+          bRA.rotation.x = rig.rightArmChain.shoulderPivot.rotation.x * 0.6;
+          bRA.rotation.z = 0.55;
+        }
+      }
+
+      // Синусоидальная 3D-физика ткани плаща (Arcane Wind Cloth Simulation)
+      if (this.capeMesh && this.capeBasePositions) {
+        const posAttr = this.capeMesh.geometry.attributes.position;
+        const arr = posAttr.array;
+        const base = this.capeBasePositions;
+        for (let i = 0; i < arr.length; i += 3) {
+          const origX = base[i];
+          const origY = base[i + 1];
+          // Верхний край плаща (origY ≈ +0.46) закреплён на плечах, нижний развевается на ветру
+          const pinFactor = Math.max(0, (0.46 - origY) / 0.92);
+          arr[i + 2] =
+            base[i + 2] +
+            Math.sin(elapsed * 5.2 - origY * 4.5 + origX * 2.0) * 0.14 * pinFactor -
+            pinFactor * 0.12;
+        }
+        posAttr.needsUpdate = true;
+        this.capeMesh.geometry.computeVertexNormals();
+      }
+
+      // Обновление 3D-лент шлейфов за клинками катан
+      this.characterRoot.updateMatrixWorld(true);
+      rig.leftArmChain.bladeBaseNode.getWorldPosition(this.leftBladeBaseWorld);
+      rig.leftArmChain.bladeTipNode.getWorldPosition(this.leftBladeTipWorld);
+      rig.rightArmChain.bladeBaseNode.getWorldPosition(this.rightBladeBaseWorld);
+      rig.rightArmChain.bladeTipNode.getWorldPosition(this.rightBladeTipWorld);
+
+      this.updateTrailRibbon(this.leftTrailMesh, this.leftTrailHistory, this.leftBladeBaseWorld, this.leftBladeTipWorld);
+      this.updateTrailRibbon(
+        this.rightTrailMesh,
+        this.rightTrailHistory,
+        this.rightBladeBaseWorld,
+        this.rightBladeTipWorld
+      );
+    },
+
+    // ========================================================================
+    // ГЛАВНЫЙ КАДР РЕНДЕРА 3D WEBGL СЦЕНЫ (ВЫЗЫВАЕТСЯ ИЗ gameLoop В game.js)
+    // ========================================================================
+    renderFrame(state, saberEngine, nowTime) {
+      if (!this.initialized) {
+        if (!this.init()) return false;
+      }
+
+      const dt = Math.min(0.05, this.clock.getDelta() || 0.016);
+      const elapsed = this.clock.getElapsedTime();
+      const w = Math.max(window.innerWidth || 1280, 320);
+      const h = Math.max(window.innerHeight || 720, 240);
+
+      // 1. Бегущий вперёд неоновый 3D-пол (ощущение стремительного движения сквозь арену)
+      if (this.floorGridTex) {
+        this.floorGridTex.offset.y = -elapsed * 1.35;
+      }
+      if (this.portalRingMesh) {
+        this.portalRingMesh.rotation.z = elapsed * 0.85;
+      }
+      if (this.innerPortalRingMesh) {
+        this.innerPortalRingMesh.rotation.z = -elapsed * 1.4;
+      }
+
+      // 2. Обновление 3D-позы Кибер-Самурая и 3D-шлейфов катан
+      this.updateCharacterPose(state, w, h, elapsed);
+
+      // 3. Синхронизация летящих 3D-объектов из Saber3DEngine.objects3D с реальными Three.js мешами
+      const activeObjs = new Set();
+      if (saberEngine && Array.isArray(saberEngine.objects3D)) {
+        for (let i = 0; i < saberEngine.objects3D.length; i++) {
+          const obj = saberEngine.objects3D[i];
+          activeObjs.add(obj);
+
+          let group = this.targetMeshes.get(obj);
+          if (!group) {
+            group = this.create3DTargetMeshGroup(obj);
+            this.targetMeshes.set(obj, group);
+          }
+
+          const wp = this.computeObjectWorld3D(obj, saberEngine.LANES);
+          obj._world3D = wp;
+          group.position.set(wp.worldX, wp.worldY, wp.worldZ);
+
+          // Вращение 3D-тела вокруг всех трёх осей (X, Y, Z) — никакой плоской 2D-крутилки!
+          const bodyGroup = group.userData.bodyGroup;
+          if (bodyGroup) {
+            bodyGroup.rotation.x = elapsed * 2.2 + i;
+            bodyGroup.rotation.y = elapsed * 2.8 + (obj.rotation || 0);
+            bodyGroup.rotation.z = (obj.rotation || 0) * 0.7;
+          }
+
+          // Если это Hextech-ядро — крутим 3D-кольца гироскопа в противоположные стороны
+          if (group.userData.gyroRings) {
+            group.userData.gyroRings[0].rotation.x = elapsed * 4.2;
+            group.userData.gyroRings[1].rotation.y = -elapsed * 5.1;
+          }
+
+          // Подсветка 3D-кольца захвата цели при входе в Зону Удара (z <= STRIKE_Z)
+          const isStrike = obj.z <= (saberEngine.STRIKE_Z || 0.32);
+          if (group.userData.lockRing) {
+            group.userData.lockRing.material.color.setHex(isStrike ? 0x18e299 : 0x00f0ff);
+            group.userData.lockRing.material.opacity = isStrike ? 0.95 : 0.42;
+            const s = isStrike ? 1.15 + Math.sin(elapsed * 18) * 0.08 : 1.0;
+            group.userData.lockRing.scale.set(s, s, s);
+          }
+
+          // Обновление 3D-тени на полу и вертикального лазерного перпендикуляра
+          const shadowDisc = group.userData.shadowDisc;
+          if (shadowDisc) {
+            shadowDisc.position.set(wp.worldX, 0.025, wp.worldZ);
+            shadowDisc.material.color.setHex(
+              obj.isBomb ? 0xff3b4b : isStrike ? 0x18e299 : 0x00f0ff
+            );
+          }
+          const laserTether = group.userData.laserTether;
+          if (laserTether) {
+            const hDist = Math.max(0.1, wp.worldY);
+            laserTether.position.set(wp.worldX, hDist * 0.5, wp.worldZ);
+            laserTether.scale.set(1, hDist, 1);
+            laserTether.material.color.setHex(
+              obj.isBomb ? 0xff3b4b : isStrike ? 0x18e299 : 0x00f0ff
+            );
+          }
+
+          // Точная 3D->2D проекция через матрицу Three.js PerspectiveCamera для попаданий саблей!
+          const projVec = new THREE.Vector3(wp.worldX, wp.worldY, wp.worldZ);
+          projVec.project(this.camera);
+          obj._webglScreenX = (projVec.x * 0.5 + 0.5) * w;
+          obj._webglScreenY = (-projVec.y * 0.5 + 0.5) * h;
+
+          const edgeVec = new THREE.Vector3(wp.worldX + 0.52, wp.worldY, wp.worldZ);
+          edgeVec.project(this.camera);
+          const edgeScreenX = (edgeVec.x * 0.5 + 0.5) * w;
+          obj._webglRadius = Math.max(18, Math.abs(edgeScreenX - obj._webglScreenX));
+        }
+      }
+
+      // Удаление мешей разрезанных или улетевших за камеру объектов
+      for (const [obj, group] of this.targetMeshes.entries()) {
+        if (!activeObjs.has(obj)) {
+          if (obj.sliced && obj._world3D) {
+            this.spawn3DSlicedHalves(obj, obj._world3D);
+          }
+          if (group.userData.shadowDisc) this.scene.remove(group.userData.shadowDisc);
+          if (group.userData.laserTether) this.scene.remove(group.userData.laserTether);
+          this.scene.remove(group);
+          this.targetMeshes.delete(obj);
+        }
+      }
+
+      // 4. Физика разлетающихся 3D-половинок в пространстве (X, Y, Z)
+      for (let i = this.halfMeshes.length - 1; i >= 0; i--) {
+        const hm = this.halfMeshes[i];
+        hm.mesh.position.x += hm.vx * dt;
+        hm.mesh.position.y += hm.vy * dt;
+        hm.mesh.position.z += hm.vz * dt;
+        hm.vy -= 9.2 * dt; // Настоящая 3D-гравитация
+        hm.mesh.rotation.x += hm.rx * dt;
+        hm.mesh.rotation.y += hm.ry * dt;
+        hm.mesh.rotation.z += hm.rz * dt;
+        hm.life -= dt * 1.35;
+        if (hm.life <= 0 || hm.mesh.position.y < -1) {
+          this.scene.remove(hm.mesh);
+          this.halfMeshes.splice(i, 1);
+        }
+      }
+
+      // 5. Физика 3D-искр при ударе катаной
+      for (let i = this.sparkParticles.length - 1; i >= 0; i--) {
+        const sp = this.sparkParticles[i];
+        sp.mesh.position.x += sp.vx * dt;
+        sp.mesh.position.y += sp.vy * dt;
+        sp.mesh.position.z += sp.vz * dt;
+        sp.vy -= 11.0 * dt;
+        sp.mesh.rotation.x += 8 * dt;
+        sp.mesh.rotation.y += 8 * dt;
+        sp.life -= dt * 1.8;
+        const sc = Math.max(0.01, sp.life);
+        sp.mesh.scale.set(sc, sc, sc);
+        if (sp.life <= 0) {
+          this.scene.remove(sp.mesh);
+          this.sparkParticles.splice(i, 1);
+        }
+      }
+
+      // 6. Рендер 3D-сцены через WebGLRenderer
+      this.renderer.render(this.scene, this.camera);
+      return true;
+    }
+  };
+
+  window.ArcaneWebGL3D = ArcaneWebGL3D;
+})();
+
+</script>
+  <script>
+// ============================================================================
 // MOTION ARENA TV v5.0 — ⚔️ 3D SABER SLICER + 🥊 BOXFRUIT 2D
 // Сверхбыстрый отклик MediaPipe Pose Lite (60 FPS) + Яркая векторная 3D/2D графика
 // ============================================================================
@@ -4958,8 +6429,18 @@ function gameLoop(timestamp) {
     const nowTime = performance.now();
     ctx.save();
 
-  // Фон: ночное неон-додзё (кэшируется). Фоллбэк — тёмная заливка.
-  if (window.ArenaVisuals) {
+  const pluginGame = getPluginGame(state.activeGame);
+  const is3DSaberMode = state.activeGame === 'saber3d' && Boolean(window.Saber3DEngine);
+  const useWebGL3D = is3DSaberMode && Boolean(window.ArcaneWebGL3D && window.ArcaneWebGL3D.active && window.THREE);
+  const webglMountEl = document.getElementById('webgl-mount');
+  if (webglMountEl) {
+    webglMountEl.style.display = useWebGL3D ? 'block' : 'none';
+  }
+
+  // Если активен настоящий WebGL 3D движок (Three.js + Arcane Shader) — очищаем 2D-холст до прозрачности!
+  if (useWebGL3D) {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  } else if (window.ArenaVisuals) {
     try {
       window.ArenaVisuals.drawBackground(ctx, canvas.width, canvas.height, nowTime, state.combo);
     } catch (e) {
@@ -4991,15 +6472,12 @@ function gameLoop(timestamp) {
     state.lastSpawnAt = 0;
   }
 
-  const pluginGame = getPluginGame(state.activeGame);
-
-  // Draw 3D tunnel grid if in 3D Saber Slicer mode, or illuminated 2D Boxing Ring in 2D mode
-  const is3DSaberMode = state.activeGame === 'saber3d' && Boolean(window.Saber3DEngine);
-  if (is3DSaberMode) {
+  // Draw 3D tunnel grid if in 2D-fallback Saber Slicer mode, or illuminated 2D Boxing Ring in 2D mode
+  if (is3DSaberMode && !useWebGL3D) {
     try {
       window.Saber3DEngine.draw3DArenaBackdrop(ctx, canvas.width, canvas.height, state.combo);
     } catch (e) {}
-  } else if (!pluginGame) {
+  } else if (!is3DSaberMode && !pluginGame) {
     // Канаты боксёрского ринга
     ctx.save();
     const ropeColors = ['rgba(255, 59, 75, 0.35)', 'rgba(255, 255, 255, 0.22)', 'rgba(0, 210, 255, 0.35)'];
@@ -5055,16 +6533,15 @@ function gameLoop(timestamp) {
     if (g.trail.length > 7) g.trail.shift();
   });
 
-  // Персонаж-самурай: рисуется по скелету с телефона (или в стойке по умолчанию, пока телефон не подключён)
-  if (state.mode !== 'phone' && window.ArenaVisuals) {
+  // Персонаж-самурай: в режиме WebGL 3D рендерится настоящим Three.js 3D-персонажем в ArcaneWebGL3D!
+  if (!useWebGL3D && state.mode !== 'phone' && window.ArenaVisuals) {
     try {
-      // В v7.0 3D PRO кибер-боец стоит ниже горизонта (вид из-за спины 3/4), поэтому делаем его чётким и объёмным
       const samuraiAlpha = is3DSaberMode ? 0.86 : pluginGame ? 0.68 : 0.88;
       window.ArenaVisuals.drawSamurai(ctx, state.bodySilhouette, state.gloves, canvas.width, canvas.height, nowTime, samuraiAlpha);
     } catch (e) {
       lastRenderError = 'samurai: ' + (e && e.message ? e.message : String(e));
     }
-  } else if (state.bodySilhouette) {
+  } else if (!useWebGL3D && state.bodySilhouette) {
     try {
       drawArenaBodySilhouette(ctx, state.bodySilhouette);
     } catch (e) {}
@@ -5102,25 +6579,36 @@ function gameLoop(timestamp) {
     // Sort far-to-near (painter's algorithm)
     eng.objects3D.sort((a, b) => b.z - a.z);
 
+    // Если активен Three.js WebGL 3D (ArcaneWebGL3D), рендерим всю 3D-сцену, 3D-персонажа и 3D-цели в WebGL!
+    let webglRendered = false;
+    if (useWebGL3D) {
+      try {
+        webglRendered = window.ArcaneWebGL3D.renderFrame(state, eng, nowTime);
+      } catch (e) {
+        lastRenderError = 'webgl3d: ' + (e && e.message ? e.message : String(e));
+      }
+    }
+
     for (let i = eng.objects3D.length - 1; i >= 0; i--) {
       const obj = eng.objects3D[i];
       obj.z -= obj.zSpeed;
       obj.rotation += obj.vRotation;
 
-      // Проекция в одной из 6 зон экрана: предмет вылетает из глубины своей зоны и растёт по мере приближения
+      // Проекция (из Three.js PerspectiveCamera при WebGL 3D или из баллистической 2D-проекции)
       const proj = eng.projectLane(obj, canvas.width, canvas.height);
-      const radius = Math.max(10, obj.baseRadius * proj.scale);
+      const hitX = webglRendered && Number.isFinite(obj._webglScreenX) ? obj._webglScreenX : proj.screenX;
+      const hitY = webglRendered && Number.isFinite(obj._webglScreenY) ? obj._webglScreenY : proj.screenY;
+      const radius = webglRendered && Number.isFinite(obj._webglRadius) ? obj._webglRadius : Math.max(10, obj.baseRadius * proj.scale);
 
       // Проверка глубины: резать можно ТОЛЬКО когда предмет подлетел близко (z <= STRIKE_Z) и стал крупным.
-      // Далёкие маленькие предметы сабля пролетает насквозь, даже если в 2D-проекции касается их.
       obj.inStrikeZone = obj.z <= eng.STRIKE_Z && obj.z > 0.02;
       if (obj.inStrikeZone) {
         for (let gIdx = 0; gIdx < state.gloves.length; gIdx++) {
           const g = state.gloves[gIdx];
           if (!g.active) continue;
           const sb = sabers[gIdx];
-          if (eng.segmentCircleHit(sb.handleX, sb.handleY, sb.tipX, sb.tipY, proj.screenX, proj.screenY, radius + 8)) {
-            trigger3DSaberSlice(obj, proj.screenX, proj.screenY, radius, g, sb);
+          if (eng.segmentCircleHit(sb.handleX, sb.handleY, sb.tipX, sb.tipY, hitX, hitY, radius + 12)) {
+            trigger3DSaberSlice(obj, hitX, hitY, radius, g, sb);
             break;
           }
         }
@@ -5141,19 +6629,21 @@ function gameLoop(timestamp) {
         continue;
       }
 
-      try {
-        eng.draw3DObject(ctx, obj, proj.screenX, proj.screenY, radius);
-      } catch (e) {
-        ctx.save();
-        ctx.fillStyle = obj.outerColor || '#10b981';
-        ctx.beginPath();
-        ctx.arc(proj.screenX, proj.screenY, Math.max(14, radius), 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
+      if (!webglRendered) {
+        try {
+          eng.draw3DObject(ctx, obj, proj.screenX, proj.screenY, radius);
+        } catch (e) {
+          ctx.save();
+          ctx.fillStyle = obj.outerColor || '#10b981';
+          ctx.beginPath();
+          ctx.arc(proj.screenX, proj.screenY, Math.max(14, radius), 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
       }
     }
 
-    // Draw sliced 3D halves
+    // Draw sliced 3D halves (2D fallback when WebGL is off)
     for (let i = eng.slicedHalves3D.length - 1; i >= 0; i--) {
       const sh = eng.slicedHalves3D[i];
       sh.x += sh.vx;
@@ -5165,18 +6655,22 @@ function gameLoop(timestamp) {
         eng.slicedHalves3D.splice(i, 1);
         continue;
       }
-      try {
-        eng.drawSlicedHalf3D(ctx, sh);
-      } catch (e) {}
+      if (!webglRendered) {
+        try {
+          eng.drawSlicedHalf3D(ctx, sh);
+        } catch (e) {}
+      }
     }
 
-    // Draw katanas (or plasma sabers as fallback) in player's hands
-    state.gloves.forEach((g) => {
-      try {
-        if (window.ArenaVisuals) window.ArenaVisuals.drawKatana(ctx, g, canvas.width, canvas.height);
-        else eng.drawPlasmaSaber(ctx, g, canvas.width, canvas.height);
-      } catch (e) {}
-    });
+    // Draw katanas on 2D canvas ONLY if WebGL 3D is not rendering the 3D katanas
+    if (!webglRendered) {
+      state.gloves.forEach((g) => {
+        try {
+          if (window.ArenaVisuals) window.ArenaVisuals.drawKatana(ctx, g, canvas.width, canvas.height);
+          else eng.drawPlasmaSaber(ctx, g, canvas.width, canvas.height);
+        } catch (e) {}
+      });
+    }
   } else {
     // --- 2D BOXFRUIT ARENA MODE ---
     if (state.isPlaying) {
@@ -5506,6 +7000,12 @@ setGameMode('saber3d');
 if (hudSwitchGameBtn) {
   hudSwitchGameBtn.addEventListener('click', () => {
     setGameMode(nextGameId());
+  });
+}
+const btnHudCamera3D = document.getElementById('btn-hud-camera-3d');
+if (btnHudCamera3D) {
+  btnHudCamera3D.addEventListener('click', () => {
+    if (window.ArcaneWebGL3D) window.ArcaneWebGL3D.cycleCameraMode();
   });
 }
 const btnPhoneSwitchGame = document.getElementById('btn-phone-switch-game');
