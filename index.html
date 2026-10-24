@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>MOTION ARENA TV v5.0 — 3D Saber Slicer & BoxFruit</title>
+  <title>MOTION ARENA TV v7.0 3D PRO — 3D Saber Slicer & BoxFruit</title>
   <meta name="description" content="Игровая ТВ-консоль со смартфоном (MediaPipe Pose 60 FPS): 3D Saber Slicer (предметы летят из глубины экрана на игрока) и BoxFruit Arena." />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚔️</text></svg>" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -606,7 +606,7 @@ h1.game-title {
             <h1 class="game-title">
               MOTION ARENA TV
               <span style="display: inline-block; font-size: 18px; background: var(--accent-gold); color: #0b0e14; padding: 5px 12px; border-radius: 8px; vertical-align: middle; margin-left: 8px; font-weight: 900;">
-                ВЕРСИЯ: v6.0 САМУРАЙ
+                ВЕРСИЯ: v7.0 3D PRO
               </span>
             </h1>
           </div>
@@ -774,29 +774,29 @@ h1.game-title {
 
   <script>
 // ============================================================================
-// MOTION ARENA TV v5.0 MODULE — 🕹️ Мульти-Игровой Лаунчер + ⚔️ 3D SABER SLICER
-// (Готовый к интеграции модуль для game.js / index.html)
+// MOTION ARENA TV v7.0 3D PRO — 🕹️ Мульти-Игровой Лаунчер + ⚔️ 3D SABER SLICER
+// (Вдохновлено Beat Saber, Fruit Ninja VR, Superhot VR и Kinect Sports Rivals)
 // ============================================================================
-// Что внутри:
-// 1. GAME_CATALOG — выбор между играми на ТВ (и переключение прямо с телефона):
-//    - 'saber3d': ⚔️ 3D SABER SLICER (Предметы летят из 3D-глубины z=1.0 -> 0.0,
-//                 растут от маленьких до огромных, рубятся виртуальными саблями)
-//    - 'boxfruit': 🥊 BOXFRUIT 2D (Классический бокс по фруктам перчатками)
-//    - 'brainwall': 🧱 BRAIN WALL 3D (Впишись в силуэт летящей стены)
-// 2. Saber3DEngine — полноценный 3D-движок перспективы на Canvas 2D:
-//    - 3D-туннель Неонового Додзё с кольцом «Зоны Удара» (Strike Zone)
-//    - Две светящиеся плазменные сабли/катаны (продолжение вектора Локоть -> Кисть)
-//    - Ленточный шлейф взмаха (Slash Ribbon) + звук рассечения катаной (Web Audio)
-//    - 3-слойные 3D-сферы/фрукты с бликами и разрезом строго под углом взмаха сабли!
+// Что нового в v7.0 3D PRO:
+// 1. Настоящая 3D-баллистика (projectLane + projectGroundShadow):
+//    - Предметы вылетают прямо из неонового портала Тории (точки схода у горизонта)
+//      по высокой параболической 3D-дуге в одну из 6 пространственных зон.
+// 2. Тройная привязка к 3D-пространству (как в Beat Saber & Superhot VR):
+//    - Реальная тень на 3D-полу додзё + цветной световой блик на паркете под каждым предметом
+//    - Лазерный высотный перпендикуляр (Altitude Tether) от тени на полу к объекту в воздухе
+//    - Уходящий вглубь 3D-шлейф (Z-Wake Trail Rings) позади летящего объекта
+// 3. Настоящая 3D-геометрия поверхностей (3D Rotating Meridians & Facets):
+//    - Вращающиеся в 3D широты/меридианы (sin/cos 3D-проекции), гранёные кристаллы
+//      плазма-ядер и 3D-шипы мины с направленным мировым освещением (лунный свет + циан-рефлекс).
 // ============================================================================
 
 const GAME_CATALOG = [
   {
     id: 'saber3d',
-    badge: '🔥 НОВИНКА • 3D ГЛУБИНА',
+    badge: '🔥 v7.0 • 3D ГЛУБИНА',
     icon: '⚔️',
     title: '3D SABER SLICER',
-    subtitle: 'Предметы летят издалека прямо в экран и растут в 3D — руби их светящимися саблями!',
+    subtitle: 'Предметы вылетают из 3D-портала по баллистической дуге с тенями на полу — руби их катанами!',
     accent: '#00f0ff',
     ready: true
   },
@@ -811,21 +811,21 @@ const GAME_CATALOG = [
   },
   {
     id: 'brainwall',
-    badge: '🧱 ПАЙПЛАЙН • СКОРО',
+    badge: '🧱 3D СИЛУЭТ • ГОТОВО',
     icon: '🕺',
     title: 'BRAIN WALL 3D',
     subtitle: 'На тебя летит неоновая стена с вырезом — успей принять точную позу всем телом!',
     accent: '#18e299',
-    ready: false
+    ready: true
   },
   {
     id: 'laserdodge',
-    badge: '⚡ ПАЙПЛАЙН • СКОРО',
+    badge: '⚡ ЛАЗЕРЫ • ГОТОВО',
     icon: '⚡',
     title: 'LASER MATRIX',
     subtitle: 'Прыгай, приседай и уклоняйся от сканирующих арену лазерных лучей.',
     accent: '#ff3b4b',
-    ready: false
+    ready: true
   }
 ];
 
@@ -907,24 +907,24 @@ function saberSafeRoundRect(ctx, x, y, w, h, r) {
 }
 
 // ============================================================================
-// 3D SABER SLICER ENGINE (Перспектива z: 1.0 -> 0.0 + Виртуальные Сабли)
+// 3D SABER SLICER ENGINE v7.0 (Баллистика + Тени на 3D-полу + 3D-Геометрия)
 // ============================================================================
 const Saber3DEngine = {
-  selectedGameId: 'saber3d', // По умолчанию ставим новую 3D-игру с саблями!
-  objects3D: [],             // Летящие из глубины 3D-предметы
-  slicedHalves3D: [],        // Разрезанные саблей 3D-половинки с мякотью
-  slashArcs: [],             // Вспышки разрезов в пространстве
-  lensDrops: [],             // Капли сока на «линзе» экрана ТВ
-  hitStopUntil: 0,           // Микро-пауза (35ms) при мощном разрезе
-  tunnelPulse: 0,            // Пульсация 3D-туннеля при комбо
+  selectedGameId: 'saber3d',
+  objects3D: [],
+  slicedHalves3D: [],
+  slashArcs: [],
+  lensDrops: [],
+  hitStopUntil: 0,
+  tunnelPulse: 0,
 
-  // 3D-каталог сочных процедурных целей (Никаких скучных плоских эмодзи!)
+  // 3D-каталог целей с параметрами 3D-граней и меридианов
   targetsCatalog: [
-    { id: 'watermelon', name: 'Кибер-Арбуз', outerColor: '#10b981', stripeColor: '#064e3b', fleshColor: '#ff2a5f', seedColor: '#111827', baseRadius: 88, points: 15 },
-    { id: 'orange',     name: 'Неон-Апельсин', outerColor: '#ff7b00', stripeColor: '#cc5200', fleshColor: '#ffb703', seedColor: '#fffbeb', baseRadius: 78, points: 12 },
-    { id: 'dragon',     name: 'Драгонфрут', outerColor: '#ff1e78', stripeColor: '#a30042', fleshColor: '#f8fafc', seedColor: '#0f172a', baseRadius: 82, points: 20 },
-    { id: 'cybercore',  name: 'Плазма-Сфера', outerColor: '#00f0ff', stripeColor: '#0284c7', fleshColor: '#e0f2fe', seedColor: '#38bdf8', baseRadius: 85, points: 30, isBonus: true },
-    { id: 'bomb3d',     name: 'Шипованная Мина', outerColor: '#ef4444', stripeColor: '#7f1d1d', fleshColor: '#f97316', seedColor: '#000000', baseRadius: 80, points: 0, isBomb: true }
+    { id: 'watermelon', name: 'Кибер-Арбуз',   outerColor: '#10b981', stripeColor: '#047857', rimColor: '#34d399', fleshColor: '#ff2a5f', seedColor: '#111827', baseRadius: 90, points: 15 },
+    { id: 'orange',     name: 'Неон-Апельсин', outerColor: '#ff7b00', stripeColor: '#c2410c', rimColor: '#fdba74', fleshColor: '#ffb703', seedColor: '#fffbeb', baseRadius: 80, points: 12 },
+    { id: 'dragon',     name: 'Драгонфрут',    outerColor: '#ff1e78', stripeColor: '#9d174d', rimColor: '#f472b6', fleshColor: '#f8fafc', seedColor: '#0f172a', baseRadius: 84, points: 20 },
+    { id: 'cybercore',  name: 'Плазма-Ядро',   outerColor: '#00f0ff', stripeColor: '#0369a1', rimColor: '#bae6fd', fleshColor: '#e0f2fe', seedColor: '#38bdf8', baseRadius: 86, points: 30, isBonus: true },
+    { id: 'bomb3d',     name: 'Шипованная Мина', outerColor: '#ef4444', stripeColor: '#7f1d1d', rimColor: '#fca5a5', fleshColor: '#f97316', seedColor: '#000000', baseRadius: 82, points: 0, isBomb: true }
   ],
 
   reset() {
@@ -937,15 +937,11 @@ const Saber3DEngine = {
   },
 
   // Проекция мировых 3D-координат (worldX, worldY ∈ [-1..1], z ∈ [0..1]) на экран ТВ
-  // При z = 1.0 (далеко у горизонта) scale = 0.14 (предмет маленький)
-  // При z = 0.08 (прямо перед лицом игрока) scale = 1.45 (предмет огромный!)
   project3D(worldX, worldY, z, canvasWidth, canvasHeight) {
     const vanishX = canvasWidth * 0.5;
-    const vanishY = canvasHeight * 0.43;
-    const focal = 0.24;
-    const clampedZ = Math.max(0.04, z);
-    const scale = focal / (focal + clampedZ); // z=1.0 -> ~0.19; z=0.10 -> ~0.71; z=0.04 -> ~0.86 (умножаем на spread)
-    const perspectiveScale = Math.pow(1.03 - Math.min(1.0, clampedZ), 1.65) * 1.45 + 0.10;
+    const vanishY = canvasHeight * 0.42;
+    const clampedZ = Math.max(0.03, Math.min(1.15, z));
+    const perspectiveScale = Math.pow(1.03 - Math.min(1.0, clampedZ), 1.68) * 1.42 + 0.08;
 
     const spreadX = canvasWidth * 0.44;
     const spreadY = canvasHeight * 0.38;
@@ -957,20 +953,20 @@ const Saber3DEngine = {
     };
   },
 
-  // 6 зон экрана: 3 колонки × 2 ряда (доли ширины/высоты экрана ТВ)
+  // 6 пространственных 3D-коридоров (3 колонки × 2 эшелона высоты)
   LANES: [
-    { col: 0, row: 0, fx: 1 / 6, fy: 0.32 },
-    { col: 1, row: 0, fx: 3 / 6, fy: 0.32 },
-    { col: 2, row: 0, fx: 5 / 6, fy: 0.32 },
-    { col: 0, row: 1, fx: 1 / 6, fy: 0.74 },
-    { col: 1, row: 1, fx: 3 / 6, fy: 0.74 },
-    { col: 2, row: 1, fx: 5 / 6, fy: 0.74 }
+    { col: 0, row: 0, fx: 0.20, fy: 0.33, floorFx: 0.18, arcLift: 0.19 },
+    { col: 1, row: 0, fx: 0.50, fy: 0.29, floorFx: 0.50, arcLift: 0.21 },
+    { col: 2, row: 0, fx: 0.80, fy: 0.33, floorFx: 0.82, arcLift: 0.19 },
+    { col: 0, row: 1, fx: 0.19, fy: 0.68, floorFx: 0.16, arcLift: 0.13 },
+    { col: 1, row: 1, fx: 0.50, fy: 0.66, floorFx: 0.50, arcLift: 0.14 },
+    { col: 2, row: 1, fx: 0.81, fy: 0.68, floorFx: 0.84, arcLift: 0.13 }
   ],
-  // Глубина «Зоны Удара»: резать можно ТОЛЬКО когда предмет подлетел ближе этого z (крупный и близкий)
-  STRIKE_Z: 0.3,
+  // Глубина «Зоны Удара»: резать можно, когда предмет подлетел близко к плоскости самурая
+  STRIKE_Z: 0.32,
   lastLaneIdx: -1,
 
-  // Спавн: по одному предмету в случайную из 6 зон (не повторяя предыдущую)
+  // Спавн 3D-предмета из портала Тории
   spawn3DWave(score = 0) {
     const isBomb = Math.random() < 0.16;
     const pool = isBomb
@@ -982,45 +978,70 @@ const Saber3DEngine = {
     if (laneIdx === this.lastLaneIdx) laneIdx = (laneIdx + 1 + Math.floor(Math.random() * 5)) % 6;
     this.lastLaneIdx = laneIdx;
 
-    // Скорость подлёта по Z: ~2.5 сек от горизонта до игрока, окно удара ~0.7 сек
-    const zSpeed = 0.0065 + Math.min(0.004, score * 0.000012) + Math.random() * 0.0015;
+    const zSpeed = 0.0064 + Math.min(0.004, score * 0.000012) + Math.random() * 0.0014;
 
     this.objects3D.push({
       ...spec,
       laneIdx,
-      z: 1.0, // Начинает далеко в глубине (маленькая точка)
+      z: 1.0,
       zSpeed,
       rotation: Math.random() * Math.PI * 2,
-      vRotation: (Math.random() - 0.5) * 0.07,
+      vRotation: (Math.random() - 0.5) * 0.065 + 0.025,
+      rot3D: Math.random() * Math.PI * 2,
+      vRot3D: 0.055 + Math.random() * 0.035,
       sliced: false
     });
   },
 
-  // Проекция предмета в своей зоне: издалека летит из глубины своей зоны и растёт по мере приближения
-  projectLane(obj, w, h) {
-    const lane = this.LANES[obj.laneIdx] || this.LANES[1];
+  // Проекция 3D-полёта по баллистической параболе из портала Тории (z=1 -> z=0)
+  // Также возвращает координаты тени (shadowX, shadowY) на 3D-полу додзё!
+  projectLaneAtZ(laneIdx, zVal, w, h) {
+    const lane = this.LANES[laneIdx] || this.LANES[1];
     const vanishX = w * 0.5;
-    const vanishY = h * 0.43;
+    const vanishY = h * 0.42; // Точка схода в центре ворот Тории
+
     const nearX = lane.fx * w;
     const nearY = lane.fy * h;
-    // Далёкая точка зоны — на 40% пути от центра к зоне (видно, из какой зоны летит)
-    const farX = vanishX + (nearX - vanishX) * 0.4;
-    const farY = vanishY + (nearY - vanishY) * 0.4;
-    const progress = Math.max(0, Math.min(1, 1 - obj.z));
-    const t = Math.pow(progress, 1.5);
-    const scale = 0.14 + 1.06 * Math.pow(progress, 1.7); // z=1 → 0.14 (точка), z≈0 → 1.2 (огромный)
+
+    // Точка старта внутри портала Тории
+    const startX = vanishX + (nearX - vanishX) * 0.12;
+    const startY = vanishY + (nearY - vanishY) * 0.08;
+
+    const progress = Math.max(0, Math.min(1.08, 1 - zVal));
+    // Нелинейное перспективное ускорение (1/z эффект)
+    const t = Math.pow(progress, 1.58);
+    const scale = 0.09 + 1.15 * Math.pow(progress, 1.72);
+
+    // Баллистическая 3D-парабола (выстрел вверх из портала и падение в зону удара)
+    const parabola = 4 * progress * Math.max(0, 1 - progress * 0.88);
+    const arcOffset = -parabola * h * (lane.arcLift || 0.15);
+
+    const screenX = startX + (nearX - startX) * t;
+    const screenY = startY + (nearY - startY) * t + arcOffset;
+
+    // Проекция тени предмета строго под ним на 3D-паркет додзё (между горизонтом 0.42h и низом 0.96h)
+    const floorNearX = (lane.floorFx || lane.fx) * w;
+    const shadowX = vanishX + (floorNearX - vanishX) * t;
+    const shadowY = vanishY + (h * 0.93 - vanishY) * (0.14 + 0.86 * t);
+
     return {
-      screenX: farX + (nearX - farX) * t,
-      screenY: farY + (nearY - farY) * t,
-      scale
+      screenX,
+      screenY,
+      scale,
+      shadowX,
+      shadowY,
+      progress,
+      t
     };
+  },
+
+  projectLane(obj, w, h) {
+    return this.projectLaneAtZ(obj.laneIdx, obj.z, w, h);
   },
 
   // Вычисление координат сабли (Рукоять в кисти -> Остриё сабли по вектору предплечья)
   computeSaberSegment(glove, canvasWidth, canvasHeight) {
-    // Длина клинка адаптируется под размер экрана ТВ (~22% диагонали)
-    const bladeLength = Math.min(canvasWidth, canvasHeight) * 0.25;
-    // В game.js угол перчатки (glove.angle) = atan2(dy, dx) + PI/2, поэтому направление предплечья:
+    const bladeLength = Math.min(canvasWidth, canvasHeight) * 0.26;
     const dirAngle = glove.angle - Math.PI * 0.5;
     const tipX = glove.x + Math.cos(dirAngle) * bladeLength;
     const tipY = glove.y + Math.sin(dirAngle) * bladeLength;
@@ -1034,7 +1055,7 @@ const Saber3DEngine = {
     };
   },
 
-  // Проверка пересечения отрезка сабли (от рукояти до острия) с кругом 3D-фрукта
+  // Проверка пересечения отрезка сабли с кругом 3D-фрукта
   segmentCircleHit(x1, y1, x2, y2, cx, cy, r) {
     const dx = x2 - x1;
     const dy = y2 - y1;
@@ -1047,173 +1068,337 @@ const Saber3DEngine = {
     return Math.hypot(cx - nearX, cy - nearY) <= r;
   },
 
-  // Отрисовка 3D-туннеля Неонового Додзё и «Зоны Удара»
+  // Отрисовка 3D-пространства: баллистические рельсы, 3D-ворота зоны удара,
+  // ТЕНИ НА ПОЛУ ДОДЗЁ, лазерные высотные проекции и 3D-шлейфы за каждым предметом!
   draw3DArenaBackdrop(ctx, w, h, combo = 0) {
-    const cx = w * 0.5;
-    const cy = h * 0.43;
+    const vanishX = w * 0.5;
+    const vanishY = h * 0.42;
 
-    // Перспективные лучи от точки схода
     ctx.save();
-    const rays = 12;
-    ctx.strokeStyle = combo >= 4 ? 'rgba(0, 240, 255, 0.16)' : 'rgba(148, 163, 184, 0.09)';
-    ctx.lineWidth = 1.5;
-    for (let i = 0; i < rays; i++) {
-      const a = (i / rays) * Math.PI * 2;
-      ctx.beginPath();
-      ctx.moveTo(cx + Math.cos(a) * 35, cy + Math.sin(a) * 35);
-      ctx.lineTo(cx + Math.cos(a) * Math.max(w, h) * 0.85, cy + Math.sin(a) * Math.max(w, h) * 0.85);
-      ctx.stroke();
-    }
 
-    // Кольца глубины (Depth Rings) — тонкие, только для ощущения туннеля
-    const depthRings = [0.85, 0.62, 0.42, 0.24];
-    depthRings.forEach((zRing) => {
-      const p = this.project3D(0, 0, zRing, w, h);
-      const rx = w * 0.42 * p.scale;
-      const ry = h * 0.36 * p.scale;
-      ctx.beginPath();
-      saberSafeEllipse(ctx, cx, cy, rx, ry, 0);
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
-      ctx.lineWidth = 1;
-      ctx.stroke();
-    });
-    ctx.setLineDash([]);
+    // 1. Перспективная рамка «Плоскости Удара» (Strike Plane Frame на глубине STRIKE_Z)
+    const strikeProgress = 1 - this.STRIKE_Z;
+    const spScale = Math.pow(strikeProgress, 1.58);
+    const frameW = w * (0.22 + 0.68 * spScale);
+    const frameH = h * (0.18 + 0.62 * spScale);
+    const frameX = vanishX - frameW * 0.5;
+    const frameY = vanishY - frameH * 0.44 + h * 0.06;
 
-    // 6 зон удара (3 колонки × 2 ряда): тонкая сетка + подсветка зоны, где предмет уже можно рубить
-    const colW = w / 3;
-    const rowSplit = h * 0.53;
-    ctx.strokeStyle = 'rgba(0, 240, 255, 0.10)';
-    ctx.lineWidth = 2;
-    ctx.setLineDash([10, 14]);
+    // Угловые 3D-скобки плоскости удара (HUD-прицел в пространстве)
+    const cornerLen = Math.min(frameW, frameH) * 0.12;
+    ctx.strokeStyle = combo >= 3 ? 'rgba(0, 240, 255, 0.38)' : 'rgba(0, 240, 255, 0.22)';
+    ctx.lineWidth = 2.5;
     ctx.beginPath();
-    ctx.moveTo(colW, h * 0.1);
-    ctx.lineTo(colW, h * 0.97);
-    ctx.moveTo(colW * 2, h * 0.1);
-    ctx.lineTo(colW * 2, h * 0.97);
-    ctx.moveTo(w * 0.04, rowSplit);
-    ctx.lineTo(w * 0.96, rowSplit);
+    // Top-left
+    ctx.moveTo(frameX, frameY + cornerLen);
+    ctx.lineTo(frameX, frameY);
+    ctx.lineTo(frameX + cornerLen, frameY);
+    // Top-right
+    ctx.moveTo(frameX + frameW - cornerLen, frameY);
+    ctx.lineTo(frameX + frameW, frameY);
+    ctx.lineTo(frameX + frameW, frameY + cornerLen);
+    // Bottom-left
+    ctx.moveTo(frameX, frameY + frameH - cornerLen);
+    ctx.lineTo(frameX, frameY + frameH);
+    ctx.lineTo(frameX + cornerLen, frameY + frameH);
+    // Bottom-right
+    ctx.moveTo(frameX + frameW - cornerLen, frameY + frameH);
+    ctx.lineTo(frameX + frameW, frameY + frameH);
+    ctx.lineTo(frameX + frameW, frameY + frameH - cornerLen);
     ctx.stroke();
-    ctx.setLineDash([]);
+
+    // 2. Тонкие 3D-баллистические направляющие для активных коридоров
     for (let i = 0; i < this.objects3D.length; i++) {
       const o = this.objects3D[i];
-      const lane = this.LANES[o.laneIdx];
-      if (!lane) continue;
-      const x0 = lane.col * colW;
-      const y0 = lane.row === 0 ? h * 0.1 : rowSplit;
-      const y1 = lane.row === 0 ? rowSplit : h * 0.97;
-      const near = Math.max(0, Math.min(1, (0.6 - o.z) / 0.6));
-      if (near <= 0) continue;
-      const strike = o.z <= this.STRIKE_Z;
-      ctx.fillStyle = o.isBomb
-        ? 'rgba(255, 34, 34, ' + (0.03 + near * 0.06).toFixed(3) + ')'
-        : strike
-        ? 'rgba(24, 226, 153, 0.10)'
-        : 'rgba(0, 240, 255, ' + (near * 0.05).toFixed(3) + ')';
-      ctx.fillRect(x0 + 6, y0 + 6, colW - 12, y1 - y0 - 12);
-      if (strike) {
-        ctx.strokeStyle = o.isBomb ? 'rgba(255, 34, 34, 0.5)' : 'rgba(24, 226, 153, 0.55)';
-        ctx.lineWidth = 3;
-        ctx.strokeRect(x0 + 6, y0 + 6, colW - 12, y1 - y0 - 12);
+      const projNow = this.projectLaneAtZ(o.laneIdx, o.z, w, h);
+      const radiusNow = Math.max(10, o.baseRadius * projNow.scale);
+      const isStrike = o.z <= this.STRIKE_Z;
+      const baseColor = o.isBomb ? '#ff3b4b' : o.isBonus ? '#00f0ff' : '#18e299';
+
+      // 2A. 3D-ТЕНЬ И ЦВЕТНОЙ СВЕТОВОЙ РЕФЛЕКС НА ПАРКЕТЕ ДОДЗЁ (Ground Drop Shadow + Floor Reflection)
+      const shadowRx = radiusNow * 0.95;
+      const shadowRy = Math.max(4, radiusNow * 0.26);
+      const shadowAlpha = Math.max(0.15, Math.min(0.75, projNow.progress * 0.85));
+
+      ctx.save();
+      // Тёмное ядро тени на полу
+      const shGrad = ctx.createRadialGradient(
+        projNow.shadowX, projNow.shadowY, shadowRy * 0.1,
+        projNow.shadowX, projNow.shadowY, shadowRx * 1.35
+      );
+      shGrad.addColorStop(0, `rgba(2, 4, 10, ${shadowAlpha.toFixed(2)})`);
+      shGrad.addColorStop(0.55, o.isBomb
+        ? `rgba(255, 42, 75, ${(shadowAlpha * 0.42).toFixed(2)})`
+        : `rgba(0, 240, 255, ${(shadowAlpha * 0.34).toFixed(2)})`
+      );
+      shGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      ctx.fillStyle = shGrad;
+      ctx.beginPath();
+      saberSafeEllipse(ctx, projNow.shadowX, projNow.shadowY, shadowRx * 1.35, shadowRy * 1.35, 0);
+      ctx.fill();
+
+      // Чёткое эллиптическое кольцо-проекция на полу (пульсирует в зоне удара!)
+      ctx.strokeStyle = isStrike
+        ? (o.isBomb ? 'rgba(255, 59, 75, 0.75)' : 'rgba(24, 226, 153, 0.80)')
+        : 'rgba(0, 240, 255, 0.30)';
+      ctx.lineWidth = isStrike ? 2.5 : 1.3;
+      ctx.beginPath();
+      saberSafeEllipse(ctx, projNow.shadowX, projNow.shadowY, shadowRx * 0.75, shadowRy * 0.75, 0);
+      ctx.stroke();
+
+      // 2B. ВЕРТИКАЛЬНЫЙ ЛАЗЕРНЫЙ ПЕРПЕНДИКУЛЯР (Altitude Tether: Тень на полу -> 3D-Предмет в воздухе)
+      if (projNow.shadowY > projNow.screenY + radiusNow * 0.4) {
+        const tetherGrad = ctx.createLinearGradient(
+          projNow.screenX, projNow.screenY + radiusNow * 0.5,
+          projNow.shadowX, projNow.shadowY
+        );
+        tetherGrad.addColorStop(0, isStrike ? baseColor : 'rgba(0, 240, 255, 0.42)');
+        tetherGrad.addColorStop(1, 'rgba(0, 240, 255, 0.08)');
+        ctx.strokeStyle = tetherGrad;
+        ctx.lineWidth = isStrike ? 2.2 : 1.2;
+        ctx.setLineDash([5, 6]);
+        ctx.beginPath();
+        ctx.moveTo(projNow.screenX, projNow.screenY + radiusNow * 0.45);
+        ctx.lineTo(projNow.shadowX, projNow.shadowY);
+        ctx.stroke();
+        ctx.setLineDash([]);
       }
+
+      // 2C. УХОДЯЩИЙ ВГЛУБЬ 3D-ШЛЕЙФ (Receding Z-Wake Rings позади летящего объекта)
+      for (let wStep = 4; wStep >= 1; wStep--) {
+        const wakeZ = o.z + wStep * 0.055;
+        if (wakeZ >= 1.0) continue;
+        const wakeProj = this.projectLaneAtZ(o.laneIdx, wakeZ, w, h);
+        const wakeR = Math.max(4, o.baseRadius * wakeProj.scale * (1 - wStep * 0.11));
+        const wakeAlpha = (1 - wStep * 0.21) * 0.28;
+        ctx.strokeStyle = o.isBomb
+          ? `rgba(255, 59, 75, ${wakeAlpha.toFixed(3)})`
+          : `rgba(0, 240, 255, ${wakeAlpha.toFixed(3)})`;
+        ctx.lineWidth = Math.max(1, 2.4 - wStep * 0.4);
+        ctx.beginPath();
+        saberSafeEllipse(ctx, wakeProj.screenX, wakeProj.screenY, wakeR * 0.88, wakeR * 0.88, 0);
+        ctx.stroke();
+      }
+
+      // 2D. БАЛЛИСТИЧЕСКАЯ 3D-ДУГА ОТ ПОРТАЛА ДО ТЕКУЩЕЙ ТОЧКИ
+      ctx.strokeStyle = isStrike
+        ? (o.isBomb ? 'rgba(255, 59, 75, 0.32)' : 'rgba(24, 226, 153, 0.35)')
+        : 'rgba(0, 240, 255, 0.16)';
+      ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      const steps = 8;
+      for (let s = 0; s <= steps; s++) {
+        const sampleZ = 1.0 - (1.0 - o.z) * (s / steps);
+        const sp = this.projectLaneAtZ(o.laneIdx, sampleZ, w, h);
+        if (s === 0) ctx.moveTo(sp.screenX, sp.screenY);
+        else ctx.lineTo(sp.screenX, sp.screenY);
+      }
+      ctx.stroke();
+
+      ctx.restore();
     }
+
     ctx.restore();
   },
 
-  // Отрисовка 3-слойного 3D-предмета (Сфера с объёмным градиентом, полосами, бликом и индикатором зоны удара)
+  // Отрисовка настоящего 3D-объекта с вращающимися меридианами, 3D-гранями и мировым освещением
   draw3DObject(ctx, obj, screenX, screenY, radius) {
     const safeR = Math.max(10, Number.isFinite(radius) ? radius : 40);
-    const strikeZ = this.STRIKE_Z || 0.3;
+    const strikeZ = this.STRIKE_Z || 0.32;
+    const isStrike = obj.z <= strikeZ;
+
+    // 3D-фаза вращения поверхности вокруг осей X/Y
+    obj.rot3D = (obj.rot3D || 0) + (obj.vRot3D || 0.04);
+    const rot3D = obj.rot3D;
+
     ctx.save();
     ctx.translate(screenX, screenY);
-    // Далёкие предметы — полупрозрачные (их ещё нельзя рубить), близкие — яркие
-    ctx.globalAlpha = obj.z <= strikeZ ? 1 : Math.max(0.6, 1 - obj.z * 0.45);
 
-    // Кольцо-прицел «РУБИ СЕЙЧАС!», когда предмет влетел в Зону Удара
-    if (obj.z <= strikeZ && !obj.isBomb) {
-      const pulse = 1 + Math.sin(performance.now() * 0.02) * 0.05;
+    // Атмосферная дымка вдалеке (Atmospheric Depth Fog: у портала темнее, у лица 100% яркость)
+    const depthClarity = Math.max(0.58, Math.min(1, 1.08 - obj.z * 0.42));
+    ctx.globalAlpha = isStrike ? 1.0 : depthClarity;
+
+    // 1. Перспективное 3D-кольцо «ЗОНА УДАРА — РУБИ!»
+    if (isStrike && !obj.isBomb) {
+      const pulse = 1 + Math.sin(performance.now() * 0.022) * 0.06;
       ctx.save();
       ctx.strokeStyle = obj.isBonus ? '#00f0ff' : '#18e299';
-      ctx.lineWidth = 4;
+      ctx.shadowColor = obj.isBonus ? '#00f0ff' : '#18e299';
+      ctx.shadowBlur = 18;
+      ctx.lineWidth = Math.max(3, safeR * 0.075);
       ctx.beginPath();
-      ctx.arc(0, 0, safeR * 1.18 * pulse, 0, Math.PI * 2);
+      saberSafeEllipse(ctx, 0, 0, safeR * 1.24 * pulse, safeR * 1.12 * pulse, -0.18);
       ctx.stroke();
+
+      // Вращающиеся 3D-дуги захвата цели (Target Lock Brackets)
+      const lockAngle = performance.now() * 0.004;
+      ctx.lineWidth = Math.max(2, safeR * 0.045);
+      for (let b = 0; b < 3; b++) {
+        const a0 = lockAngle + (b * Math.PI * 2) / 3;
+        ctx.beginPath();
+        ctx.arc(0, 0, safeR * 1.32, a0, a0 + 0.55);
+        ctx.stroke();
+      }
       ctx.restore();
-    } else if (obj.z > strikeZ) {
-      // Индикатор приближения: сжимающееся кольцо показывает, когда предмет станет доступен для удара
+    } else if (!isStrike) {
+      // Сходящееся 3D-кольцо синхронизации глубины (показывает, сколько осталось до зоны удара)
       const approach = Math.max(0, Math.min(1, (obj.z - strikeZ) / (1 - strikeZ)));
       ctx.save();
-      ctx.strokeStyle = obj.isBomb ? 'rgba(255, 60, 60, 0.45)' : 'rgba(255, 255, 255, 0.35)';
-      ctx.lineWidth = 2;
+      ctx.strokeStyle = obj.isBomb ? 'rgba(255, 60, 60, 0.42)' : 'rgba(0, 240, 255, 0.34)';
+      ctx.lineWidth = 1.8;
       ctx.beginPath();
-      ctx.arc(0, 0, safeR * (1.2 + approach * 1.6), 0, Math.PI * 2);
+      ctx.arc(0, 0, safeR * (1.18 + approach * 1.15), 0, Math.PI * 2);
       ctx.stroke();
       ctx.restore();
     }
 
-    ctx.rotate(obj.rotation || 0);
-
-    // Тень/свечение позади 3D-объекта
+    // Внешнее неоновое свечение
     ctx.shadowColor = obj.isBomb ? '#ff2222' : obj.outerColor || '#10b981';
-    ctx.shadowBlur = Math.min(32, safeR * 0.45);
+    ctx.shadowBlur = Math.min(34, safeR * 0.45);
 
     if (obj.isBomb) {
-      // 3D Шипованная Плазменная Мина
+      // ======================================================================
+      // 3D ШИПОВАННАЯ МОРСКАЯ МИНА (С 3D-шипами разной глубины + металлической сферой)
+      // ======================================================================
+      ctx.save();
+      ctx.rotate(obj.rotation || 0);
+
+      // Задние и боковые конические 3D-шипы
       const spikes = 8;
-      ctx.fillStyle = '#991b1b';
       for (let s = 0; s < spikes; s++) {
         const a = (s / spikes) * Math.PI * 2;
+        const tipX = Math.cos(a) * safeR * 1.28;
+        const tipY = Math.sin(a) * safeR * 1.28;
+        const spikeGrad = ctx.createLinearGradient(0, 0, tipX, tipY);
+        spikeGrad.addColorStop(0, '#1e293b');
+        spikeGrad.addColorStop(0.65, '#dc2626');
+        spikeGrad.addColorStop(1, '#fef08a');
+        ctx.fillStyle = spikeGrad;
         ctx.beginPath();
-        ctx.moveTo(Math.cos(a - 0.18) * safeR * 0.85, Math.sin(a - 0.18) * safeR * 0.85);
-        ctx.lineTo(Math.cos(a) * safeR * 1.24, Math.sin(a) * safeR * 1.24);
-        ctx.lineTo(Math.cos(a + 0.18) * safeR * 0.85, Math.sin(a + 0.18) * safeR * 0.85);
+        ctx.moveTo(Math.cos(a - 0.2) * safeR * 0.82, Math.sin(a - 0.2) * safeR * 0.82);
+        ctx.lineTo(tipX, tipY);
+        ctx.lineTo(Math.cos(a + 0.2) * safeR * 0.82, Math.sin(a + 0.2) * safeR * 0.82);
         ctx.closePath();
         ctx.fill();
       }
-      const bombGrad = ctx.createRadialGradient(-safeR * 0.28, -safeR * 0.28, safeR * 0.1, 0, 0, safeR);
-      bombGrad.addColorStop(0, '#475569');
-      bombGrad.addColorStop(0.55, '#1e293b');
-      bombGrad.addColorStop(1, '#090d16');
+
+      // Чугунное 3D-ядро с направленным светом сверху-справа (от луны додзё)
+      const bombGrad = ctx.createRadialGradient(
+        safeR * 0.28, -safeR * 0.30, safeR * 0.08,
+        0, 0, safeR * 0.94
+      );
+      bombGrad.addColorStop(0, '#94a3b8');
+      bombGrad.addColorStop(0.32, '#334155');
+      bombGrad.addColorStop(0.75, '#0f172a');
+      bombGrad.addColorStop(1, '#020617');
       ctx.fillStyle = bombGrad;
       ctx.beginPath();
       ctx.arc(0, 0, safeR * 0.92, 0, Math.PI * 2);
       ctx.fill();
 
-      // Пульсирующее красное ядро мины
-      ctx.fillStyle = '#ff2a5f';
+      // 3D-экваториальный металлический обод мины
+      ctx.strokeStyle = 'rgba(248, 113, 113, 0.55)';
+      ctx.lineWidth = Math.max(2, safeR * 0.06);
       ctx.beginPath();
-      ctx.arc(0, 0, safeR * 0.36, 0, Math.PI * 2);
+      saberSafeEllipse(ctx, 0, 0, safeR * 0.86, safeR * 0.32, Math.sin(rot3D) * 0.4);
+      ctx.stroke();
+
+      // Передний 3D-шип, смотрящий прямо в камеру на зрителя!
+      const frontX = Math.sin(rot3D) * safeR * 0.28;
+      const frontY = Math.cos(rot3D) * safeR * 0.22;
+      const coreGrad = ctx.createRadialGradient(frontX, frontY, 2, frontX, frontY, safeR * 0.42);
+      coreGrad.addColorStop(0, '#ffffff');
+      coreGrad.addColorStop(0.35, '#ff2a5f');
+      coreGrad.addColorStop(1, 'rgba(153, 27, 27, 0)');
+      ctx.fillStyle = coreGrad;
+      ctx.beginPath();
+      ctx.arc(frontX, frontY, safeR * 0.42, 0, Math.PI * 2);
       ctx.fill();
+
+      ctx.restore();
     } else {
-      // 1. Внешняя 3D-сфера фрукта с объёмным шейдингом
-      const sphereGrad = ctx.createRadialGradient(-safeR * 0.32, -safeR * 0.32, safeR * 0.12, 0, 0, safeR);
+      // ======================================================================
+      // 3D СФЕРИЧЕСКИЙ / ГРАНЁНЫЙ ФРУКТ С ВРАЩАЮЩИМИСЯ 3D-МЕРИДИАНАМИ
+      // ======================================================================
+      // Мировое освещение НЕ крутится вместе с 2D-углом (источник света всегда сверху-справа от луны,
+      // а снизу-слева — бирюзовый рефлекс от неонового пола додзё!)
+      const sphereGrad = ctx.createRadialGradient(
+        safeR * 0.30, -safeR * 0.32, safeR * 0.08,
+        -safeR * 0.10, safeR * 0.12, safeR * 1.02
+      );
       sphereGrad.addColorStop(0, '#ffffff');
-      sphereGrad.addColorStop(0.18, obj.outerColor || '#10b981');
-      sphereGrad.addColorStop(0.82, obj.stripeColor || '#064e3b');
-      sphereGrad.addColorStop(1, '#090d16');
+      sphereGrad.addColorStop(0.16, obj.rimColor || '#a7f3d0');
+      sphereGrad.addColorStop(0.45, obj.outerColor || '#10b981');
+      sphereGrad.addColorStop(0.84, obj.stripeColor || '#064e3b');
+      sphereGrad.addColorStop(1, '#040814');
 
       ctx.fillStyle = sphereGrad;
       ctx.beginPath();
       ctx.arc(0, 0, safeR, 0, Math.PI * 2);
       ctx.fill();
 
-      // 2. Экваториальные полосы/текстура для ощущения 3D-вращения
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.22)';
-      ctx.lineWidth = Math.max(2, safeR * 0.08);
+      // Внутренний 3D-контейнер с вращающимися меридианами (обрезается по контуру сферы)
+      ctx.save();
       ctx.beginPath();
-      saberSafeEllipse(ctx, 0, 0, safeR * 0.72, safeR * 0.32, 0.3);
+      ctx.arc(0, 0, safeR * 0.97, 0, Math.PI * 2);
+      ctx.clip();
+      ctx.rotate(obj.rotation || 0);
+
+      // 3 вращающихся 3D-меридиана (создают стопроцентную иллюзию вращающегося 3D-шара!)
+      const meridianCount = 3;
+      for (let m = 0; m < meridianCount; m++) {
+        const phase = rot3D + (m * Math.PI) / meridianCount;
+        const mRx = Math.max(2, Math.abs(Math.sin(phase)) * safeR * 0.92);
+        ctx.strokeStyle = obj.isBonus
+          ? 'rgba(255, 255, 255, 0.42)'
+          : 'rgba(6, 24, 20, 0.36)';
+        ctx.lineWidth = Math.max(2.5, safeR * 0.085);
+        ctx.beginPath();
+        saberSafeEllipse(ctx, 0, 0, mRx, safeR * 0.95, 0);
+        ctx.stroke();
+      }
+
+      // Экваториальный 3D-пояс с перспективным наклоном
+      const eqTilt = Math.cos(rot3D * 0.7) * 0.38;
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.28)';
+      ctx.lineWidth = Math.max(2, safeR * 0.06);
+      ctx.beginPath();
+      saberSafeEllipse(ctx, 0, safeR * Math.sin(eqTilt) * 0.18, safeR * 0.94, safeR * 0.34, 0);
       ctx.stroke();
 
-      // 3. Глянцевый 3D-блик сверху-слева (Specular Highlight)
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.42)';
+      // Если это бонусное Плазма-Ядро — рисуем внутри вращающийся 3D-октаэдр (кристалл как в Beat Saber)
+      if (obj.isBonus) {
+        const ox = Math.sin(rot3D) * safeR * 0.36;
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = Math.max(2, safeR * 0.045);
+        ctx.beginPath();
+        ctx.moveTo(0, -safeR * 0.68);
+        ctx.lineTo(ox, 0);
+        ctx.lineTo(0, safeR * 0.68);
+        ctx.lineTo(-ox, 0);
+        ctx.closePath();
+        ctx.stroke();
+      }
+      ctx.restore();
+
+      // 3. Фиксированный в мировых координатах 3D-блик сверху-справа (Specular Highlight)
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.52)';
       ctx.beginPath();
-      saberSafeEllipse(ctx, -safeR * 0.32, -safeR * 0.34, safeR * 0.28, safeR * 0.14, -0.45);
+      saberSafeEllipse(ctx, safeR * 0.30, -safeR * 0.34, safeR * 0.26, safeR * 0.13, 0.48);
       ctx.fill();
+
+      // 4. Нижний неоновый рефлекс от пола додзё (Cyan Bounce Light Rim)
+      ctx.strokeStyle = isStrike ? '#18e299' : 'rgba(0, 240, 255, 0.55)';
+      ctx.lineWidth = Math.max(2, safeR * 0.055);
+      ctx.beginPath();
+      ctx.arc(0, 0, safeR * 0.96, Math.PI * 0.18, Math.PI * 0.82);
+      ctx.stroke();
     }
 
     ctx.restore();
   },
 
-  // Отрисовка разрезанной 3D-половинки с сочной внутренней мякотью и косточками!
+  // Отрисовка разрезанной 3D-половинки с видимой толщиной кожуры, 3D-срезом мякоти и косточками
   drawSlicedHalf3D(ctx, half) {
     ctx.save();
     ctx.globalAlpha = Math.max(0, half.alpha);
@@ -1221,6 +1406,7 @@ const Saber3DEngine = {
     ctx.rotate(half.cutAngle);
 
     const r = half.radius;
+    // 1. Внешний 3D-купол кожуры
     ctx.beginPath();
     if (half.side < 0) {
       ctx.arc(0, 0, r, Math.PI, Math.PI * 2, false);
@@ -1228,17 +1414,15 @@ const Saber3DEngine = {
       ctx.arc(0, 0, r, 0, Math.PI, false);
     }
     ctx.closePath();
-
-    // Кожура снаружи
     ctx.fillStyle = half.outerColor;
     ctx.fill();
-    ctx.lineWidth = Math.max(3, r * 0.1);
+    ctx.lineWidth = Math.max(3, r * 0.09);
     ctx.strokeStyle = '#ffffff';
     ctx.stroke();
 
-    // Сочная мякоть внутри разреза
+    // 2. Внутренняя мякоть
     ctx.beginPath();
-    const innerR = r * 0.84;
+    const innerR = r * 0.85;
     if (half.side < 0) {
       ctx.arc(0, 0, innerR, Math.PI, Math.PI * 2, false);
     } else {
@@ -1248,7 +1432,16 @@ const Saber3DEngine = {
     ctx.fillStyle = half.fleshColor;
     ctx.fill();
 
-    // Косточки на срезе
+    // 3. Эллиптическая 3D-плоскость самого среза (придаёт половинке настоящий 3D-объём!)
+    ctx.fillStyle = half.fleshColor;
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    saberSafeEllipse(ctx, 0, 0, innerR, Math.max(4, innerR * 0.22), 0);
+    ctx.fill();
+    ctx.stroke();
+
+    // 4. Косточки на срезе
     ctx.fillStyle = half.seedColor;
     const seedOffset = half.side * innerR * 0.42;
     [-0.45, 0, 0.45].forEach((sx) => {
@@ -1260,39 +1453,16 @@ const Saber3DEngine = {
     ctx.restore();
   },
 
-  // Отрисовка Плазменной Сабли / Катаны и ленточного шлейфа удара
+  // Отрисовка Плазменной Сабли / Катаны (резервный метод, если не загружен ArenaVisuals)
   drawPlasmaSaber(ctx, glove, canvasWidth, canvasHeight) {
+    if (window.ArenaVisuals && typeof window.ArenaVisuals.drawKatana === 'function') {
+      return window.ArenaVisuals.drawKatana(ctx, glove, canvasWidth, canvasHeight);
+    }
     const saber = this.computeSaberSegment(glove, canvasWidth, canvasHeight);
     const bladeColor = glove.id === 'left' ? '#00f0ff' : '#ff2a5f';
 
     ctx.save();
-
-    // 1. Светящийся ленточный шлейф взмаха (Slash Trail Ribbon)
-    if (glove.trail && glove.trail.length > 2) {
-      for (let i = 1; i < glove.trail.length; i++) {
-        const ptPrev = glove.trail[i - 1];
-        const ptCurr = glove.trail[i];
-        const ratio = i / glove.trail.length;
-        ctx.strokeStyle = bladeColor;
-        ctx.globalAlpha = ratio * 0.38;
-        ctx.lineWidth = ratio * 22;
-        ctx.lineCap = 'round';
-        ctx.beginPath();
-        ctx.moveTo(
-          ptPrev.x + Math.cos(saber.dirAngle) * saber.bladeLength * 0.85,
-          ptPrev.y + Math.sin(saber.dirAngle) * saber.bladeLength * 0.85
-        );
-        ctx.lineTo(
-          ptCurr.x + Math.cos(saber.dirAngle) * saber.bladeLength * 0.85,
-          ptCurr.y + Math.sin(saber.dirAngle) * saber.bladeLength * 0.85
-        );
-        ctx.stroke();
-      }
-    }
-
     ctx.globalAlpha = glove.active ? 1.0 : 0.55;
-
-    // 2. Неоновый ореол клинка катаны
     ctx.shadowColor = bladeColor;
     ctx.shadowBlur = 26;
     ctx.strokeStyle = bladeColor;
@@ -1303,34 +1473,12 @@ const Saber3DEngine = {
     ctx.lineTo(saber.tipX, saber.tipY);
     ctx.stroke();
 
-    // 3. Белое раскалённое ядро клинка
     ctx.strokeStyle = '#ffffff';
     ctx.lineWidth = 5.5;
     ctx.beginPath();
     ctx.moveTo(saber.handleX, saber.handleY);
     ctx.lineTo(saber.tipX, saber.tipY);
     ctx.stroke();
-
-    // 4. Гарда (Цуба) и рукоять в кулаке игрока
-    ctx.translate(saber.handleX, saber.handleY);
-    ctx.rotate(saber.dirAngle);
-    ctx.shadowBlur = 0;
-
-    // Рукоять (назад от кисти)
-    ctx.fillStyle = '#1e293b';
-    ctx.strokeStyle = '#94a3b8';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    saberSafeRoundRect(ctx, -42, -7, 42, 14, 5);
-    ctx.fill();
-    ctx.stroke();
-
-    // Золотая цуба (гарда)
-    ctx.fillStyle = '#ffb800';
-    ctx.beginPath();
-    saberSafeRoundRect(ctx, -4, -18, 9, 36, 4);
-    ctx.fill();
-
     ctx.restore();
     return saber;
   }
@@ -1343,9 +1491,12 @@ window.playKatanaSlashSound = playKatanaSlashSound;
 </script>
   <script>
 // ============================================================================
-// MOTION ARENA TV v6 — ВИЗУАЛ: Ночное Неон-Додзё + Персонаж-Самурай + Катаны
-// Совместимо со старыми браузерами Smart TV: без ctx.ellipse/roundRect/filter,
-// без ?. и ??, все размеры защищены от NaN/0.
+// MOTION ARENA TV v7.0 — 3D CYBER-DOJO + 3D VOLUMETRIC CYBER-FIGHTER
+// Решает проблему плоского 2D:
+// 1. Перспективный 3D-коридор с движущимися Z-линиями пола и 3D-арками глубины
+// 2. Объёмный 3D Кибер-Боец (вид со спины в 3D-перспективе с хребтом-реактором,
+//    объёмным цилиндрическим 3D-шейдингом брони и контровым неоновым светом)
+// 3. Совместимо со всеми браузерами Smart TV (ES2017, без ненадёжных API)
 // ============================================================================
 (function () {
   'use strict';
@@ -1365,8 +1516,20 @@ window.playKatanaSlashSound = playKatanaSlashSound;
     ctx.restore();
   }
 
+  function lerp(a, b, t) {
+    return a + (b - a) * t;
+  }
+
+  function lerpP(a, b, t) {
+    return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
+  }
+
+  function dist(a, b) {
+    return Math.hypot(a[0] - b[0], a[1] - b[1]);
+  }
+
   // ---------------------------------------------------------------------------
-  // 1. ФОН: ночное додзё (кэшируется в offscreen-canvas, перерисовка только при ресайзе)
+  // 1. 3D СЦЕНА: НОЧНОЕ КИБЕР-ДОДЗЁ С ГЛУБИНОЙ, ПОРТАЛОМ ТОРИИ И 3D-ПОЛОМ
   // ---------------------------------------------------------------------------
   let bgCache = null;
   let bgW = 0;
@@ -1378,175 +1541,234 @@ window.playKatanaSlashSound = playKatanaSlashSound;
     c.width = w;
     c.height = h;
     const g = c.getContext('2d');
-    const horizon = h * 0.43;
+    const horizon = h * 0.42;
     const vx = w * 0.5;
 
-    // Небо
+    // 1. Глубокое ночное небо с атмосферным 3D-свечением у горизонта
     const sky = g.createLinearGradient(0, 0, 0, horizon);
-    sky.addColorStop(0, '#05070f');
-    sky.addColorStop(0.6, '#0e1530');
-    sky.addColorStop(1, '#2a1238');
+    sky.addColorStop(0, '#03050a');
+    sky.addColorStop(0.52, '#0a1128');
+    sky.addColorStop(0.88, '#1e1035');
+    sky.addColorStop(1, '#3b1548');
     g.fillStyle = sky;
     g.fillRect(0, 0, w, horizon + 2);
 
-    // Звёзды (детерминированно)
-    let seed = 7;
+    // Звёзды
+    let seed = 19;
     const rnd = function () {
       seed = (seed * 9301 + 49297) % 233280;
       return seed / 233280;
     };
-    g.fillStyle = 'rgba(255,255,255,0.75)';
-    for (let i = 0; i < 70; i++) {
+    g.fillStyle = '#ffffff';
+    for (let i = 0; i < 85; i++) {
       const sx = rnd() * w;
-      const sy = rnd() * horizon * 0.8;
-      const sr = rnd() * 1.4 + 0.3;
-      g.globalAlpha = 0.3 + rnd() * 0.6;
+      const sy = rnd() * horizon * 0.82;
+      const sr = rnd() * 1.5 + 0.3;
+      g.globalAlpha = 0.25 + rnd() * 0.65;
       g.beginPath();
       g.arc(sx, sy, sr, 0, Math.PI * 2);
       g.fill();
     }
     g.globalAlpha = 1;
 
-    // Луна с ореолом
-    const mx = w * 0.8;
-    const my = h * 0.16;
-    const mr = Math.max(8, h * 0.065);
-    const halo = g.createRadialGradient(mx, my, mr * 0.6, mx, my, mr * 4);
-    halo.addColorStop(0, 'rgba(255, 220, 230, 0.35)');
-    halo.addColorStop(1, 'rgba(255, 220, 230, 0)');
+    // 2. Гигантская кибер-луна справа-сверху (источник направленного 3D-света сцены)
+    const mx = w * 0.81;
+    const my = h * 0.17;
+    const mr = Math.max(12, h * 0.075);
+    const halo = g.createRadialGradient(mx, my, mr * 0.4, mx, my, mr * 4.5);
+    halo.addColorStop(0, 'rgba(255, 210, 235, 0.42)');
+    halo.addColorStop(0.45, 'rgba(180, 90, 255, 0.14)');
+    halo.addColorStop(1, 'rgba(0, 0, 0, 0)');
     g.fillStyle = halo;
-    g.fillRect(mx - mr * 4, my - mr * 4, mr * 8, mr * 8);
-    const moon = g.createRadialGradient(mx - mr * 0.3, my - mr * 0.3, mr * 0.1, mx, my, mr);
-    moon.addColorStop(0, '#fff7f0');
-    moon.addColorStop(1, '#f2c9d6');
+    g.fillRect(mx - mr * 4.5, my - mr * 4.5, mr * 9, mr * 9);
+
+    const moon = g.createRadialGradient(mx - mr * 0.28, my - mr * 0.28, mr * 0.1, mx, my, mr);
+    moon.addColorStop(0, '#ffffff');
+    moon.addColorStop(0.65, '#ffe4ef');
+    moon.addColorStop(1, '#d896ff');
     g.fillStyle = moon;
     g.beginPath();
     g.arc(mx, my, mr, 0, Math.PI * 2);
     g.fill();
 
-    // Горы (2 слоя)
-    const mountains = function (color, base, amp, step, phase) {
-      g.fillStyle = color;
+    // 3. Многослойные 3D-горы с воздушной перспективой (Atmospheric Fog)
+    const mountains = function (colorTop, colorBot, base, amp, step, phase) {
+      const mg = g.createLinearGradient(0, base - amp, 0, horizon);
+      mg.addColorStop(0, colorTop);
+      mg.addColorStop(1, colorBot);
+      g.fillStyle = mg;
       g.beginPath();
       g.moveTo(0, horizon);
       for (let x = 0; x <= w + step; x += step) {
-        const y = base - Math.abs(Math.sin(x * 0.004 + phase)) * amp - Math.sin(x * 0.011 + phase * 2) * amp * 0.25;
+        const y =
+          base -
+          Math.abs(Math.sin(x * 0.0038 + phase)) * amp -
+          Math.sin(x * 0.011 + phase * 2) * amp * 0.26;
         g.lineTo(x, y);
       }
       g.lineTo(w, horizon);
       g.closePath();
       g.fill();
     };
-    mountains('#1a1736', horizon - h * 0.02, h * 0.12, 24, 1.3);
-    mountains('#110f24', horizon, h * 0.07, 18, 3.1);
+    mountains('#181338', '#2c1644', horizon - h * 0.01, h * 0.14, 22, 1.1);
+    mountains('#0f0c24', '#1d1030', horizon, h * 0.08, 16, 2.9);
 
-    // Тории в точке схода
-    const tw = Math.max(40, w * 0.11);
-    const th = tw * 0.75;
-    const tx = vx - tw / 2;
-    const ty = horizon - th;
-    g.fillStyle = '#7a1024';
-    g.fillRect(tx + tw * 0.14, ty + th * 0.18, tw * 0.07, th * 0.82);
-    g.fillRect(tx + tw * 0.79, ty + th * 0.18, tw * 0.07, th * 0.82);
-    g.fillRect(tx + tw * 0.08, ty + th * 0.32, tw * 0.84, th * 0.07);
+    // 4. 3D-Пол Додзё (Глубокая лакированная палуба с отражением портала)
+    const floor = g.createLinearGradient(0, horizon, 0, h);
+    floor.addColorStop(0, '#0d0714');
+    floor.addColorStop(0.25, '#160d1f');
+    floor.addColorStop(0.7, '#1d1222');
+    floor.addColorStop(1, '#09060e');
+    g.fillStyle = floor;
+    g.fillRect(0, horizon, w, h - horizon);
+
+    // Центральная 3D-дорожка арены (Runway Track) от ворот Тории к игроку
+    const trackGrad = g.createLinearGradient(0, horizon, 0, h);
+    trackGrad.addColorStop(0, 'rgba(0, 240, 255, 0.22)');
+    trackGrad.addColorStop(0.4, 'rgba(0, 240, 255, 0.08)');
+    trackGrad.addColorStop(1, 'rgba(255, 42, 95, 0.06)');
+    g.fillStyle = trackGrad;
     g.beginPath();
-    g.moveTo(tx - tw * 0.06, ty + th * 0.06);
-    g.quadraticCurveTo(vx, ty + th * 0.2, tx + tw * 1.06, ty + th * 0.06);
-    g.lineTo(tx + tw * 1.02, ty + th * 0.17);
-    g.quadraticCurveTo(vx, ty + th * 0.28, tx - tw * 0.02, ty + th * 0.17);
+    g.moveTo(vx - w * 0.055, horizon);
+    g.lineTo(vx + w * 0.055, horizon);
+    g.lineTo(vx + w * 0.46, h);
+    g.lineTo(vx - w * 0.46, h);
     g.closePath();
     g.fill();
 
-    // Пол: деревянные доски с перспективой
-    const floor = g.createLinearGradient(0, horizon, 0, h);
-    floor.addColorStop(0, '#120c10');
-    floor.addColorStop(1, '#2b1a14');
-    g.fillStyle = floor;
-    g.fillRect(0, horizon, w, h - horizon);
-    g.strokeStyle = 'rgba(255, 184, 0, 0.07)';
-    g.lineWidth = 1.5;
-    for (let i = -12; i <= 12; i++) {
+    // Перспективные рельсы пола (уходят ровно в точку схода vx, horizon)
+    for (let i = -10; i <= 10; i++) {
+      const isMainRail = Math.abs(i) === 2 || i === 0;
+      g.strokeStyle = isMainRail ? 'rgba(0, 240, 255, 0.28)' : 'rgba(255, 184, 0, 0.08)';
+      g.lineWidth = isMainRail ? 2.2 : 1.2;
       g.beginPath();
-      g.moveTo(vx, horizon);
-      g.lineTo(vx + i * w * 0.12, h);
+      g.moveTo(vx + i * w * 0.012, horizon);
+      g.lineTo(vx + i * w * 0.115, h);
       g.stroke();
     }
-    for (let k = 1; k <= 9; k++) {
-      const t = Math.pow(k / 9, 2);
-      const y = horizon + (h - horizon) * t;
-      g.strokeStyle = 'rgba(255, 184, 0, ' + (0.03 + t * 0.06).toFixed(3) + ')';
-      g.beginPath();
-      g.moveTo(0, y);
-      g.lineTo(w, y);
-      g.stroke();
-    }
-    // Отражение луны на полу
-    const refl = g.createRadialGradient(vx, h * 0.8, 10, vx, h * 0.8, w * 0.45);
-    refl.addColorStop(0, 'rgba(0, 240, 255, 0.07)');
-    refl.addColorStop(1, 'rgba(0, 240, 255, 0)');
-    g.fillStyle = refl;
-    g.fillRect(0, horizon, w, h - horizon);
 
-    // Боковые колонны додзё
-    const pillar = function (x0, wdt) {
+    // 5. Светящийся 3D-портал ворот Тории в точке схода (откуда вылетают объекты!)
+    const portalGlow = g.createRadialGradient(vx, horizon - h * 0.04, 6, vx, horizon - h * 0.04, w * 0.16);
+    portalGlow.addColorStop(0, 'rgba(0, 240, 255, 0.45)');
+    portalGlow.addColorStop(0.45, 'rgba(255, 42, 95, 0.18)');
+    portalGlow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    g.fillStyle = portalGlow;
+    g.fillRect(vx - w * 0.18, horizon - h * 0.22, w * 0.36, h * 0.32);
+
+    const tw = Math.max(54, w * 0.125);
+    const th = tw * 0.78;
+    const tx = vx - tw / 2;
+    const ty = horizon - th;
+    // Тень и 3D-объём колонн Тории
+    g.fillStyle = '#b91c1c';
+    g.fillRect(tx + tw * 0.14, ty + th * 0.18, tw * 0.075, th * 0.84);
+    g.fillRect(tx + tw * 0.785, ty + th * 0.18, tw * 0.075, th * 0.84);
+    g.fillStyle = '#ff3b4b';
+    g.fillRect(tx + tw * 0.14, ty + th * 0.18, tw * 0.025, th * 0.84);
+    g.fillRect(tx + tw * 0.785, ty + th * 0.18, tw * 0.025, th * 0.84);
+    // Перекладины Тории
+    g.fillStyle = '#dc2626';
+    g.fillRect(tx + tw * 0.06, ty + th * 0.31, tw * 0.88, th * 0.075);
+    g.beginPath();
+    g.moveTo(tx - tw * 0.08, ty + th * 0.05);
+    g.quadraticCurveTo(vx, ty + th * 0.2, tx + tw * 1.08, ty + th * 0.05);
+    g.lineTo(tx + tw * 1.03, ty + th * 0.17);
+    g.quadraticCurveTo(vx, ty + th * 0.28, tx - tw * 0.03, ty + th * 0.17);
+    g.closePath();
+    g.fill();
+    g.strokeStyle = '#ffb800';
+    g.lineWidth = 1.8;
+    g.stroke();
+
+    // 6. Боковые 3D-колонны Кибер-Додзё на переднем плане
+    const pillar = function (x0, wdt, isLeft) {
       const pg = g.createLinearGradient(x0, 0, x0 + wdt, 0);
-      pg.addColorStop(0, '#0a0610');
-      pg.addColorStop(0.5, '#24121a');
-      pg.addColorStop(1, '#0a0610');
+      pg.addColorStop(0, isLeft ? '#07050c' : '#2a1320');
+      pg.addColorStop(0.55, '#1c0e18');
+      pg.addColorStop(1, isLeft ? '#2a1320' : '#07050c');
       g.fillStyle = pg;
       g.fillRect(x0, 0, wdt, h);
+      // Неоновая вертикальная жила на колонне
+      g.fillStyle = isLeft ? 'rgba(0, 240, 255, 0.35)' : 'rgba(255, 42, 95, 0.35)';
+      g.fillRect(isLeft ? x0 + wdt - 3 : x0, 0, 3, h);
     };
-    pillar(0, w * 0.035);
-    pillar(w - w * 0.035, w * 0.035);
-    // Верхняя балка
-    g.fillStyle = '#160a10';
-    g.fillRect(0, 0, w, h * 0.035);
-    g.fillStyle = 'rgba(255, 184, 0, 0.25)';
-    g.fillRect(0, h * 0.035, w, 2);
+    pillar(0, w * 0.032, true);
+    pillar(w - w * 0.032, w * 0.032, false);
 
-    // Виньетка
-    const vig = g.createRadialGradient(vx, h * 0.5, Math.min(w, h) * 0.35, vx, h * 0.5, Math.max(w, h) * 0.75);
-    vig.addColorStop(0, 'rgba(0,0,0,0)');
-    vig.addColorStop(1, 'rgba(0,0,0,0.6)');
-    g.fillStyle = vig;
-    g.fillRect(0, 0, w, h);
     return c;
   }
 
   function drawLantern(ctx, x, y, r, now, phase) {
-    const flicker = 0.85 + Math.sin(now * 0.004 + phase) * 0.08 + Math.sin(now * 0.013 + phase) * 0.05;
-    const glow = ctx.createRadialGradient(x, y, r * 0.2, x, y, r * 3.2);
-    glow.addColorStop(0, 'rgba(255, 150, 60, ' + (0.32 * flicker).toFixed(3) + ')');
+    const flicker = 0.88 + Math.sin(now * 0.004 + phase) * 0.08;
+    const glow = ctx.createRadialGradient(x, y, r * 0.2, x, y, r * 3.0);
+    glow.addColorStop(0, 'rgba(255, 150, 60, ' + (0.3 * flicker).toFixed(3) + ')');
     glow.addColorStop(1, 'rgba(255, 150, 60, 0)');
     ctx.fillStyle = glow;
-    ctx.fillRect(x - r * 3.2, y - r * 3.2, r * 6.4, r * 6.4);
-    // Шнур
+    ctx.fillRect(x - r * 3, y - r * 3, r * 6, r * 6);
+
     ctx.strokeStyle = 'rgba(0,0,0,0.7)';
     ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.moveTo(x, 0);
     ctx.lineTo(x, y - r * 1.2);
     ctx.stroke();
-    // Корпус фонаря
-    const body = ctx.createRadialGradient(x - r * 0.2, y - r * 0.3, r * 0.1, x, y, r * 1.2);
-    body.addColorStop(0, '#fff1c2');
-    body.addColorStop(0.5, '#ff8a3d');
-    body.addColorStop(1, '#a3241a');
+
+    const body = ctx.createRadialGradient(x - r * 0.25, y - r * 0.3, r * 0.1, x, y, r * 1.2);
+    body.addColorStop(0, '#fff3c4');
+    body.addColorStop(0.55, '#ff8a3d');
+    body.addColorStop(1, '#991b1b');
     ctx.fillStyle = body;
     ctx.beginPath();
     ell(ctx, x, y, r * 0.85, r * 1.15, 0);
     ctx.fill();
-    ctx.strokeStyle = 'rgba(80, 20, 10, 0.6)';
-    ctx.lineWidth = 1.5;
-    for (let i = -2; i <= 2; i++) {
+  }
+
+  // Движущиеся в 3D-перспективе поперечные линии пола и 3D-арки глубины (создают 100% ощущение полёта по оси Z!)
+  function drawAnimated3DFloorAndArches(ctx, w, h, now, comboGlow) {
+    const horizon = h * 0.42;
+    const vx = w * 0.5;
+    const floorH = h - horizon;
+
+    ctx.save();
+    // 1. Бегущие на зрителя перспективные 3D-ступени пола (z: 1.0 -> 0.0)
+    const speedPhase = ((now * 0.00028) % 1 + 1) % 1;
+    const numRows = 11;
+    for (let k = 0; k < numRows; k++) {
+      // p ∈ (0..1], где 0 — горизонт, 1 — край экрана у ног игрока
+      const linearP = ((k + speedPhase) / numRows) % 1;
+      const zDepth = 1 - linearP; // z=1 у горизонта, z=0 у камеры
+      // Квадратично-кубическое ускорение по мере приближения к камере (настоящий закон 1/z перспективы!)
+      const projT = Math.pow(linearP, 2.35);
+      const y = horizon + floorH * projT;
+      const halfWidth = w * (0.055 + 0.48 * projT);
+
+      const alpha = Math.min(0.42, 0.04 + projT * 0.32);
+      ctx.strokeStyle = comboGlow >= 5 ? 'rgba(0, 240, 255, ' + alpha.toFixed(3) + ')' : 'rgba(255, 184, 0, ' + (alpha * 0.75).toFixed(3) + ')';
+      ctx.lineWidth = 1 + projT * 2.5;
       ctx.beginPath();
-      ctx.moveTo(x - r * 0.8, y + i * r * 0.36);
-      ctx.lineTo(x + r * 0.8, y + i * r * 0.36);
+      ctx.moveTo(vx - halfWidth, y);
+      ctx.lineTo(vx + halfWidth, y);
       ctx.stroke();
+
+      // Боковые 3D-световые столбики (Pylons) вдоль дорожки на 3 ключевых рубежах глубины
+      if (k % 3 === 0 && zDepth < 0.88 && zDepth > 0.12) {
+        const pylonH = h * 0.22 * projT;
+        const pylonAlpha = Math.min(0.45, projT * 0.55);
+        ctx.strokeStyle = 'rgba(0, 240, 255, ' + pylonAlpha.toFixed(3) + ')';
+        ctx.lineWidth = Math.max(1.5, 4 * projT);
+        ctx.beginPath();
+        // Левая стойка 3D-коридора
+        ctx.moveTo(vx - halfWidth, y);
+        ctx.lineTo(vx - halfWidth, y - pylonH);
+        ctx.lineTo(vx - halfWidth * 0.82, y - pylonH * 1.18);
+        // Правая стойка 3D-коридора
+        ctx.moveTo(vx + halfWidth, y);
+        ctx.lineTo(vx + halfWidth, y - pylonH);
+        ctx.lineTo(vx + halfWidth * 0.82, y - pylonH * 1.18);
+        ctx.stroke();
+      }
     }
-    ctx.fillStyle = '#1a0a08';
-    ctx.fillRect(x - r * 0.5, y - r * 1.25, r, r * 0.16);
-    ctx.fillRect(x - r * 0.5, y + r * 1.1, r, r * 0.16);
+    ctx.restore();
   }
 
   function drawBackground(ctx, w, h, now, comboGlow) {
@@ -1565,17 +1787,21 @@ window.playKatanaSlashSound = playKatanaSlashSound;
       ctx.fillStyle = '#0b0e14';
       ctx.fillRect(0, 0, w, h);
     }
-    const lr = Math.max(10, h * 0.035);
-    drawLantern(ctx, w * 0.12, h * 0.17, lr, now, 0);
-    drawLantern(ctx, w * 0.88, h * 0.17, lr, now, 2.1);
 
-    // Падающие лепестки сакуры
+    // Анимированный 3D-пол и арки глубины
+    drawAnimated3DFloorAndArches(ctx, w, h, now, comboGlow);
+
+    const lr = Math.max(10, h * 0.032);
+    drawLantern(ctx, w * 0.08, h * 0.19, lr, now, 0);
+    drawLantern(ctx, w * 0.92, h * 0.19, lr, now, 2.1);
+
+    // Падающие лепестки сакуры с 3D-размером
     if (petals.length === 0) {
       for (let i = 0; i < 16; i++) {
-        petals.push({ x: Math.random(), y: Math.random(), s: 0.6 + Math.random() * 0.8, p: Math.random() * 6.28 });
+        petals.push({ x: Math.random(), y: Math.random(), s: 0.5 + Math.random() * 0.9, p: Math.random() * 6.28 });
       }
     }
-    ctx.fillStyle = 'rgba(255, 170, 200, 0.75)';
+    ctx.fillStyle = 'rgba(255, 175, 205, 0.72)';
     for (let i = 0; i < petals.length; i++) {
       const pt = petals[i];
       pt.y += 0.0009 * pt.s;
@@ -1585,41 +1811,40 @@ window.playKatanaSlashSound = playKatanaSlashSound;
         pt.x = Math.random();
       }
       ctx.beginPath();
-      ell(ctx, pt.x * w, pt.y * h, 5 * pt.s, 2.6 * pt.s, now * 0.002 + pt.p);
+      ell(ctx, pt.x * w, pt.y * h, 5 * pt.s, 2.5 * pt.s, now * 0.002 + pt.p);
       ctx.fill();
-    }
-
-    // Пульс комбо по краям
-    if (comboGlow > 0) {
-      ctx.save();
-      ctx.globalAlpha = Math.min(0.35, comboGlow * 0.04);
-      ctx.strokeStyle = '#00f0ff';
-      ctx.lineWidth = 10;
-      ctx.strokeRect(5, 5, w - 10, h - 10);
-      ctx.restore();
     }
   }
 
   // ---------------------------------------------------------------------------
-  // 2. ПЕРСОНАЖ-САМУРАЙ по ключевым точкам тела
+  // 2. ОБЪЁМНЫЙ 3D КИБЕР-БОЕЦ / САМУРАЙ (Вид со спины в 3D-перспективе!)
   // ---------------------------------------------------------------------------
+  // Почему раньше выглядело плохо:
+  // Старый самурай стоял в центре экрана (на y=0.25..0.70), закрывал ворота Тории
+  // и рисовался плоскими 2D-прямоугольниками с 1px жёлтой обводкой.
+  //
+  // Как сделано теперь (по канонам Punch-Out!! / Beat Saber / Starri / Ghostrunner):
+  // - Камера расположена за спиной/над плечами бойца (Over-the-Shoulder 3D View).
+  // - Торс и шлем находятся в нижней части переднего плана (не перекрывают точку схода!),
+  //   а руки в 3D-броне с неоновыми энерго-каналами выходят вперёд вглубь арены к катанам!
+  // - Каждый сегмент тела рендерится с настоящим цилиндрическим/сферическим 3D-шейдингом
+  //   (Ambient Occlusion в центре + металлический блик + яркий Cyan/Crimson Rim Light по краям).
   const DEFAULT_BODY = {
-    head: [0.5, 0.25],
-    chest: [0.5, 0.37],
-    pelvis: [0.5, 0.57],
-    lS: [0.44, 0.37],
-    rS: [0.56, 0.37],
-    lE: [0.4, 0.48],
-    rE: [0.6, 0.48],
-    lW: [0.36, 0.58],
-    rW: [0.64, 0.58],
-    lH: [0.465, 0.57],
-    rH: [0.535, 0.57],
-    lK: [0.455, 0.7],
-    rK: [0.545, 0.7]
+    head: [0.5, 0.34],
+    chest: [0.5, 0.46],
+    pelvis: [0.5, 0.66],
+    lS: [0.43, 0.45],
+    rS: [0.57, 0.45],
+    lE: [0.37, 0.56],
+    rE: [0.63, 0.56],
+    lW: [0.32, 0.64],
+    rW: [0.68, 0.64],
+    lH: [0.46, 0.66],
+    rH: [0.54, 0.66],
+    lK: [0.45, 0.81],
+    rK: [0.55, 0.81]
   };
 
-  // Сглаживание точек тела (тело приходит ~30 Гц, рисуем 60 Гц)
   const smoothBody = {};
 
   function getPoint(body, key) {
@@ -1631,480 +1856,334 @@ window.playKatanaSlashSound = playKatanaSlashSound;
   function resolveBody(body, w, h) {
     const out = {};
     const keys = Object.keys(DEFAULT_BODY);
-    // Если тела нет, но есть плечи — достраиваем недостающее по умолчанию относительно плеч
     for (let i = 0; i < keys.length; i++) {
       const k = keys[i];
       let p = getPoint(body, k);
       if (!p) p = DEFAULT_BODY[k];
-      // Тот же reach-масштаб, что и у перчаток в game.js (updateGlovesFromStableSlots), чтобы кисти совпадали с мечами
-      const tx = (0.5 + (p[0] - 0.5) * 1.35) * w;
-      const ty = (0.52 + (p[1] - 0.52) * 1.3) * h;
+      // Смещаем торс бойца чуть ниже линии горизонта (0.42h), чтобы точка вылета 3D-объектов была 100% открыта!
+      const tx = (0.5 + (p[0] - 0.5) * 1.25) * w;
+      const ty = (0.58 + (p[1] - 0.48) * 1.15) * h;
       const prev = smoothBody[k];
       if (prev && Math.abs(prev[0] - tx) < w * 0.5) {
-        prev[0] += (tx - prev[0]) * 0.5;
-        prev[1] += (ty - prev[1]) * 0.5;
+        prev[0] += (tx - prev[0]) * 0.52;
+        prev[1] += (ty - prev[1]) * 0.52;
       } else {
         smoothBody[k] = [tx, ty];
       }
       out[k] = [smoothBody[k][0], smoothBody[k][1]];
     }
-    // Достраиваем недостающие опорные точки
     if (!getPoint(body, 'chest')) out.chest = [(out.lS[0] + out.rS[0]) / 2, (out.lS[1] + out.rS[1]) / 2];
     if (!getPoint(body, 'pelvis')) out.pelvis = [(out.lH[0] + out.rH[0]) / 2, (out.lH[1] + out.rH[1]) / 2];
     return out;
   }
 
-  function dist(a, b) {
-    return Math.hypot(a[0] - b[0], a[1] - b[1]);
-  }
-
-  function lerpP(a, b, t) {
-    return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
-  }
-
-  function capsule(ctx, a, b, width, color) {
-    ctx.strokeStyle = color;
-    ctx.lineWidth = Math.max(1, width);
-    ctx.lineCap = 'round';
-    ctx.beginPath();
-    ctx.moveTo(a[0], a[1]);
-    ctx.lineTo(b[0], b[1]);
-    ctx.stroke();
-  }
-
-  // Четырёхугольная пластина вдоль отрезка a→b с шириной wa (у a) и wb (у b)
-  function plate(ctx, a, b, wa, wb) {
+  // Отрисовка объёмного 3D-цилиндра с поперечным градиентом освещения и неоновым контровым светом (Rim Light)
+  function draw3DCylinderLimb(ctx, a, b, rStart, rEnd, coreColor, rimLeftColor, rimRightColor) {
     const dx = b[0] - a[0];
     const dy = b[1] - a[1];
-    const len = Math.max(0.001, Math.hypot(dx, dy));
+    const len = Math.max(1, Math.hypot(dx, dy));
     const nx = -dy / len;
     const ny = dx / len;
+    const mid = lerpP(a, b, 0.5);
+    const maxR = Math.max(rStart, rEnd, 2);
+
+    // Поперечный 3D-градиент от левого края цилиндра к правому (имитация 3D Normal Map!)
+    const grad = ctx.createLinearGradient(
+      mid[0] + nx * maxR,
+      mid[1] + ny * maxR,
+      mid[0] - nx * maxR,
+      mid[1] - ny * maxR
+    );
+    grad.addColorStop(0, rimLeftColor);
+    grad.addColorStop(0.18, coreColor);
+    grad.addColorStop(0.5, '#2b364f'); // 3D цилиндрический блик по хребту сегмента
+    grad.addColorStop(0.82, '#090d18');
+    grad.addColorStop(1, rimRightColor);
+
+    ctx.fillStyle = grad;
     ctx.beginPath();
-    ctx.moveTo(a[0] + nx * wa, a[1] + ny * wa);
-    ctx.lineTo(b[0] + nx * wb, b[1] + ny * wb);
-    ctx.lineTo(b[0] - nx * wb, b[1] - ny * wb);
-    ctx.lineTo(a[0] - nx * wa, a[1] - ny * wa);
+    ctx.moveTo(a[0] + nx * rStart, a[1] + ny * rStart);
+    ctx.lineTo(b[0] + nx * rEnd, b[1] + ny * rEnd);
+    ctx.lineTo(b[0] - nx * rEnd, b[1] - ny * rEnd);
+    ctx.lineTo(a[0] - nx * rStart, a[1] - ny * rStart);
     ctx.closePath();
-  }
-
-  function drawLeg(ctx, hip, knee, s) {
-    const ankle = [knee[0] + (knee[0] - hip[0]) * 0.85, knee[1] + Math.max(s * 0.6, (knee[1] - hip[1]) * 0.9)];
-    // Хакама (широкие штаны-юбка)
-    const grad = ctx.createLinearGradient(hip[0], hip[1], ankle[0], ankle[1]);
-    grad.addColorStop(0, '#1f2a4d');
-    grad.addColorStop(1, '#0c1226');
-    ctx.fillStyle = grad;
-    plate(ctx, hip, ankle, s * 0.24, s * 0.42);
     ctx.fill();
-    ctx.strokeStyle = 'rgba(0, 240, 255, 0.35)';
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
-    // Складки
-    ctx.strokeStyle = 'rgba(255,255,255,0.08)';
-    ctx.lineWidth = 2;
-    for (let i = -1; i <= 1; i++) {
-      const a = lerpP(hip, ankle, 0.1);
-      const b = lerpP(hip, ankle, 0.95);
-      ctx.beginPath();
-      ctx.moveTo(a[0] + i * s * 0.1, a[1]);
-      ctx.lineTo(b[0] + i * s * 0.2, b[1]);
-      ctx.stroke();
-    }
-    // Наколенник (сунэатэ)
-    ctx.fillStyle = '#2b3448';
-    plate(ctx, lerpP(knee, ankle, 0.15), lerpP(knee, ankle, 0.7), s * 0.13, s * 0.11);
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(255, 184, 0, 0.55)';
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
-  }
 
-  function drawArm(ctx, shoulder, elbow, wrist, s, accent) {
-    // Рукав кимоно (плечо → локоть)
-    capsule(ctx, shoulder, elbow, s * 0.3, '#151b2e');
-    capsule(ctx, shoulder, elbow, s * 0.3 - 4, '#222b45');
-    // Наруч (котэ): локоть → кисть
-    capsule(ctx, elbow, wrist, s * 0.22, '#0f1320');
-    capsule(ctx, elbow, wrist, s * 0.22 - 4, '#3a445c');
-    // Золотые полосы на наруче
-    for (let t = 0.3; t < 0.9; t += 0.22) {
-      const p = lerpP(elbow, wrist, t);
-      const dx = wrist[0] - elbow[0];
-      const dy = wrist[1] - elbow[1];
-      const len = Math.max(0.001, Math.hypot(dx, dy));
-      const nx = (-dy / len) * s * 0.09;
-      const ny = (dx / len) * s * 0.09;
-      ctx.strokeStyle = 'rgba(255, 184, 0, 0.75)';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(p[0] + nx, p[1] + ny);
-      ctx.lineTo(p[0] - nx, p[1] - ny);
-      ctx.stroke();
-    }
-    // Неоновый кант на локте
-    ctx.fillStyle = accent;
+    // Объёмные сферические 3D-шарниры на концах сегмента
+    const jointGrad = ctx.createRadialGradient(
+      a[0] - rStart * 0.25,
+      a[1] - rStart * 0.25,
+      rStart * 0.1,
+      a[0],
+      a[1],
+      rStart
+    );
+    jointGrad.addColorStop(0, '#475569');
+    jointGrad.addColorStop(0.65, coreColor);
+    jointGrad.addColorStop(1, '#050811');
+    ctx.fillStyle = jointGrad;
     ctx.beginPath();
-    ctx.arc(elbow[0], elbow[1], Math.max(2, s * 0.06), 0, Math.PI * 2);
+    ctx.arc(a[0], a[1], rStart * 0.92, 0, Math.PI * 2);
     ctx.fill();
   }
 
-  function drawSode(ctx, shoulder, elbow, s, outwardSign) {
-    // Наплечник (содэ): пластины, свисающие вдоль плеча
-    const end = lerpP(shoulder, elbow, 0.55);
-    const a = [shoulder[0] + outwardSign * s * 0.06, shoulder[1] - s * 0.04];
-    const grad = ctx.createLinearGradient(a[0], a[1], end[0], end[1]);
-    grad.addColorStop(0, '#d0183a');
-    grad.addColorStop(1, '#6a0a1c');
-    ctx.fillStyle = grad;
-    plate(ctx, a, end, s * 0.2, s * 0.26);
-    ctx.fill();
-    ctx.strokeStyle = '#ffb800';
-    ctx.lineWidth = 2;
+  // Отрисовка 3D-руки Кибер-Бойца с перспективным расширением к кулаку (3D Foreshortening)
+  function draw3DCyberArm(ctx, shoulder, elbow, wrist, s, neonColor) {
+    // 1. Плечевой сегмент (уходит от плеча к локтю)
+    draw3DCylinderLimb(ctx, shoulder, elbow, s * 0.22, s * 0.19, '#111827', neonColor, 'rgba(255, 184, 0, 0.5)');
+
+    // 2. Многослойный 3D-наплечник (Sode) со скошенными гранями и неоновым ребром
+    const sodeEnd = lerpP(shoulder, elbow, 0.58);
+    draw3DCylinderLimb(ctx, shoulder, sodeEnd, s * 0.28, s * 0.22, '#7f1d1d', neonColor, '#fbbf24');
+
+    // 3. Предплечье (Локоть -> Кисть): расширяется к кисти, т.к. рука вытянута вперёд в 3D-глубину!
+    draw3DCylinderLimb(ctx, elbow, wrist, s * 0.18, s * 0.23, '#0f172a', neonColor, '#ffffff');
+
+    // 4. Светящийся энергетический канал вдоль предплечья к рукояти катаны
+    ctx.save();
+    ctx.shadowColor = neonColor;
+    ctx.shadowBlur = 12;
+    ctx.strokeStyle = neonColor;
+    ctx.lineWidth = Math.max(2.5, s * 0.055);
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(elbow[0], elbow[1]);
+    ctx.lineTo(wrist[0], wrist[1]);
     ctx.stroke();
-    // Шнуровка
-    ctx.strokeStyle = 'rgba(255, 220, 140, 0.55)';
-    ctx.lineWidth = 1.5;
-    for (let t = 0.3; t < 1; t += 0.25) {
-      const p = lerpP(a, end, t);
-      const dx = end[0] - a[0];
-      const dy = end[1] - a[1];
-      const len = Math.max(0.001, Math.hypot(dx, dy));
-      const wv = s * (0.2 + 0.06 * t);
-      const nx = (-dy / len) * wv;
-      const ny = (dx / len) * wv;
-      ctx.beginPath();
-      ctx.moveTo(p[0] + nx, p[1] + ny);
-      ctx.lineTo(p[0] - nx, p[1] - ny);
-      ctx.stroke();
-    }
+
+    // 3D-энергоузел на локте
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.arc(elbow[0], elbow[1], Math.max(3.5, s * 0.075), 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
   }
 
-  function drawTorso(ctx, b, s) {
-    const sw = s * 0.12;
+  // Отрисовка 3D-торса Кибер-Бойца со спины (Хребет-реактор, объёмные лопатки брони и набедренники)
+  function draw3DCyberTorsoBack(ctx, b, s, now) {
+    const sw = s * 0.18;
     const lS = [b.lS[0] - sw, b.lS[1]];
     const rS = [b.rS[0] + sw, b.rS[1]];
-    const lH = [b.lH[0] - s * 0.1, b.lH[1]];
-    const rH = [b.rH[0] + s * 0.1, b.rH[1]];
+    const lH = [b.lH[0] - s * 0.08, b.lH[1]];
+    const rH = [b.rH[0] + s * 0.08, b.rH[1]];
+    const neck = lerpP(lS, rS, 0.5);
+    const waist = lerpP(lH, rH, 0.5);
 
-    // Кимоно под бронёй (тёмный ворот)
-    ctx.fillStyle = '#141a2e';
+    // 1. Внешний 3D-корпус спинной кирасы с горизонтальным цилиндрическим шейдингом
+    const torsoGrad = ctx.createLinearGradient(lS[0], neck[1], rS[0], neck[1]);
+    torsoGrad.addColorStop(0, '#00f0ff'); // Левый неоновый контровой свет (Cyan Rim)
+    torsoGrad.addColorStop(0.08, '#1e293b');
+    torsoGrad.addColorStop(0.32, '#334155');
+    torsoGrad.addColorStop(0.5, '#0f172a'); // Углубление вдоль позвоночника
+    torsoGrad.addColorStop(0.68, '#334155');
+    torsoGrad.addColorStop(0.92, '#1e293b');
+    torsoGrad.addColorStop(1, '#ff2a5f'); // Правый неоновый контровой свет (Crimson Rim)
+
+    ctx.fillStyle = torsoGrad;
     ctx.beginPath();
     ctx.moveTo(lS[0], lS[1]);
-    ctx.lineTo(rS[0], rS[1]);
+    ctx.quadraticCurveTo(neck[0], neck[1] - s * 0.14, rS[0], rS[1]);
     ctx.lineTo(rH[0], rH[1]);
-    ctx.lineTo(lH[0], lH[1]);
+    ctx.quadraticCurveTo(waist[0], waist[1] + s * 0.12, lH[0], lH[1]);
     ctx.closePath();
     ctx.fill();
 
-    // Кираса (до)
-    const top = Math.min(lS[1], rS[1]);
-    const bottom = Math.max(lH[1], rH[1]);
-    const grad = ctx.createLinearGradient(0, top, 0, bottom);
-    grad.addColorStop(0, '#c5163a');
-    grad.addColorStop(0.55, '#8c0f28');
-    grad.addColorStop(1, '#4d0816');
-    ctx.fillStyle = grad;
-    const inset = s * 0.08;
-    const cTop = lerpP(lS, rS, 0.5);
-    ctx.beginPath();
-    ctx.moveTo(lS[0] + inset, lS[1] + s * 0.12);
-    ctx.quadraticCurveTo(cTop[0], cTop[1] + s * 0.02, rS[0] - inset, rS[1] + s * 0.12);
-    ctx.lineTo(rH[0] - inset * 0.5, rH[1] - s * 0.06);
-    ctx.lineTo(lH[0] + inset * 0.5, lH[1] - s * 0.06);
-    ctx.closePath();
-    ctx.fill();
-    ctx.strokeStyle = '#ffb800';
-    ctx.lineWidth = 2.5;
-    ctx.stroke();
-
-    // Горизонтальные ламели брони
-    ctx.strokeStyle = 'rgba(255, 210, 120, 0.45)';
-    ctx.lineWidth = 2;
-    for (let i = 1; i <= 4; i++) {
-      const t = 0.3 + i * 0.13;
-      const l = lerpP([lS[0] + inset, lS[1]], [lH[0] + inset * 0.5, lH[1]], t);
-      const r = lerpP([rS[0] - inset, rS[1]], [rH[0] - inset * 0.5, rH[1]], t);
+    // 2. 3D-пластины лопаток (выпуклые гранёные щитки)
+    const drawScapulaPlate = function (shoulderPt, sign) {
+      const pg = ctx.createLinearGradient(shoulderPt[0], shoulderPt[1], waist[0], waist[1]);
+      pg.addColorStop(0, '#991b1b');
+      pg.addColorStop(0.6, '#450a0a');
+      pg.addColorStop(1, '#090d16');
+      ctx.fillStyle = pg;
       ctx.beginPath();
-      ctx.moveTo(l[0], l[1]);
-      ctx.lineTo(r[0], r[1]);
-      ctx.stroke();
-    }
-
-    // V-образный ворот кимоно
-    const neck = lerpP(b.lS, b.rS, 0.5);
-    ctx.fillStyle = '#f2e8d8';
-    ctx.beginPath();
-    ctx.moveTo(neck[0] - s * 0.16, neck[1] - s * 0.02);
-    ctx.lineTo(neck[0], neck[1] + s * 0.28);
-    ctx.lineTo(neck[0] + s * 0.16, neck[1] - s * 0.02);
-    ctx.lineTo(neck[0] + s * 0.08, neck[1] - s * 0.02);
-    ctx.lineTo(neck[0], neck[1] + s * 0.16);
-    ctx.lineTo(neck[0] - s * 0.08, neck[1] - s * 0.02);
-    ctx.closePath();
-    ctx.fill();
-
-    // Мон (герб) на груди
-    const mon = lerpP(cTop, lerpP(lH, rH, 0.5), 0.36);
-    const mr = Math.max(4, s * 0.13);
-    ctx.fillStyle = '#ffb800';
-    ctx.beginPath();
-    ctx.arc(mon[0], mon[1], mr, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = '#8c0f28';
-    for (let i = 0; i < 3; i++) {
-      const a = (i / 3) * Math.PI * 2 - Math.PI / 2;
-      ctx.beginPath();
-      ctx.arc(mon[0] + Math.cos(a) * mr * 0.42, mon[1] + Math.sin(a) * mr * 0.42, mr * 0.32, 0, Math.PI * 2);
-      ctx.fill();
-    }
-
-    // Пояс оби с узлом
-    const ol = lerpP(lH, lS, 0.08);
-    const orr = lerpP(rH, rS, 0.08);
-    ctx.strokeStyle = '#1b1b1b';
-    ctx.lineWidth = Math.max(4, s * 0.16);
-    ctx.lineCap = 'butt';
-    ctx.beginPath();
-    ctx.moveTo(ol[0], ol[1]);
-    ctx.lineTo(orr[0], orr[1]);
-    ctx.stroke();
-    ctx.strokeStyle = '#ffb800';
-    ctx.lineWidth = Math.max(1.5, s * 0.04);
-    ctx.beginPath();
-    ctx.moveTo(ol[0], ol[1]);
-    ctx.lineTo(orr[0], orr[1]);
-    ctx.stroke();
-
-    // Кусадзури (юбка-пластины брони)
-    const skirtTop = [lerpP(ol, orr, 0), lerpP(ol, orr, 1)];
-    for (let i = 0; i < 4; i++) {
-      const a = lerpP(skirtTop[0], skirtTop[1], i / 4 + 0.02);
-      const c = lerpP(skirtTop[0], skirtTop[1], (i + 1) / 4 - 0.02);
-      ctx.fillStyle = i % 2 === 0 ? '#9d1230' : '#7a0d24';
-      ctx.beginPath();
-      ctx.moveTo(a[0], a[1] + s * 0.06);
-      ctx.lineTo(c[0], c[1] + s * 0.06);
-      ctx.lineTo(c[0] + (i - 1.5) * s * 0.03, c[1] + s * 0.46);
-      ctx.lineTo(a[0] + (i - 1.5) * s * 0.03, a[1] + s * 0.46);
+      ctx.moveTo(neck[0] + sign * s * 0.08, neck[1] + s * 0.05);
+      ctx.lineTo(shoulderPt[0] - sign * s * 0.04, shoulderPt[1] + s * 0.06);
+      ctx.lineTo(waist[0] + sign * s * 0.36, waist[1] - s * 0.18);
+      ctx.lineTo(waist[0] + sign * s * 0.08, waist[1] - s * 0.08);
       ctx.closePath();
       ctx.fill();
-      ctx.strokeStyle = 'rgba(255, 184, 0, 0.6)';
+      ctx.strokeStyle = 'rgba(255, 184, 0, 0.45)';
       ctx.lineWidth = 1.5;
       ctx.stroke();
-    }
+    };
+    drawScapulaPlate(lS, -1);
+    drawScapulaPlate(rS, 1);
 
-    // Неоновый контур (rim light)
-    ctx.strokeStyle = 'rgba(0, 240, 255, 0.35)';
+    // 3. Светящийся 3D Кибер-Позвоночник (Cyber-Spine Reactor) по центру спины!
+    ctx.save();
+    ctx.shadowColor = '#00f0ff';
+    ctx.shadowBlur = 14;
+    const vertebrae = 6;
+    for (let i = 0; i < vertebrae; i++) {
+      const t = 0.14 + (i / (vertebrae - 1)) * 0.72;
+      const vp = lerpP(neck, waist, t);
+      const vr = s * (0.095 - i * 0.006);
+      ctx.fillStyle = i === 1 ? '#ffb800' : '#00f0ff';
+      ctx.beginPath();
+      ell(ctx, vp[0], vp[1], vr * 1.35, vr * 0.7, 0);
+      ctx.fill();
+    }
+    ctx.restore();
+
+    // 4. Энергетический пояс Оби с 3D-свечением
+    ctx.fillStyle = '#090d16';
+    ctx.strokeStyle = '#ffb800';
     ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.moveTo(lS[0], lS[1]);
-    ctx.lineTo(lH[0], lH[1]);
-    ctx.moveTo(rS[0], rS[1]);
-    ctx.lineTo(rH[0], rH[1]);
+    ctx.moveTo(lH[0] - s * 0.04, lH[1] - s * 0.06);
+    ctx.lineTo(rH[0] + s * 0.04, rH[1] - s * 0.06);
+    ctx.lineTo(rH[0] + s * 0.06, rH[1] + s * 0.08);
+    ctx.lineTo(lH[0] - s * 0.06, lH[1] + s * 0.08);
+    ctx.closePath();
+    ctx.fill();
     ctx.stroke();
   }
 
-  function drawHead(ctx, b, s, now) {
+  // Отрисовка 3D-шлема Кабуто (Вид сзади/сверху — без плоского грустного лица!)
+  function draw3DKabutoBack(ctx, b, s, now) {
     const neck = lerpP(b.lS, b.rS, 0.5);
     let head = b.head;
-    // Голова (нос) должна быть выше шеи
-    if (head[1] > neck[1] - s * 0.3) head = [head[0], neck[1] - s * 0.55];
-    const r = Math.max(6, s * 0.36);
-    const tilt = Math.atan2(b.rS[1] - b.lS[1], b.rS[0] - b.lS[0]) * 0.6;
-    const hc = [head[0], head[1] - r * 0.15];
-
-    // Шея
-    capsule(ctx, neck, hc, s * 0.2, '#1a1f2e');
+    if (head[1] > neck[1] - s * 0.28) head = [head[0], neck[1] - s * 0.52];
+    const r = Math.max(10, s * 0.42);
+    const tilt = Math.atan2(b.rS[1] - b.lS[1], b.rS[0] - b.lS[0]) * 0.55;
+    const hc = [head[0], head[1] - r * 0.1];
 
     ctx.save();
     ctx.translate(hc[0], hc[1]);
     ctx.rotate(tilt);
 
-    // Сасимоно (флажок за спиной)
-    ctx.strokeStyle = '#2a1a10';
-    ctx.lineWidth = Math.max(2, r * 0.1);
+    // 1. 3D-купол шлема (сферический градиент с бликом луны сверху-справа и Cyan-рефлексом слева)
+    const domeGrad = ctx.createRadialGradient(r * 0.28, -r * 0.45, r * 0.1, 0, -r * 0.1, r * 1.15);
+    domeGrad.addColorStop(0, '#64748b');
+    domeGrad.addColorStop(0.45, '#1e293b');
+    domeGrad.addColorStop(0.85, '#090d16');
+    domeGrad.addColorStop(1, '#00f0ff');
+    ctx.fillStyle = domeGrad;
     ctx.beginPath();
-    ctx.moveTo(r * 0.9, r * 1.6);
-    ctx.lineTo(r * 1.25, -r * 2.0);
-    ctx.stroke();
-    const wave = Math.sin(now * 0.004) * r * 0.12;
-    ctx.fillStyle = '#c5163a';
-    ctx.beginPath();
-    ctx.moveTo(r * 1.25, -r * 2.0);
-    ctx.lineTo(r * 2.1 + wave, -r * 1.95);
-    ctx.lineTo(r * 2.0 - wave, -r * 0.85);
-    ctx.lineTo(r * 1.15, -r * 0.9);
+    ctx.arc(0, -r * 0.12, r * 0.96, Math.PI * 0.92, Math.PI * 2.08);
     ctx.closePath();
-    ctx.fill();
-    ctx.fillStyle = '#ffb800';
-    ctx.beginPath();
-    ctx.arc(r * 1.62, -r * 1.42, r * 0.26, 0, Math.PI * 2);
     ctx.fill();
 
-    // Сикоро (нащёчник шлема)
-    ctx.fillStyle = '#1b2236';
-    ctx.beginPath();
-    ctx.moveTo(-r * 1.0, -r * 0.1);
-    ctx.lineTo(r * 1.0, -r * 0.1);
-    ctx.lineTo(r * 1.45, r * 0.75);
-    ctx.lineTo(-r * 1.45, r * 0.75);
-    ctx.closePath();
-    ctx.fill();
-    ctx.strokeStyle = '#ffb800';
-    ctx.lineWidth = 2;
-    ctx.stroke();
-    ctx.strokeStyle = 'rgba(255, 184, 0, 0.4)';
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.moveTo(-r * 1.15, r * 0.2);
-    ctx.lineTo(r * 1.15, r * 0.2);
-    ctx.moveTo(-r * 1.3, r * 0.48);
-    ctx.lineTo(r * 1.3, r * 0.48);
-    ctx.stroke();
+    // 2. Каскадные 3D-пластины защиты шеи сзади (Сикоро — 3 изогнутых яруса)
+    for (let layer = 0; layer < 3; layer++) {
+      const yTop = -r * 0.08 + layer * r * 0.25;
+      const yBot = yTop + r * 0.24;
+      const wTop = r * (0.98 + layer * 0.15);
+      const wBot = r * (1.12 + layer * 0.18);
+      const plateGrad = ctx.createLinearGradient(-wBot, yTop, wBot, yBot);
+      plateGrad.addColorStop(0, '#00f0ff');
+      plateGrad.addColorStop(0.15, '#1e293b');
+      plateGrad.addColorStop(0.5, '#334155');
+      plateGrad.addColorStop(0.85, '#0f172a');
+      plateGrad.addColorStop(1, '#ff2a5f');
 
-    // Лицо-маска (мэмпо)
-    ctx.fillStyle = '#7a0d24';
-    ctx.beginPath();
-    ctx.arc(0, r * 0.1, r * 0.78, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = '#0b0b10';
-    ctx.fillRect(-r * 0.62, -r * 0.18, r * 1.24, r * 0.34);
-    // Светящиеся глаза
-    ctx.save();
-    ctx.shadowColor = '#00f0ff';
-    ctx.shadowBlur = 10;
-    ctx.fillStyle = '#7ff8ff';
-    ctx.beginPath();
-    ctx.moveTo(-r * 0.5, -r * 0.05);
-    ctx.lineTo(-r * 0.12, -r * 0.1);
-    ctx.lineTo(-r * 0.15, r * 0.04);
-    ctx.closePath();
-    ctx.moveTo(r * 0.5, -r * 0.05);
-    ctx.lineTo(r * 0.12, -r * 0.1);
-    ctx.lineTo(r * 0.15, r * 0.04);
-    ctx.closePath();
-    ctx.fill();
-    ctx.restore();
-    // Усы маски
-    ctx.strokeStyle = '#d8d8d8';
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.moveTo(-r * 0.12, r * 0.38);
-    ctx.quadraticCurveTo(-r * 0.4, r * 0.42, -r * 0.55, r * 0.62);
-    ctx.moveTo(r * 0.12, r * 0.38);
-    ctx.quadraticCurveTo(r * 0.4, r * 0.42, r * 0.55, r * 0.62);
-    ctx.stroke();
-
-    // Купол шлема (кабуто)
-    const dome = ctx.createLinearGradient(0, -r * 1.1, 0, -r * 0.1);
-    dome.addColorStop(0, '#3b4560');
-    dome.addColorStop(1, '#141a2a');
-    ctx.fillStyle = dome;
-    ctx.beginPath();
-    ctx.arc(0, -r * 0.15, r * 0.95, Math.PI, Math.PI * 2);
-    ctx.closePath();
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(255,255,255,0.18)';
-    ctx.lineWidth = 1.5;
-    for (let i = -2; i <= 2; i++) {
+      ctx.fillStyle = plateGrad;
       ctx.beginPath();
-      ctx.moveTo(0, -r * 1.1);
-      ctx.lineTo(i * r * 0.38, -r * 0.18);
+      ctx.moveTo(-wTop, yTop);
+      ctx.quadraticCurveTo(0, yTop + r * 0.1, wTop, yTop);
+      ctx.lineTo(wBot, yBot);
+      ctx.quadraticCurveTo(0, yBot + r * 0.12, -wBot, yBot);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(255, 184, 0, 0.65)';
+      ctx.lineWidth = 1.4;
       ctx.stroke();
     }
-    // Козырёк
-    ctx.fillStyle = '#0d111c';
-    ctx.fillRect(-r * 1.05, -r * 0.24, r * 2.1, r * 0.14);
-    ctx.fillStyle = '#ffb800';
-    ctx.fillRect(-r * 1.05, -r * 0.24, r * 2.1, r * 0.04);
 
-    // Маэдатэ — золотой полумесяц
+    // 3. Золотые рога гребня (Кувагата / Маэдатэ), выступающие над шлемом с неоновым свечением
     ctx.save();
     ctx.shadowColor = '#ffb800';
-    ctx.shadowBlur = 12;
-    ctx.fillStyle = '#ffcf40';
+    ctx.shadowBlur = 14;
+    const hornGrad = ctx.createLinearGradient(-r * 1.4, -r * 1.6, r * 1.4, -r * 0.5);
+    hornGrad.addColorStop(0, '#fde047');
+    hornGrad.addColorStop(0.5, '#f59e0b');
+    hornGrad.addColorStop(1, '#fef08a');
+    ctx.fillStyle = hornGrad;
     ctx.beginPath();
-    ctx.moveTo(0, -r * 0.55);
-    ctx.quadraticCurveTo(-r * 1.2, -r * 0.9, -r * 1.3, -r * 1.6);
-    ctx.quadraticCurveTo(-r * 0.85, -r * 1.1, 0, -r * 0.85);
-    ctx.quadraticCurveTo(r * 0.85, -r * 1.1, r * 1.3, -r * 1.6);
-    ctx.quadraticCurveTo(r * 1.2, -r * 0.9, 0, -r * 0.55);
+    ctx.moveTo(0, -r * 0.62);
+    ctx.quadraticCurveTo(-r * 1.15, -r * 0.85, -r * 1.42, -r * 1.68);
+    ctx.quadraticCurveTo(-r * 0.82, -r * 1.12, 0, -r * 0.88);
+    ctx.quadraticCurveTo(r * 0.82, -r * 1.12, r * 1.42, -r * 1.68);
+    ctx.quadraticCurveTo(r * 1.15, -r * 0.85, 0, -r * 0.62);
     ctx.closePath();
     ctx.fill();
     ctx.restore();
-    ctx.fillStyle = '#c5163a';
-    ctx.beginPath();
-    ctx.arc(0, -r * 0.62, r * 0.14, 0, Math.PI * 2);
-    ctx.fill();
 
     ctx.restore();
   }
 
-  // gloves: массив перчаток хоста (px). Кисти рисуем в позициях перчаток, чтобы руки точно вели к мечу/перчатке.
   function drawSamurai(ctx, body, gloves, w, h, now, alpha) {
     const b = resolveBody(body, w, h);
     if (gloves && gloves.length === 2) {
       if (gloves[0] && isFinite(gloves[0].x)) b.lW = [gloves[0].x, gloves[0].y];
       if (gloves[1] && isFinite(gloves[1].x)) b.rW = [gloves[1].x, gloves[1].y];
     }
-    // s — базовая единица пропорций персонажа (~60% ширины плеч), чтобы самурай не закрывал игровое поле
-    let s = dist(b.lS, b.rS) * 0.45;
-    s = Math.max(w * 0.03, Math.min(w * 0.1, fin(s, w * 0.06)));
-    // Голова не должна уходить под верхнюю панель HUD
-    const minHeadY = h * 0.2;
+
+    let s = dist(b.lS, b.rS) * 0.46;
+    s = Math.max(w * 0.032, Math.min(w * 0.095, fin(s, w * 0.06)));
+
+    // Держим голову самурая ниже точки схода (0.42h), чтобы он НЕ загораживал вылетающие из ворот Тории 3D-объекты!
+    const minHeadY = h * 0.44;
     if (b.head[1] < minHeadY) {
       const shift = minHeadY - b.head[1];
       b.head = [b.head[0], minHeadY];
-      // Плечи не выше головы + шея
-      if (b.lS[1] < minHeadY + s * 0.6) b.lS = [b.lS[0], Math.max(b.lS[1], b.lS[1] + shift * 0.6)];
-      if (b.rS[1] < minHeadY + s * 0.6) b.rS = [b.rS[0], Math.max(b.rS[1], b.rS[1] + shift * 0.6)];
+      b.lS = [b.lS[0], b.lS[1] + shift * 0.75];
+      b.rS = [b.rS[0], b.rS[1] + shift * 0.75];
+      b.chest = [b.chest[0], b.chest[1] + shift * 0.75];
+      b.lH = [b.lH[0], b.lH[1] + shift * 0.65];
+      b.rH = [b.rH[0], b.rH[1] + shift * 0.65];
+      b.pelvis = [b.pelvis[0], b.pelvis[1] + shift * 0.65];
     }
 
-    // Чтобы руки не «рвались» при reach-масштабе — подтягиваем локоть к середине плечо→кисть, если рука слишком вытянута
-    const fixElbow = function (sh, el, wr) {
-      const full = dist(sh, wr);
-      const seg = dist(sh, el) + dist(el, wr);
-      if (full > seg * 0.98) {
-        const mid = lerpP(sh, wr, 0.5);
-        const dx = wr[0] - sh[0];
-        const dy = wr[1] - sh[1];
-        const len = Math.max(0.001, Math.hypot(dx, dy));
-        return [mid[0] + (-dy / len) * s * 0.12, mid[1] + (dx / len) * s * 0.12];
-      }
-      return el;
+    const fixElbow = function (sh, el, wr, sideSign) {
+      const mid = lerpP(sh, wr, 0.48);
+      return [mid[0] + sideSign * s * 0.22, mid[1] + s * 0.18];
     };
-    b.lE = fixElbow(b.lS, b.lE, b.lW);
-    b.rE = fixElbow(b.rS, b.rE, b.rW);
+    b.lE = fixElbow(b.lS, b.lE, b.lW, -1);
+    b.rE = fixElbow(b.rS, b.rE, b.rW, 1);
 
     ctx.save();
-    ctx.globalAlpha = typeof alpha === 'number' && isFinite(alpha) ? Math.max(0.1, Math.min(1, alpha)) : 0.92;
-    // Тень на полу
-    const footY = Math.min(h * 0.98, Math.max(b.lK[1], b.rK[1]) + s * 0.9);
-    const shadow = ctx.createRadialGradient(b.pelvis[0], footY, 4, b.pelvis[0], footY, s * 1.6);
-    shadow.addColorStop(0, 'rgba(0,0,0,0.55)');
-    shadow.addColorStop(1, 'rgba(0,0,0,0)');
+    // Делаем 3D-бойца насыщенным и чётким (0.88), т.к. он больше не перекрывает точку схода!
+    ctx.globalAlpha = typeof alpha === 'number' && isFinite(alpha) ? Math.max(0.72, Math.min(0.95, alpha + 0.35)) : 0.88;
+
+    // 1. Перспективное 3D-кольцо стойки и тень на полу под бойцом
+    const footY = Math.min(h * 0.96, Math.max(b.lK[1], b.rK[1]) + s * 0.65);
+    const shadow = ctx.createRadialGradient(b.pelvis[0], footY, 6, b.pelvis[0], footY, s * 2.2);
+    shadow.addColorStop(0, 'rgba(0, 0, 0, 0.78)');
+    shadow.addColorStop(0.6, 'rgba(0, 240, 255, 0.18)');
+    shadow.addColorStop(1, 'rgba(0, 0, 0, 0)');
     ctx.fillStyle = shadow;
     ctx.beginPath();
-    ell(ctx, b.pelvis[0], footY, s * 1.6, s * 0.35, 0);
+    ell(ctx, b.pelvis[0], footY, s * 2.2, s * 0.42, 0);
     ctx.fill();
 
-    drawLeg(ctx, b.lH, b.lK, s);
-    drawLeg(ctx, b.rH, b.rK, s);
-    drawTorso(ctx, b, s);
-    drawHead(ctx, b, s, now);
-    drawArm(ctx, b.lS, b.lE, b.lW, s, '#00d2ff');
-    drawArm(ctx, b.rS, b.rE, b.rW, s, '#ff3b4b');
-    drawSode(ctx, b.lS, b.lE, s, -1);
-    drawSode(ctx, b.rS, b.rE, s, 1);
+    ctx.strokeStyle = 'rgba(0, 240, 255, 0.42)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ell(ctx, b.pelvis[0], footY, s * 1.65, s * 0.28, 0);
+    ctx.stroke();
+
+    // 2. Объёмные 3D-поножи / Хакама
+    draw3DCylinderLimb(ctx, b.lH, b.lK, s * 0.26, s * 0.34, '#0f172a', '#00f0ff', '#1e293b');
+    draw3DCylinderLimb(ctx, b.rH, b.rK, s * 0.26, s * 0.34, '#0f172a', '#1e293b', '#ff2a5f');
+
+    // 3. Торс со спины с 3D-хребтом и шлем Кабуто
+    draw3DCyberTorsoBack(ctx, b, s, now);
+    draw3DKabutoBack(ctx, b, s, now);
+
+    // 4. Выходящие вперёд в 3D-перспективу бронированные руки
+    draw3DCyberArm(ctx, b.lS, b.lE, b.lW, s, '#00f0ff');
+    draw3DCyberArm(ctx, b.rS, b.rE, b.rW, s, '#ff2a5f');
+
     ctx.restore();
     return b;
   }
 
   // ---------------------------------------------------------------------------
-  // 3. КАТАНА (вместо простой «палки»): изогнутый клинок, хамон, цуба, оплётка
+  // 3. 3D ПЛАЗМЕННАЯ КАТАНА С ПЕРСПЕКТИВНЫМ СУЖЕНИЕМ ВГЛУБЬ ЭКРАНА
   // ---------------------------------------------------------------------------
   function drawKatana(ctx, glove, w, h) {
-    const L = Math.min(w, h) * 0.25;
+    const L = Math.min(w, h) * 0.28;
     const dirAngle = fin(glove.angle, 0) - Math.PI * 0.5;
     const hx = fin(glove.x, w * 0.5);
     const hy = fin(glove.y, h * 0.7);
@@ -2112,21 +2191,21 @@ window.playKatanaSlashSound = playKatanaSlashSound;
     const speed = fin(glove.speed, 0);
 
     ctx.save();
-    // Шлейф взмаха (ленточный)
+    // Широкий объёмный неоновый шлейф (Trail Renderer в стиле Beat Saber / Starri)
     if (glove.trail && glove.trail.length > 2) {
-      ctx.fillStyle = edgeColor;
       for (let i = 1; i < glove.trail.length; i++) {
         const p0 = glove.trail[i - 1];
         const p1 = glove.trail[i];
         const ratio = i / glove.trail.length;
-        ctx.globalAlpha = ratio * Math.min(0.45, 0.1 + speed * 0.02);
+        ctx.fillStyle = edgeColor;
+        ctx.globalAlpha = ratio * Math.min(0.55, 0.16 + speed * 0.025);
         const c = Math.cos(dirAngle);
         const sn = Math.sin(dirAngle);
         ctx.beginPath();
-        ctx.moveTo(p0.x + c * L * 0.15, p0.y + sn * L * 0.15);
+        ctx.moveTo(p0.x + c * L * 0.12, p0.y + sn * L * 0.12);
         ctx.lineTo(p0.x + c * L, p0.y + sn * L);
         ctx.lineTo(p1.x + c * L, p1.y + sn * L);
-        ctx.lineTo(p1.x + c * L * 0.15, p1.y + sn * L * 0.15);
+        ctx.lineTo(p1.x + c * L * 0.12, p1.y + sn * L * 0.12);
         ctx.closePath();
         ctx.fill();
       }
@@ -2135,97 +2214,86 @@ window.playKatanaSlashSound = playKatanaSlashSound;
 
     ctx.translate(hx, hy);
     ctx.rotate(dirAngle);
-    ctx.globalAlpha = glove.active ? 1 : 0.6;
-    const bw = L * 0.05; // ширина клинка у основания
-    const sori = L * 0.06 * (glove.id === 'left' ? -1 : 1); // изгиб клинка
+    ctx.globalAlpha = glove.active ? 1 : 0.75;
 
-    // Неоновое свечение лезвия
+    // Перспективное сужение клинка: у рукояти (ближе к камере) шире, к острию (вглубь 3D-сцены) уже!
+    const bwBase = L * 0.068;
+    const bwTip = L * 0.024;
+    const sori = L * 0.055 * (glove.id === 'left' ? -1 : 1);
+
+    // 1. Внешнее плазменное свечение
     ctx.save();
     ctx.shadowColor = edgeColor;
-    ctx.shadowBlur = 22 + Math.min(20, speed);
+    ctx.shadowBlur = 28 + Math.min(24, speed);
     ctx.strokeStyle = edgeColor;
-    ctx.lineWidth = Math.max(3, bw * 0.55);
+    ctx.lineWidth = Math.max(4, bwBase * 0.7);
     ctx.lineCap = 'round';
     ctx.beginPath();
-    ctx.moveTo(L * 0.06, bw * 0.5);
-    ctx.quadraticCurveTo(L * 0.55, bw * 0.5 + sori, L, sori * 0.2);
+    ctx.moveTo(L * 0.05, bwBase * 0.45);
+    ctx.quadraticCurveTo(L * 0.55, bwBase * 0.35 + sori, L, sori * 0.2);
     ctx.stroke();
     ctx.restore();
 
-    // Клинок (сталь)
-    const steel = ctx.createLinearGradient(0, -bw, 0, bw);
-    steel.addColorStop(0, '#8a94a6');
-    steel.addColorStop(0.45, '#f8fafc');
-    steel.addColorStop(0.6, '#cbd5e1');
-    steel.addColorStop(1, '#f1f5f9');
+    // 2. Трёхмерное стальное полотно клинка с ребром жёсткости (Синоги)
+    const steel = ctx.createLinearGradient(0, -bwBase, 0, bwBase);
+    steel.addColorStop(0, '#0f172a');
+    steel.addColorStop(0.38, '#94a3b8');
+    steel.addColorStop(0.52, '#ffffff');
+    steel.addColorStop(0.75, '#e2e8f0');
+    steel.addColorStop(1, edgeColor);
     ctx.fillStyle = steel;
     ctx.beginPath();
-    ctx.moveTo(L * 0.06, -bw * 0.5);
-    ctx.quadraticCurveTo(L * 0.55, -bw * 0.45 + sori, L * 0.94, sori * 0.2 - bw * 0.25);
-    ctx.lineTo(L, sori * 0.2); // кончик (киссаки)
-    ctx.quadraticCurveTo(L * 0.55, bw * 0.5 + sori, L * 0.06, bw * 0.5);
+    ctx.moveTo(L * 0.04, -bwBase * 0.55);
+    ctx.quadraticCurveTo(L * 0.55, -bwTip * 0.8 + sori, L * 0.93, sori * 0.2 - bwTip * 0.5);
+    ctx.lineTo(L, sori * 0.2);
+    ctx.quadraticCurveTo(L * 0.55, bwBase * 0.45 + sori, L * 0.04, bwBase * 0.55);
     ctx.closePath();
     ctx.fill();
-    // Хамон (волнистая линия закалки)
-    ctx.strokeStyle = 'rgba(255,255,255,0.9)';
-    ctx.lineWidth = 1.2;
-    ctx.beginPath();
-    for (let i = 0; i <= 10; i++) {
-      const t = 0.08 + (i / 10) * 0.82;
-      const yC = sori * 4 * t * (1 - t) * 0.95;
-      const y = yC + bw * 0.18 + Math.sin(i * 1.7) * bw * 0.08;
-      if (i === 0) ctx.moveTo(L * t, y);
-      else ctx.lineTo(L * t, y);
-    }
-    ctx.stroke();
-    // Хабаки
-    ctx.fillStyle = '#ffcf40';
-    ctx.fillRect(L * 0.03, -bw * 0.6, L * 0.045, bw * 1.2);
 
-    // Цуба (гарда)
-    const tr = Math.max(4, L * 0.07);
-    const tsuba = ctx.createRadialGradient(0, 0, 1, 0, 0, tr * 1.1);
-    tsuba.addColorStop(0, '#ffe08a');
-    tsuba.addColorStop(1, '#8a5a00');
+    // 3. Объёмная 3D-гарда (Цуба) в ракурсе перспективы
+    const tr = Math.max(6, L * 0.085);
+    const tsuba = ctx.createRadialGradient(0, 0, 1, 0, 0, tr * 1.15);
+    tsuba.addColorStop(0, '#fef08a');
+    tsuba.addColorStop(0.6, '#f59e0b');
+    tsuba.addColorStop(1, '#451a03');
     ctx.fillStyle = tsuba;
     ctx.beginPath();
-    ell(ctx, L * 0.02, 0, tr * 0.32, tr, 0);
+    ell(ctx, L * 0.02, 0, tr * 0.42, tr * 1.05, 0);
     ctx.fill();
-    ctx.strokeStyle = '#3a2600';
-    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = '#fef08a';
+    ctx.lineWidth = 1.8;
     ctx.stroke();
 
-    // Рукоять (цука) с ромбической оплёткой
-    const hl = L * 0.3;
-    ctx.fillStyle = '#16121a';
-    ctx.fillRect(-hl, -bw * 0.7, hl, bw * 1.4);
+    // 4. Рукоять (Цука) с 3D-оплёткой и бронированным кулаком
+    const hl = L * 0.32;
+    ctx.fillStyle = '#090d16';
+    ctx.fillRect(-hl, -bwBase * 0.68, hl, bwBase * 1.36);
     ctx.strokeStyle = edgeColor;
-    ctx.globalAlpha = (glove.active ? 1 : 0.6) * 0.85;
-    ctx.lineWidth = 1.5;
+    ctx.lineWidth = 1.8;
     ctx.beginPath();
-    const steps = 6;
-    for (let i = 0; i < steps; i++) {
-      const x0 = -hl + (i / steps) * hl;
-      const x1 = -hl + ((i + 1) / steps) * hl;
-      ctx.moveTo(x0, -bw * 0.7);
-      ctx.lineTo(x1, bw * 0.7);
-      ctx.moveTo(x0, bw * 0.7);
-      ctx.lineTo(x1, -bw * 0.7);
+    for (let i = 0; i < 6; i++) {
+      const x0 = -hl + (i / 6) * hl;
+      const x1 = -hl + ((i + 1) / 6) * hl;
+      ctx.moveTo(x0, -bwBase * 0.65);
+      ctx.lineTo(x1, bwBase * 0.65);
+      ctx.moveTo(x0, bwBase * 0.65);
+      ctx.lineTo(x1, -bwBase * 0.65);
     }
     ctx.stroke();
-    ctx.globalAlpha = glove.active ? 1 : 0.6;
-    // Кашира (навершие)
-    ctx.fillStyle = '#ffcf40';
-    ctx.fillRect(-hl - L * 0.025, -bw * 0.75, L * 0.025, bw * 1.5);
 
-    // Кулак в перчатке-котэ поверх рукояти
-    ctx.fillStyle = '#2b3448';
-    ctx.strokeStyle = glove.id === 'left' ? '#00d2ff' : '#ff3b4b';
+    // 3D-кулак в бронированной перчатке поверх рукояти
+    const fistGrad = ctx.createRadialGradient(-hl * 0.42, -bwBase * 0.3, 2, -hl * 0.42, 0, bwBase * 1.45);
+    fistGrad.addColorStop(0, '#475569');
+    fistGrad.addColorStop(0.65, '#1e293b');
+    fistGrad.addColorStop(1, '#090d16');
+    ctx.fillStyle = fistGrad;
+    ctx.strokeStyle = edgeColor;
     ctx.lineWidth = 2.5;
     ctx.beginPath();
-    ctx.arc(-hl * 0.45, 0, Math.max(5, bw * 1.25), 0, Math.PI * 2);
+    ctx.arc(-hl * 0.42, 0, Math.max(7, bwBase * 1.35), 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
+
     ctx.restore();
   }
 
@@ -4990,8 +5058,8 @@ function gameLoop(timestamp) {
   // Персонаж-самурай: рисуется по скелету с телефона (или в стойке по умолчанию, пока телефон не подключён)
   if (state.mode !== 'phone' && window.ArenaVisuals) {
     try {
-      // В 3D-сабле самурай — полупрозрачная голограмма, чтобы не закрывать центральную зону с летящими предметами
-      const samuraiAlpha = is3DSaberMode ? 0.42 : pluginGame ? 0.55 : 0.7;
+      // В v7.0 3D PRO кибер-боец стоит ниже горизонта (вид из-за спины 3/4), поэтому делаем его чётким и объёмным
+      const samuraiAlpha = is3DSaberMode ? 0.86 : pluginGame ? 0.68 : 0.88;
       window.ArenaVisuals.drawSamurai(ctx, state.bodySilhouette, state.gloves, canvas.width, canvas.height, nowTime, samuraiAlpha);
     } catch (e) {
       lastRenderError = 'samurai: ' + (e && e.message ? e.message : String(e));
