@@ -549,7 +549,7 @@ h1.game-title {
             <h1 class="game-title">
               MOTION ARENA TV
               <span style="display: inline-block; font-size: 18px; background: var(--accent-gold); color: #0b0e14; padding: 5px 12px; border-radius: 8px; vertical-align: middle; margin-left: 8px; font-weight: 900;">
-                ВЕРСИЯ: v4.7 / v5.3 FIX
+                ВЕРСИЯ: v4.8 / v5.4
               </span>
             </h1>
           </div>
@@ -909,7 +909,7 @@ const Saber3DEngine = {
 
   // Спавн волны 3D-предметов из глубины экрана
   spawn3DWave(score = 0) {
-    const count = Math.random() < 0.35 ? 2 : 1;
+    const count = 1; // По одному предмету за волну — без перегруза экрана
     for (let i = 0; i < count; i++) {
       const isBomb = Math.random() < 0.16 && i === 0;
       const pool = isBomb
@@ -2355,8 +2355,10 @@ function drawArenaBodySilhouette(ctx, b) {
 }
 
 // --- 2D Spawning & Physics ---
+const MAX_FRUITS_ON_SCREEN_2D = 1; // Только 1 фрукт на экране одновременно
 function spawnFruitWave() {
-  const count = Math.random() < 0.35 ? 2 : 1;
+  if (state.fruits.length >= MAX_FRUITS_ON_SCREEN_2D) return;
+  const count = 1;
   for (let i = 0; i < count; i++) {
     const roll = Math.random();
     let template;
@@ -2804,8 +2806,11 @@ function gameLoop(timestamp) {
     const sabers = state.gloves.map((g) => eng.computeSaberSegment(g, canvas.width, canvas.height));
 
     if (state.isPlaying) {
-      const spawnInterval = Math.max(520, 1150 - state.score * 1.1);
-      if (nowTime - state.lastSpawnAt > spawnInterval || state.lastSpawnAt > nowTime || eng.objects3D.length === 0) {
+      const spawnInterval = Math.max(1400, 2000 - state.score * 0.8);
+      if (
+        eng.objects3D.length < 2 &&
+        (nowTime - state.lastSpawnAt > spawnInterval || state.lastSpawnAt > nowTime || state.lastSpawnAt === 0)
+      ) {
         eng.spawn3DWave(state.score);
         state.lastSpawnAt = nowTime;
       }
@@ -2892,8 +2897,8 @@ function gameLoop(timestamp) {
   } else {
     // --- 2D BOXFRUIT ARENA MODE ---
     if (state.isPlaying) {
-      const spawnInterval = Math.max(580, 1250 - state.score * 1.2);
-      if (nowTime - state.lastSpawnAt > spawnInterval || state.lastSpawnAt > nowTime || state.fruits.length === 0) {
+      const spawnInterval = Math.max(1100, 1700 - state.score * 0.8);
+      if (nowTime - state.lastSpawnAt > spawnInterval || state.lastSpawnAt > nowTime || state.lastSpawnAt === 0) {
         spawnFruitWave();
         state.lastSpawnAt = nowTime;
       }
