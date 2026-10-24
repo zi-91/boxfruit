@@ -48,7 +48,10 @@ html, body {
 /* Main Game Canvas */
 #game-canvas {
   position: fixed;
-  inset: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
   width: 100vw;
   height: 100vh;
   display: block;
@@ -86,7 +89,10 @@ html, body {
 
 #pip-overlay-canvas {
   position: absolute;
-  inset: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
   width: 100%;
   height: 100%;
   transform: scaleX(-1);
@@ -174,7 +180,10 @@ html, body {
 /* Screens & Modals */
 .screen-overlay {
   position: fixed;
-  inset: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
   z-index: 25;
   display: flex;
   align-items: center;
@@ -386,7 +395,10 @@ h1.game-title {
 /* Phone Camera Sensor Screen */
 #phone-sensor-screen {
   position: fixed;
-  inset: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
   z-index: 30;
   background: var(--bg-arena);
   display: flex;
@@ -428,7 +440,10 @@ h1.game-title {
 
 #phone-skeleton-canvas {
   position: absolute;
-  inset: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
   width: 100%;
   height: 100%;
   transform: scaleX(-1);
@@ -534,7 +549,7 @@ h1.game-title {
             <h1 class="game-title">
               MOTION ARENA TV
               <span style="display: inline-block; font-size: 18px; background: var(--accent-gold); color: #0b0e14; padding: 5px 12px; border-radius: 8px; vertical-align: middle; margin-left: 8px; font-weight: 900;">
-                ВЕРСИЯ: v4.4 FIX / v5.0
+                ВЕРСИЯ: v4.5 / v5.1 FIX
               </span>
             </h1>
           </div>
@@ -1213,10 +1228,17 @@ class SoundFX {
   init() {
     if (!this.ctx) {
       const AudioCtx = window.AudioContext || window.webkitAudioContext;
-      if (AudioCtx) this.ctx = new AudioCtx();
+      if (AudioCtx) {
+        try {
+          this.ctx = new AudioCtx();
+        } catch (e) {}
+      }
     }
     if (this.ctx && this.ctx.state === 'suspended') {
-      this.ctx.resume();
+      try {
+        const p = this.ctx.resume();
+        if (p && p.catch) p.catch(() => {});
+      } catch (e) {}
     }
   }
 
@@ -1270,19 +1292,21 @@ class SoundFX {
   }
 
   playBell() {
-    this.init();
-    if (!this.ctx) return;
-    const now = this.ctx.currentTime;
-    const osc = this.ctx.createOscillator();
-    const gain = this.ctx.createGain();
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(660, now);
-    gain.gain.setValueAtTime(0.4, now);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.9);
-    osc.connect(gain);
-    gain.connect(this.ctx.destination);
-    osc.start(now);
-    osc.stop(now + 0.95);
+    try {
+      this.init();
+      if (!this.ctx) return;
+      const now = this.ctx.currentTime;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(660, now);
+      gain.gain.setValueAtTime(0.4, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.9);
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.95);
+    } catch (e) {}
   }
 }
 
@@ -1798,6 +1822,11 @@ function setGameMode(gameId) {
   if (hudSwitchGameBtn) {
     hudSwitchGameBtn.textContent =
       state.activeGame === 'saber3d' ? '⚔️ Режим: 3D Сабли' : '🥊 Режим: 2D Бокс';
+    hudSwitchGameBtn.className = state.activeGame === 'saber3d' ? 'btn btn-blue' : 'btn btn-gold';
+  }
+  if (!state.isPlaying && state.mode !== 'phone') {
+    state.isPlaying = true;
+    state.lastSpawnAt = performance.now() - 800;
   }
 }
 
@@ -1810,7 +1839,10 @@ async function resolveHomeRoomCode() {
     return state.roomCode;
   }
   try {
-    const res = await fetch('https://api.ipify.org?format=json');
+    const controller = window.AbortController ? new AbortController() : null;
+    const timeoutId = controller ? setTimeout(() => controller.abort(), 1800) : null;
+    const res = await fetch('https://api.ipify.org?format=json', controller ? { signal: controller.signal } : {});
+    if (timeoutId) clearTimeout(timeoutId);
     const data = await res.json();
     if (data && data.ip) {
       let hash = 0;
@@ -1936,7 +1968,6 @@ function handleIncomingRemotePayload(payload) {
     updateGlovesFromStableSlots(payload.hands);
     if (
       state.mode === 'tv' &&
-      !state.isPlaying &&
       !tvPairingModal.classList.contains('hidden') &&
       payload.hands &&
       payload.hands.length > 0
@@ -2080,12 +2111,11 @@ function updateGlovesFromStableSlots(handsList) {
 
   [0, 1].forEach((idx) => {
     const g = state.gloves[idx];
-    if (!seenSlots.has(idx) && now - g.lastSeen > 600) {
-      g.active = false;
+    if (!seenSlots.has(idx) && g.lastSeen > 0 && now - g.lastSeen > 800) {
       g.netVx = 0;
       g.netVy = 0;
-      g.targetX = canvas.width * (idx === 0 ? 0.28 : 0.72);
-      g.targetY = canvas.height * 0.85;
+      g.targetX = canvas.width * (idx === 0 ? 0.30 : 0.70);
+      g.targetY = canvas.height * 0.75;
       g.targetAngle = idx === 0 ? -0.2 : 0.2;
     }
   });
@@ -2155,11 +2185,11 @@ async function startCameraAndMediaPipePose(videoElement, overlayCanvas, overlayC
       requestAnimationFrame(processFrame);
     }
   } catch (err) {
-    alert(
-      'На этом устройстве камера не найдена (' +
-        err.message +
-        '). Если это Телевизор — нажмите «✕ Выход в меню» и выберите 1-ю карточку «📺 Это экран ТВ / Монитор»!'
-    );
+    // Если на ТВ случайно нажали кнопку режима с камерой — не пугаем чёрным экраном, а сразу запускаем ТВ-Арену!
+    pipContainer.classList.add('hidden');
+    phoneSensorScreen.classList.add('hidden');
+    state.mode = 'tv';
+    startRound();
   }
 }
 
@@ -2629,6 +2659,17 @@ function gameLoop(timestamp) {
     state.screenShake = 0;
   }
 
+  // Исключаем застревание в неигровом состоянии, если все модальные окна скрыты
+  const allOverlaysHidden =
+    menuOverlay.classList.contains('hidden') &&
+    tvPairingModal.classList.contains('hidden') &&
+    gameOverOverlay.classList.contains('hidden') &&
+    phoneSensorScreen.classList.contains('hidden');
+  if (allOverlaysHidden && !state.isPlaying) {
+    state.isPlaying = true;
+    state.lastSpawnAt = timestamp;
+  }
+
   // Draw 3D tunnel grid if in 3D Saber Slicer mode
   const is3DSaberMode = state.activeGame === 'saber3d' && Boolean(window.Saber3DEngine);
   if (is3DSaberMode) {
@@ -2918,7 +2959,12 @@ function startRound() {
   if (window.Saber3DEngine) {
     window.Saber3DEngine.reset();
   }
-  state.lastSpawnAt = performance.now();
+  state.lastSpawnAt = performance.now() - 900;
+  if (state.activeGame === 'saber3d' && window.Saber3DEngine) {
+    window.Saber3DEngine.spawn3DWave(0);
+  } else {
+    spawnFruitWave();
+  }
 
   menuOverlay.classList.add('hidden');
   tvPairingModal.classList.add('hidden');
@@ -2965,6 +3011,20 @@ async function launchSoloMode() {
 async function launchTvHostMode() {
   state.mode = 'tv';
   pushSubScreenHistory('tv');
+  menuOverlay.classList.add('hidden');
+  tvPairingModal.classList.remove('hidden');
+
+  // Сразу запускаем живую арену (перчатки/сабли и полёт фруктов) на фоне ТВ, не дожидаясь сетевых запросов!
+  if (!state.isPlaying) {
+    state.isPlaying = true;
+    state.lastSpawnAt = performance.now() - 900;
+    if (state.activeGame === 'saber3d' && window.Saber3DEngine) {
+      window.Saber3DEngine.spawn3DWave(0);
+    } else {
+      spawnFruitWave();
+    }
+  }
+
   await resolveHomeRoomCode();
   initRealtimeSync();
 
@@ -2981,9 +3041,6 @@ async function launchTvHostMode() {
       colorLight: '#ffffff'
     });
   }
-
-  menuOverlay.classList.add('hidden');
-  tvPairingModal.classList.remove('hidden');
 
   if (window.Peer) {
     if (state.peer) state.peer.destroy();
