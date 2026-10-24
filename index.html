@@ -1,0 +1,3114 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>MOTION ARENA TV v5.0 — 3D Saber Slicer & BoxFruit</title>
+  <meta name="description" content="Игровая ТВ-консоль со смартфоном (MediaPipe Pose 60 FPS): 3D Saber Slicer (предметы летят из глубины экрана на игрока) и BoxFruit Arena." />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚔️</text></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Russo+One&display=swap" rel="stylesheet" />
+  <style>
+:root {
+  --bg-arena: #0b0e14;
+  --bg-panel: rgba(18, 23, 33, 0.88);
+  --bg-panel-solid: #121721;
+  --bg-elevated: #1b2230;
+  --text-primary: #f5f7fa;
+  --text-secondary: #9ba5b8;
+  --accent-red: #ff3b4b;
+  --accent-blue: #00d2ff;
+  --accent-gold: #ffb800;
+  --accent-green: #18e299;
+  --border-subtle: rgba(255, 255, 255, 0.12);
+  --shadow-soft: 0 16px 40px rgba(0, 0, 0, 0.55);
+  --font-display: 'Russo One', system-ui, -apple-system, sans-serif;
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background-color: var(--bg-arena);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Main Game Canvas */
+#game-canvas {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  display: block;
+  z-index: 1;
+}
+
+/* Camera Preview PIP (TV / Solo Mode) */
+#pip-container {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 220px;
+  height: 165px;
+  border-radius: 14px;
+  overflow: hidden;
+  background: #000;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  box-shadow: var(--shadow-soft);
+  z-index: 15;
+  transition: transform 0.25s ease, opacity 0.25s ease;
+}
+
+#pip-container.hidden {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(20px);
+}
+
+#input-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scaleX(-1);
+}
+
+#pip-overlay-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  transform: scaleX(-1);
+  pointer-events: none;
+}
+
+.pip-badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  background: rgba(0, 0, 0, 0.72);
+  color: var(--accent-green);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 8px;
+  border-radius: 6px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* Top HUD Bar */
+#hud-bar {
+  position: fixed;
+  top: 20px;
+  left: 24px;
+  right: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  z-index: 10;
+  pointer-events: none;
+}
+
+#hud-bar.hidden {
+  display: none;
+}
+
+.hud-group {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  pointer-events: auto;
+}
+
+.hud-stat {
+  background: var(--bg-panel);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--border-subtle);
+  padding: 10px 18px;
+  border-radius: 14px;
+  box-shadow: var(--shadow-soft);
+  display: flex;
+  flex-direction: column;
+  min-width: 110px;
+}
+
+.hud-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.hud-value {
+  font-family: var(--font-display);
+  font-size: 28px;
+  line-height: 1.1;
+  color: var(--text-primary);
+  margin-top: 2px;
+}
+
+.hud-value.gold {
+  color: var(--accent-gold);
+}
+
+.hud-value.red {
+  color: var(--accent-red);
+}
+
+.hud-value.green {
+  color: var(--accent-green);
+}
+
+/* Screens & Modals */
+.screen-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 25;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: radial-gradient(circle at 50% 25%, rgba(28, 36, 54, 0.92), rgba(8, 10, 15, 0.97));
+  overflow-y: auto;
+}
+
+.screen-overlay.hidden {
+  display: none;
+}
+
+.modal-card {
+  width: 100%;
+  max-width: 820px;
+  background: var(--bg-panel-solid);
+  border: 1px solid var(--border-subtle);
+  border-radius: 22px;
+  padding: 36px;
+  box-shadow: var(--shadow-soft);
+}
+
+.brand-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+.brand-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.glove-icon {
+  font-size: 42px;
+  line-height: 1;
+}
+
+h1.game-title {
+  font-family: var(--font-display);
+  font-size: clamp(26px, 4vw, 38px);
+  letter-spacing: 0.02em;
+  color: var(--text-primary);
+}
+
+.game-subtitle {
+  color: var(--text-secondary);
+  font-size: 15px;
+  line-height: 1.5;
+  margin-bottom: 28px;
+}
+
+/* Mode Selector Grid */
+.mode-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.mode-card {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: 16px;
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 14px;
+  cursor: pointer;
+  transition: transform 0.18s ease, background-color 0.18s ease, border-color 0.18s ease;
+  text-align: left;
+}
+
+.mode-card:hover {
+  transform: translateY(-3px);
+  background: #232c3d;
+  border-color: rgba(255, 255, 255, 0.28);
+}
+
+.mode-tag {
+  display: inline-block;
+  align-self: flex-start;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--accent-gold);
+}
+
+.mode-card h2 {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 400;
+  color: var(--text-primary);
+}
+
+.mode-card p {
+  font-size: 13.5px;
+  line-height: 1.45;
+  color: var(--text-secondary);
+}
+
+/* Buttons */
+.btn {
+  appearance: none;
+  border: none;
+  border-radius: 12px;
+  padding: 13px 22px;
+  font-family: var(--font-sans);
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.15s ease, opacity 0.15s ease, background-color 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+}
+
+.btn:active {
+  transform: translateY(1px);
+}
+
+.btn-primary {
+  background: var(--accent-red);
+  color: #fff;
+}
+
+.btn-blue {
+  background: var(--accent-blue);
+  color: #061018;
+}
+
+.btn-gold {
+  background: var(--accent-gold);
+  color: #141004;
+}
+
+.btn-secondary {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+  border: 1px solid var(--border-subtle);
+}
+
+/* TV Pairing Box */
+.pairing-layout {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: 28px;
+  align-items: center;
+  background: var(--bg-elevated);
+  padding: 24px;
+  border-radius: 16px;
+  margin-top: 16px;
+}
+
+@media (max-width: 640px) {
+  .pairing-layout {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    text-align: center;
+  }
+  .modal-card {
+    padding: 22px;
+  }
+}
+
+.qr-box {
+  width: 200px;
+  height: 200px;
+  background: #fff;
+  padding: 12px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.qr-box img, .qr-box canvas {
+  max-width: 100%;
+  max-height: 100%;
+}
+
+.room-code-badge {
+  font-family: var(--font-display);
+  font-size: 42px;
+  letter-spacing: 0.14em;
+  color: var(--accent-gold);
+  background: rgba(0, 0, 0, 0.35);
+  padding: 10px 20px;
+  border-radius: 12px;
+  display: inline-block;
+  margin: 10px 0;
+}
+
+/* Phone Camera Sensor Screen */
+#phone-sensor-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  background: var(--bg-arena);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 16px;
+}
+
+#phone-sensor-screen.hidden {
+  display: none;
+}
+
+.sensor-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--bg-panel-solid);
+  padding: 12px 16px;
+  border-radius: 14px;
+  border: 1px solid var(--border-subtle);
+}
+
+.sensor-camera-stage {
+  position: relative;
+  flex: 1;
+  margin: 14px 0;
+  border-radius: 18px;
+  overflow: hidden;
+  background: #000;
+  border: 1px solid var(--border-subtle);
+}
+
+#phone-video-preview {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scaleX(-1);
+}
+
+#phone-skeleton-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  transform: scaleX(-1);
+  pointer-events: none;
+}
+
+.sensor-controls {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.code-input {
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+  font-family: var(--font-display);
+  font-size: 26px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  padding: 12px 16px;
+  border-radius: 12px;
+  width: 180px;
+  text-align: center;
+}
+
+.status-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--accent-gold);
+  margin-right: 6px;
+}
+
+.status-dot.online {
+  background: var(--accent-green);
+}
+
+</style>
+  <!-- MediaPipe Pose (Full Body 33 Landmarks), MQTT over WSS, PeerJS (WebRTC), and QRCode.js -->
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mqtt@5.10.1/dist/mqtt.min.js" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" crossorigin="anonymous"></script>
+</head>
+<body>
+  <!-- Fullscreen Arena Canvas -->
+  <canvas id="game-canvas"></canvas>
+
+  <!-- Top HUD Bar (During Active Game) -->
+  <header id="hud-bar" class="hidden">
+    <div class="hud-group">
+      <button id="btn-hud-exit" class="btn btn-secondary" type="button">
+        ✕ Выход в меню
+      </button>
+      <button id="btn-hud-switch-game" class="btn btn-blue" type="button">
+        ⚔️ Режим: 3D Сабли
+      </button>
+      <div class="hud-stat">
+        <span class="hud-label">Счёт</span>
+        <span id="hud-score" class="hud-value gold">0</span>
+      </div>
+      <div class="hud-stat">
+        <span class="hud-label">Комбо</span>
+        <span id="hud-combo" class="hud-value green">—</span>
+      </div>
+      <div class="hud-stat">
+        <span class="hud-label">Сенсор (v5.0)</span>
+        <span id="hud-phone-status" class="hud-value" style="font-size: 16px; margin-top: 6px;">Код: ----</span>
+      </div>
+    </div>
+
+    <div class="hud-group">
+      <div class="hud-stat">
+        <span class="hud-label">Раунд</span>
+        <span id="hud-timer" class="hud-value">60с</span>
+      </div>
+      <div class="hud-stat">
+        <span class="hud-label">Щиты</span>
+        <span id="hud-lives" class="hud-value red">🛡️🛡️🛡️</span>
+      </div>
+      <button id="btn-hud-restart" class="btn btn-gold" type="button">
+        🔄 Заново
+      </button>
+    </div>
+  </header>
+
+  <!-- Camera PIP Preview (Solo Mode) -->
+  <aside id="pip-container" class="hidden">
+    <video id="input-video" playsinline muted></video>
+    <canvas id="pip-overlay-canvas"></canvas>
+    <div class="pip-badge">● AI-Поза 60 FPS</div>
+  </aside>
+
+  <!-- Main Menu Screen -->
+  <main id="menu-overlay" class="screen-overlay">
+    <section class="modal-card">
+      <div class="brand-header">
+        <div class="brand-title-wrap">
+          <span class="glove-icon" aria-hidden="true">⚔️</span>
+          <div>
+            <h1 class="game-title">
+              MOTION ARENA TV
+              <span style="display: inline-block; font-size: 18px; background: var(--accent-gold); color: #0b0e14; padding: 5px 12px; border-radius: 8px; vertical-align: middle; margin-left: 8px; font-weight: 900;">
+                ВЕРСИЯ: v5.0 3D SABER
+              </span>
+            </h1>
+          </div>
+        </div>
+        <button id="btn-main-exit" class="btn btn-secondary" type="button">
+          ✕ Выход
+        </button>
+      </div>
+
+      <!-- Game Mode Selector Bar -->
+      <div style="display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap;">
+        <button id="btn-select-saber3d" class="btn btn-blue" style="flex: 1; padding: 14px 18px; font-size: 16px;" type="button">
+          ⚔️ Игра 1: 3D SABER SLICER (Из глубины в экран) ✓
+        </button>
+        <button id="btn-select-boxfruit" class="btn btn-secondary" style="flex: 1; padding: 14px 18px; font-size: 16px;" type="button">
+          🥊 Игра 2: BOXFRUIT 2D (Боксёрские перчатки)
+        </button>
+      </div>
+
+      <p id="selected-game-desc" class="game-subtitle" style="margin-bottom: 20px;">
+        <strong>Выбрана игра: ⚔️ 3D SABER SLICER.</strong> Предметы вылетают из глубины 3D-туннеля прямо на тебя и растут в размере — руби их светящимися плазменными саблями!
+      </p>
+
+      <div class="mode-grid">
+        <!-- Card 1 (LEFT): TV Display Host (No camera needed on TV!) -->
+        <button id="btn-mode-tv" class="mode-card" type="button">
+          <span class="mode-tag">1. Для Телевизора (Без камеры)</span>
+          <h2>📺 Это экран ТВ / Монитор</h2>
+          <p>
+            Показывает 3D-арену, твой неоновый силуэт и плазменные сабли / перчатки на большом экране.
+          </p>
+          <span class="btn btn-gold" style="width: 100%; margin-top: 6px;">Открыть экран ТВ</span>
+        </button>
+
+        <!-- Card 2 (MIDDLE): Phone Camera Sensor -->
+        <button id="btn-mode-phone" class="mode-card" type="button">
+          <span class="mode-tag">2. Для Смартфона</span>
+          <h2>📱 Это Телефон-Сенсор</h2>
+          <p>
+            Отслеживает скелет тела (MediaPipe Pose Lite 60 FPS) и передаёт взмахи рук на телевизор без задержки.
+          </p>
+          <span class="btn btn-blue" style="width: 100%; margin-top: 6px;">Подключить к ТВ</span>
+        </button>
+
+        <!-- Card 3 (RIGHT): Solo All-in-One -->
+        <button id="btn-mode-solo" class="mode-card" type="button">
+          <span class="mode-tag">3. Всё на одном экране</span>
+          <h2>⚡ Играть на одном устройстве</h2>
+          <p>
+            И камера, и игра на одном экране (для ноутбука с веб-камерой или теста прямо на телефоне).
+          </p>
+          <span class="btn btn-primary" style="width: 100%; margin-top: 6px;">Запустить бой</span>
+        </button>
+      </div>
+    </section>
+  </main>
+
+  <!-- TV Pairing Screen (Shows QR Code & 4-Digit Room Code) -->
+  <section id="tv-pairing-modal" class="screen-overlay hidden">
+    <div class="modal-card">
+      <div class="brand-header" style="margin-bottom: 12px;">
+        <h2 class="game-title" style="font-size: 28px;">📺 Подключение телефона к ТВ (v5.0)</h2>
+        <button id="btn-tv-top-back" class="btn btn-secondary" type="button">
+          ✕ Выход в меню
+        </button>
+      </div>
+      <p id="tv-status-text" class="game-subtitle" style="margin-bottom: 16px;">
+        Открой эту же страницу на телефоне и выбери «📱 Это Телефон-Сенсор» (или отсканируй QR-код ниже):
+      </p>
+
+      <div class="pairing-layout">
+        <div id="tv-qr-container" class="qr-box"></div>
+        <div>
+          <div style="font-size: 13px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.08em;">
+            Код комнаты (совпадает автоматически по Wi-Fi):
+          </div>
+          <div id="tv-room-code" class="room-code-badge">----</div>
+          <p style="font-size: 14px; color: var(--text-secondary); line-height: 1.5; margin-top: 8px;">
+            Поставь телефон на расстоянии 1.5–3 метра от себя. Как только камера увидит твой силуэт, раунд на ТВ запустится автоматически!
+          </p>
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 12px; margin-top: 24px; flex-wrap: wrap;">
+        <button id="btn-tv-start-now" class="btn btn-gold" type="button">
+          ▶ Перейти на арену ТВ сейчас
+        </button>
+        <button id="btn-tv-back" class="btn btn-secondary" type="button">
+          ✕ Выход в главное меню
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Phone Camera Sensor UI -->
+  <section id="phone-sensor-screen" class="hidden">
+    <div class="sensor-header">
+      <div>
+        <span id="phone-status-dot" class="status-dot"></span>
+        <strong id="phone-conn-status" style="font-size: 14px;">Запуск MediaPipe Pose v5.0...</strong>
+      </div>
+      <button id="btn-phone-exit" class="btn btn-secondary" style="padding: 10px 16px; font-size: 14px;" type="button">
+        ✕ Выход в меню
+      </button>
+    </div>
+
+    <div class="sensor-camera-stage">
+      <video id="phone-video-preview" playsinline muted></video>
+      <canvas id="phone-skeleton-canvas"></canvas>
+    </div>
+
+    <div class="sensor-controls">
+      <input
+        id="phone-room-input"
+        class="code-input"
+        type="text"
+        maxlength="4"
+        placeholder="Код ТВ"
+        inputmode="numeric"
+      />
+      <button id="btn-phone-connect" class="btn btn-blue" style="flex: 1;" type="button">
+        Связать с ТВ
+      </button>
+      <button id="btn-phone-switch-game" class="btn btn-secondary" style="flex: 1;" type="button">
+        ⚔️ Сменить игру (3D/2D)
+      </button>
+      <button id="btn-phone-restart" class="btn btn-gold" style="width: 100%;" type="button">
+        ▶ ЗАПУСТИТЬ / ПЕРЕЗАПУСТИТЬ РАУНД НА ТВ
+      </button>
+    </div>
+  </section>
+
+  <!-- Game Over Modal -->
+  <section id="gameover-overlay" class="screen-overlay hidden">
+    <div class="modal-card" style="max-width: 520px; text-align: center;">
+      <div style="display: flex; justify-content: flex-end;">
+        <button id="btn-gameover-top-exit" class="btn btn-secondary" style="padding: 8px 14px; font-size: 13px;" type="button">
+          ✕ Выход в меню
+        </button>
+      </div>
+      <div style="font-size: 54px; margin-bottom: 8px;">🏆</div>
+      <h2 class="game-title" style="font-size: 32px;">РАУНД ОКОНЧЕН!</h2>
+      <p id="gameover-reason" class="game-subtitle" style="margin-top: 6px; margin-bottom: 20px;">
+        Время раунда вышло!
+      </p>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 24px;">
+        <div class="hud-stat" style="align-items: center;">
+          <span class="hud-label">Твой счёт</span>
+          <span id="final-score" class="hud-value gold">0</span>
+        </div>
+        <div class="hud-stat" style="align-items: center;">
+          <span class="hud-label">Рекорд</span>
+          <span id="final-best" class="hud-value green">0</span>
+        </div>
+      </div>
+
+      <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 24px;">
+        Активность за раунд: <strong id="final-kcal" style="color: var(--text-primary);">0 ккал</strong>
+      </p>
+
+      <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
+        <button id="btn-play-again" class="btn btn-primary" type="button">
+          ⚔️ Ещё раунд!
+        </button>
+        <button id="btn-back-menu" class="btn btn-secondary" type="button">
+          ✕ Выход в главное меню
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <script>
+// ============================================================================
+// MOTION ARENA TV v5.0 MODULE — 🕹️ Мульти-Игровой Лаунчер + ⚔️ 3D SABER SLICER
+// (Готовый к интеграции модуль для game.js / index.html)
+// ============================================================================
+// Что внутри:
+// 1. GAME_CATALOG — выбор между играми на ТВ (и переключение прямо с телефона):
+//    - 'saber3d': ⚔️ 3D SABER SLICER (Предметы летят из 3D-глубины z=1.0 -> 0.0,
+//                 растут от маленьких до огромных, рубятся виртуальными саблями)
+//    - 'boxfruit': 🥊 BOXFRUIT 2D (Классический бокс по фруктам перчатками)
+//    - 'brainwall': 🧱 BRAIN WALL 3D (Впишись в силуэт летящей стены)
+// 2. Saber3DEngine — полноценный 3D-движок перспективы на Canvas 2D:
+//    - 3D-туннель Неонового Додзё с кольцом «Зоны Удара» (Strike Zone)
+//    - Две светящиеся плазменные сабли/катаны (продолжение вектора Локоть -> Кисть)
+//    - Ленточный шлейф взмаха (Slash Ribbon) + звук рассечения катаной (Web Audio)
+//    - 3-слойные 3D-сферы/фрукты с бликами и разрезом строго под углом взмаха сабли!
+// ============================================================================
+
+const GAME_CATALOG = [
+  {
+    id: 'saber3d',
+    badge: '🔥 НОВИНКА • 3D ГЛУБИНА',
+    icon: '⚔️',
+    title: '3D SABER SLICER',
+    subtitle: 'Предметы летят издалека прямо в экран и растут в 3D — руби их светящимися саблями!',
+    accent: '#00f0ff',
+    ready: true
+  },
+  {
+    id: 'boxfruit',
+    badge: '🥊 КЛАССИКА • 2D АРЕНА',
+    icon: '🥊',
+    title: 'BOXFRUIT ARENA',
+    subtitle: 'Боксёрский поединок с разлетающимися фруктами и бомбами на плоскости арены.',
+    accent: '#ffb800',
+    ready: true
+  },
+  {
+    id: 'brainwall',
+    badge: '🧱 ПАЙПЛАЙН • СКОРО',
+    icon: '🕺',
+    title: 'BRAIN WALL 3D',
+    subtitle: 'На тебя летит неоновая стена с вырезом — успей принять точную позу всем телом!',
+    accent: '#18e299',
+    ready: false
+  },
+  {
+    id: 'laserdodge',
+    badge: '⚡ ПАЙПЛАЙН • СКОРО',
+    icon: '⚡',
+    title: 'LASER MATRIX',
+    subtitle: 'Прыгай, приседай и уклоняйся от сканирующих арену лазерных лучей.',
+    accent: '#ff3b4b',
+    ready: false
+  }
+];
+
+// --- Расширение звукового движка: Свист сабли (Whoosh) и Рассечение катаной (Slice) ---
+function playKatanaSlashSound(sfxInstance, isCritical = false) {
+  if (!sfxInstance) return;
+  sfxInstance.init();
+  const ctx = sfxInstance.ctx;
+  if (!ctx) return;
+  const now = ctx.currentTime;
+
+  // 1. Воздушный свист лезвия (Filtered White Noise Sweep)
+  const bufferSize = Math.floor(ctx.sampleRate * 0.18);
+  const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+  const output = noiseBuffer.getChannelData(0);
+  for (let i = 0; i < bufferSize; i++) {
+    output[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufferSize * 0.45));
+  }
+  const whiteNoise = ctx.createBufferSource();
+  whiteNoise.buffer = noiseBuffer;
+
+  const bandpass = ctx.createBiquadFilter();
+  bandpass.type = 'bandpass';
+  bandpass.frequency.setValueAtTime(600, now);
+  bandpass.frequency.exponentialRampToValueAtTime(isCritical ? 3400 : 2400, now + 0.09);
+  bandpass.Q.setValueAtTime(2.2, now);
+
+  const noiseGain = ctx.createGain();
+  noiseGain.gain.setValueAtTime(0.45, now);
+  noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.17);
+
+  whiteNoise.connect(bandpass);
+  bandpass.connect(noiseGain);
+  noiseGain.connect(ctx.destination);
+  whiteNoise.start(now);
+
+  // 2. Металлический звон клинка (High-frequency harmonic Zing)
+  const zing = ctx.createOscillator();
+  const zingGain = ctx.createGain();
+  zing.type = 'triangle';
+  zing.frequency.setValueAtTime(isCritical ? 1480 : 1120, now);
+  zing.frequency.exponentialRampToValueAtTime(2960, now + 0.14);
+
+  zingGain.gain.setValueAtTime(0.28, now);
+  zingGain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+
+  zing.connect(zingGain);
+  zingGain.connect(ctx.destination);
+  zing.start(now);
+  zing.stop(now + 0.16);
+}
+
+// ============================================================================
+// 3D SABER SLICER ENGINE (Перспектива z: 1.0 -> 0.0 + Виртуальные Сабли)
+// ============================================================================
+const Saber3DEngine = {
+  selectedGameId: 'saber3d', // По умолчанию ставим новую 3D-игру с саблями!
+  objects3D: [],             // Летящие из глубины 3D-предметы
+  slicedHalves3D: [],        // Разрезанные саблей 3D-половинки с мякотью
+  slashArcs: [],             // Вспышки разрезов в пространстве
+  lensDrops: [],             // Капли сока на «линзе» экрана ТВ
+  hitStopUntil: 0,           // Микро-пауза (35ms) при мощном разрезе
+  tunnelPulse: 0,            // Пульсация 3D-туннеля при комбо
+
+  // 3D-каталог сочных процедурных целей (Никаких скучных плоских эмодзи!)
+  targetsCatalog: [
+    { id: 'watermelon', name: 'Кибер-Арбуз', outerColor: '#10b981', stripeColor: '#064e3b', fleshColor: '#ff2a5f', seedColor: '#111827', baseRadius: 88, points: 15 },
+    { id: 'orange',     name: 'Неон-Апельсин', outerColor: '#ff7b00', stripeColor: '#cc5200', fleshColor: '#ffb703', seedColor: '#fffbeb', baseRadius: 78, points: 12 },
+    { id: 'dragon',     name: 'Драгонфрут', outerColor: '#ff1e78', stripeColor: '#a30042', fleshColor: '#f8fafc', seedColor: '#0f172a', baseRadius: 82, points: 20 },
+    { id: 'cybercore',  name: 'Плазма-Сфера', outerColor: '#00f0ff', stripeColor: '#0284c7', fleshColor: '#e0f2fe', seedColor: '#38bdf8', baseRadius: 85, points: 30, isBonus: true },
+    { id: 'bomb3d',     name: 'Шипованная Мина', outerColor: '#ef4444', stripeColor: '#7f1d1d', fleshColor: '#f97316', seedColor: '#000000', baseRadius: 80, points: 0, isBomb: true }
+  ],
+
+  reset() {
+    this.objects3D = [];
+    this.slicedHalves3D = [];
+    this.slashArcs = [];
+    this.lensDrops = [];
+    this.hitStopUntil = 0;
+    this.tunnelPulse = 0;
+  },
+
+  // Проекция мировых 3D-координат (worldX, worldY ∈ [-1..1], z ∈ [0..1]) на экран ТВ
+  // При z = 1.0 (далеко у горизонта) scale = 0.14 (предмет маленький)
+  // При z = 0.08 (прямо перед лицом игрока) scale = 1.45 (предмет огромный!)
+  project3D(worldX, worldY, z, canvasWidth, canvasHeight) {
+    const vanishX = canvasWidth * 0.5;
+    const vanishY = canvasHeight * 0.43;
+    const focal = 0.24;
+    const clampedZ = Math.max(0.04, z);
+    const scale = focal / (focal + clampedZ); // z=1.0 -> ~0.19; z=0.10 -> ~0.71; z=0.04 -> ~0.86 (умножаем на spread)
+    const perspectiveScale = Math.pow(1.03 - Math.min(1.0, clampedZ), 1.65) * 1.45 + 0.10;
+
+    const spreadX = canvasWidth * 0.44;
+    const spreadY = canvasHeight * 0.38;
+
+    return {
+      screenX: vanishX + worldX * spreadX * perspectiveScale,
+      screenY: vanishY + worldY * spreadY * perspectiveScale,
+      scale: perspectiveScale
+    };
+  },
+
+  // Спавн волны 3D-предметов из глубины экрана
+  spawn3DWave(score = 0) {
+    const count = Math.random() < 0.35 ? 2 : 1;
+    for (let i = 0; i < count; i++) {
+      const isBomb = Math.random() < 0.16 && i === 0;
+      const pool = isBomb
+        ? this.targetsCatalog.filter((t) => t.isBomb)
+        : this.targetsCatalog.filter((t) => !t.isBomb);
+      const spec = pool[Math.floor(Math.random() * pool.length)];
+
+      // Выбирает траекторию: предмет летит из центра горизонта к левой/правой руке игрока
+      const side = count === 2 ? (i === 0 ? -1 : 1) : (Math.random() < 0.5 ? -1 : 1);
+      const targetWorldX = side * (0.22 + Math.random() * 0.52);
+      const targetWorldY = -0.35 + Math.random() * 0.78;
+
+      // Скорость приближения по оси Z (чем выше счёт, тем стремительнее подлёт)
+      const zSpeed = 0.0085 + Math.min(0.006, score * 0.000018) + Math.random() * 0.0025;
+
+      this.objects3D.push({
+        ...spec,
+        z: 1.0, // Начинает далеко в глубине (маленькая точка)
+        zSpeed,
+        worldX: targetWorldX * 0.15,
+        worldY: targetWorldY * 0.15,
+        targetWorldX,
+        targetWorldY,
+        arcLift: 0.18 + Math.random() * 0.14, // Красивая навесная 3D-дуга полёта
+        rotation: Math.random() * Math.PI * 2,
+        vRotation: (Math.random() - 0.5) * 0.07,
+        sliced: false
+      });
+    }
+  },
+
+  // Вычисление координат сабли (Рукоять в кисти -> Остриё сабли по вектору предплечья)
+  computeSaberSegment(glove, canvasWidth, canvasHeight) {
+    // Длина клинка адаптируется под размер экрана ТВ (~22% диагонали)
+    const bladeLength = Math.min(canvasWidth, canvasHeight) * 0.25;
+    // В game.js угол перчатки (glove.angle) = atan2(dy, dx) + PI/2, поэтому направление предплечья:
+    const dirAngle = glove.angle - Math.PI * 0.5;
+    const tipX = glove.x + Math.cos(dirAngle) * bladeLength;
+    const tipY = glove.y + Math.sin(dirAngle) * bladeLength;
+    return {
+      handleX: glove.x,
+      handleY: glove.y,
+      tipX,
+      tipY,
+      dirAngle,
+      bladeLength
+    };
+  },
+
+  // Проверка пересечения отрезка сабли (от рукояти до острия) с кругом 3D-фрукта
+  segmentCircleHit(x1, y1, x2, y2, cx, cy, r) {
+    const dx = x2 - x1;
+    const dy = y2 - y1;
+    const lenSq = dx * dx + dy * dy;
+    if (lenSq === 0) return Math.hypot(cx - x1, cy - y1) <= r;
+    let t = ((cx - x1) * dx + (cy - y1) * dy) / lenSq;
+    t = Math.max(0, Math.min(1, t));
+    const nearX = x1 + t * dx;
+    const nearY = y1 + t * dy;
+    return Math.hypot(cx - nearX, cy - nearY) <= r;
+  },
+
+  // Отрисовка 3D-туннеля Неонового Додзё и «Зоны Удара»
+  draw3DArenaBackdrop(ctx, w, h, combo = 0) {
+    const cx = w * 0.5;
+    const cy = h * 0.43;
+
+    // Перспективные лучи от точки схода
+    ctx.save();
+    const rays = 12;
+    ctx.strokeStyle = combo >= 4 ? 'rgba(0, 240, 255, 0.16)' : 'rgba(148, 163, 184, 0.09)';
+    ctx.lineWidth = 1.5;
+    for (let i = 0; i < rays; i++) {
+      const a = (i / rays) * Math.PI * 2;
+      ctx.beginPath();
+      ctx.moveTo(cx + Math.cos(a) * 35, cy + Math.sin(a) * 35);
+      ctx.lineTo(cx + Math.cos(a) * Math.max(w, h) * 0.85, cy + Math.sin(a) * Math.max(w, h) * 0.85);
+      ctx.stroke();
+    }
+
+    // Кольца глубины (Depth Rings) + Подсвеченное кольцо «Зоны Удара» (Strike Zone z ≈ 0.22)
+    const depthRings = [0.85, 0.62, 0.42, 0.24];
+    depthRings.forEach((zRing, idx) => {
+      const p = this.project3D(0, 0, zRing, w, h);
+      const rx = w * 0.42 * p.scale;
+      const ry = h * 0.36 * p.scale;
+      const isStrikeRing = idx === 3;
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+      ctx.strokeStyle = isStrikeRing
+        ? 'rgba(0, 240, 255, 0.32)'
+        : 'rgba(255, 255, 255, 0.06)';
+      ctx.lineWidth = isStrikeRing ? 2.5 : 1;
+      if (isStrikeRing) {
+        ctx.setLineDash([14, 10]);
+      } else {
+        ctx.setLineDash([]);
+      }
+      ctx.stroke();
+    });
+    ctx.setLineDash([]);
+    ctx.restore();
+  },
+
+  // Отрисовка 3-слойного 3D-предмета (Сфера с объёмным градиентом, полосами, бликом и индикатором зоны удара)
+  draw3DObject(ctx, obj, screenX, screenY, radius) {
+    ctx.save();
+    ctx.translate(screenX, screenY);
+
+    // Кольцо-прицел «РУБИ СЕЙЧАС!», когда предмет влетел в Зону Удара (z < 0.38)
+    if (obj.z < 0.38 && !obj.isBomb) {
+      const readyAlpha = Math.min(1, (0.38 - obj.z) * 3.5);
+      ctx.save();
+      ctx.strokeStyle = obj.isBonus ? `rgba(0, 240, 255, ${readyAlpha})` : `rgba(24, 226, 153, ${readyAlpha})`;
+      ctx.lineWidth = 3.5;
+      ctx.beginPath();
+      ctx.arc(0, 0, radius * 1.16, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    ctx.rotate(obj.rotation);
+
+    // Тень/свечение позади 3D-объекта
+    ctx.shadowColor = obj.isBomb ? '#ff2222' : obj.outerColor;
+    ctx.shadowBlur = Math.min(32, radius * 0.45);
+
+    if (obj.isBomb) {
+      // 3D Шипованная Плазменная Мина
+      const spikes = 8;
+      ctx.fillStyle = '#991b1b';
+      for (let s = 0; s < spikes; s++) {
+        const a = (s / spikes) * Math.PI * 2;
+        ctx.beginPath();
+        ctx.moveTo(Math.cos(a - 0.18) * radius * 0.85, Math.sin(a - 0.18) * radius * 0.85);
+        ctx.lineTo(Math.cos(a) * radius * 1.24, Math.sin(a) * radius * 1.24);
+        ctx.lineTo(Math.cos(a + 0.18) * radius * 0.85, Math.sin(a + 0.18) * radius * 0.85);
+        ctx.closePath();
+        ctx.fill();
+      }
+      const bombGrad = ctx.createRadialGradient(-radius * 0.28, -radius * 0.28, radius * 0.1, 0, 0, radius);
+      bombGrad.addColorStop(0, '#475569');
+      bombGrad.addColorStop(0.55, '#1e293b');
+      bombGrad.addColorStop(1, '#090d16');
+      ctx.fillStyle = bombGrad;
+      ctx.beginPath();
+      ctx.arc(0, 0, radius * 0.92, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Пульсирующее красное ядро мины
+      ctx.fillStyle = '#ff2a5f';
+      ctx.beginPath();
+      ctx.arc(0, 0, radius * 0.36, 0, Math.PI * 2);
+      ctx.fill();
+    } else {
+      // 1. Внешняя 3D-сфера фрукта с объёмным шейдингом
+      const sphereGrad = ctx.createRadialGradient(-radius * 0.32, -radius * 0.32, radius * 0.12, 0, 0, radius);
+      sphereGrad.addColorStop(0, '#ffffff');
+      sphereGrad.addColorStop(0.18, obj.outerColor);
+      sphereGrad.addColorStop(0.82, obj.stripeColor);
+      sphereGrad.addColorStop(1, '#090d16');
+
+      ctx.fillStyle = sphereGrad;
+      ctx.beginPath();
+      ctx.arc(0, 0, radius, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 2. Экваториальные полосы/текстура для ощущения 3D-вращения
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.22)';
+      ctx.lineWidth = Math.max(2, radius * 0.08);
+      ctx.beginPath();
+      ctx.ellipse(0, 0, radius * 0.72, radius * 0.32, 0.3, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // 3. Глянцевый 3D-блик сверху-слева (Specular Highlight)
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.42)';
+      ctx.beginPath();
+      ctx.ellipse(-radius * 0.32, -radius * 0.34, radius * 0.28, radius * 0.14, -0.45, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    ctx.restore();
+  },
+
+  // Отрисовка разрезанной 3D-половинки с сочной внутренней мякотью и косточками!
+  drawSlicedHalf3D(ctx, half) {
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, half.alpha);
+    ctx.translate(half.x, half.y);
+    ctx.rotate(half.cutAngle);
+
+    const r = half.radius;
+    ctx.beginPath();
+    if (half.side < 0) {
+      ctx.arc(0, 0, r, Math.PI, Math.PI * 2, false);
+    } else {
+      ctx.arc(0, 0, r, 0, Math.PI, false);
+    }
+    ctx.closePath();
+
+    // Кожура снаружи
+    ctx.fillStyle = half.outerColor;
+    ctx.fill();
+    ctx.lineWidth = Math.max(3, r * 0.1);
+    ctx.strokeStyle = '#ffffff';
+    ctx.stroke();
+
+    // Сочная мякоть внутри разреза
+    ctx.beginPath();
+    const innerR = r * 0.84;
+    if (half.side < 0) {
+      ctx.arc(0, 0, innerR, Math.PI, Math.PI * 2, false);
+    } else {
+      ctx.arc(0, 0, innerR, 0, Math.PI, false);
+    }
+    ctx.closePath();
+    ctx.fillStyle = half.fleshColor;
+    ctx.fill();
+
+    // Косточки на срезе
+    ctx.fillStyle = half.seedColor;
+    const seedOffset = half.side * innerR * 0.42;
+    [-0.45, 0, 0.45].forEach((sx) => {
+      ctx.beginPath();
+      ctx.arc(sx * innerR, seedOffset, Math.max(2.5, r * 0.065), 0, Math.PI * 2);
+      ctx.fill();
+    });
+
+    ctx.restore();
+  },
+
+  // Отрисовка Плазменной Сабли / Катаны и ленточного шлейфа удара
+  drawPlasmaSaber(ctx, glove, canvasWidth, canvasHeight) {
+    const saber = this.computeSaberSegment(glove, canvasWidth, canvasHeight);
+    const bladeColor = glove.id === 'left' ? '#00f0ff' : '#ff2a5f';
+
+    ctx.save();
+
+    // 1. Светящийся ленточный шлейф взмаха (Slash Trail Ribbon)
+    if (glove.trail && glove.trail.length > 2) {
+      for (let i = 1; i < glove.trail.length; i++) {
+        const ptPrev = glove.trail[i - 1];
+        const ptCurr = glove.trail[i];
+        const ratio = i / glove.trail.length;
+        ctx.strokeStyle = bladeColor;
+        ctx.globalAlpha = ratio * 0.38;
+        ctx.lineWidth = ratio * 22;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(
+          ptPrev.x + Math.cos(saber.dirAngle) * saber.bladeLength * 0.85,
+          ptPrev.y + Math.sin(saber.dirAngle) * saber.bladeLength * 0.85
+        );
+        ctx.lineTo(
+          ptCurr.x + Math.cos(saber.dirAngle) * saber.bladeLength * 0.85,
+          ptCurr.y + Math.sin(saber.dirAngle) * saber.bladeLength * 0.85
+        );
+        ctx.stroke();
+      }
+    }
+
+    ctx.globalAlpha = glove.active ? 1.0 : 0.55;
+
+    // 2. Неоновый ореол клинка катаны
+    ctx.shadowColor = bladeColor;
+    ctx.shadowBlur = 26;
+    ctx.strokeStyle = bladeColor;
+    ctx.lineWidth = 14;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(saber.handleX, saber.handleY);
+    ctx.lineTo(saber.tipX, saber.tipY);
+    ctx.stroke();
+
+    // 3. Белое раскалённое ядро клинка
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 5.5;
+    ctx.beginPath();
+    ctx.moveTo(saber.handleX, saber.handleY);
+    ctx.lineTo(saber.tipX, saber.tipY);
+    ctx.stroke();
+
+    // 4. Гарда (Цуба) и рукоять в кулаке игрока
+    ctx.translate(saber.handleX, saber.handleY);
+    ctx.rotate(saber.dirAngle);
+    ctx.shadowBlur = 0;
+
+    // Рукоять (назад от кисти)
+    ctx.fillStyle = '#1e293b';
+    ctx.strokeStyle = '#94a3b8';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    if (ctx.roundRect) {
+      ctx.roundRect(-42, -7, 42, 14, 5);
+    } else {
+      ctx.rect(-42, -7, 42, 14);
+    }
+    ctx.fill();
+    ctx.stroke();
+
+    // Золотая цуба (гарда)
+    ctx.fillStyle = '#ffb800';
+    ctx.beginPath();
+    if (ctx.roundRect) {
+      ctx.roundRect(-4, -18, 9, 36, 4);
+    } else {
+      ctx.rect(-4, -18, 9, 36);
+    }
+    ctx.fill();
+
+    ctx.restore();
+    return saber;
+  }
+};
+
+window.GAME_CATALOG = GAME_CATALOG;
+window.Saber3DEngine = Saber3DEngine;
+window.playKatanaSlashSound = playKatanaSlashSound;
+
+</script>
+  <script>
+// ============================================================================
+// MOTION ARENA TV v5.0 — ⚔️ 3D SABER SLICER + 🥊 BOXFRUIT 2D
+// Сверхбыстрый отклик MediaPipe Pose Lite (60 FPS) + Яркая векторная 3D/2D графика
+// ============================================================================
+
+const FRUITS_CATALOG = [
+  { kind: 'watermelon', name: 'Арбуз', color: '#ff1744', rind: '#00e676', radius: 54, points: 10 },
+  { kind: 'orange', name: 'Апельсин', color: '#ff9100', rind: '#ff3d00', radius: 46, points: 12 },
+  { kind: 'apple', name: 'Яблоко', color: '#76ff03', rind: '#00c853', radius: 46, points: 10 },
+  { kind: 'pineapple', name: 'Ананас', color: '#ffd600', rind: '#ffab00', radius: 50, points: 15 },
+  { kind: 'banana', name: 'Банан', color: '#ffee58', rind: '#fbc02d', radius: 48, points: 12 },
+  { kind: 'coconut', name: 'Мега-Сфера', color: '#00e5ff', rind: '#00b0ff', radius: 46, points: 20 },
+  { kind: 'star', name: 'Мега-Звезда', color: '#ffff00', rind: '#ffab00', radius: 50, points: 35, isBonus: true },
+  { kind: 'bomb', name: 'Бомба', color: '#ff1744', rind: '#263238', radius: 48, points: 0, isBomb: true }
+];
+
+// --- Synthesized Arcade Sound Engine (Web Audio API) ---
+class SoundFX {
+  constructor() {
+    this.ctx = null;
+  }
+
+  init() {
+    if (!this.ctx) {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (AudioCtx) this.ctx = new AudioCtx();
+    }
+    if (this.ctx && this.ctx.state === 'suspended') {
+      this.ctx.resume();
+    }
+  }
+
+  playPunch(isHeavy = false) {
+    this.init();
+    if (!this.ctx) return;
+    const now = this.ctx.currentTime;
+
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = isHeavy ? 'sawtooth' : 'triangle';
+    osc.frequency.setValueAtTime(isHeavy ? 190 : 140, now);
+    osc.frequency.exponentialRampToValueAtTime(32, now + (isHeavy ? 0.22 : 0.14));
+
+    gain.gain.setValueAtTime(isHeavy ? 0.55 : 0.38, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + (isHeavy ? 0.24 : 0.15));
+
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start(now);
+    osc.stop(now + (isHeavy ? 0.25 : 0.16));
+
+    const pop = this.ctx.createOscillator();
+    const popGain = this.ctx.createGain();
+    pop.type = 'sine';
+    pop.frequency.setValueAtTime(360, now + 0.02);
+    pop.frequency.exponentialRampToValueAtTime(880, now + 0.11);
+    popGain.gain.setValueAtTime(0.2, now + 0.02);
+    popGain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+    pop.connect(popGain);
+    popGain.connect(this.ctx.destination);
+    pop.start(now + 0.02);
+    pop.stop(now + 0.13);
+  }
+
+  playBomb() {
+    this.init();
+    if (!this.ctx) return;
+    const now = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(110, now);
+    osc.frequency.exponentialRampToValueAtTime(18, now + 0.45);
+    gain.gain.setValueAtTime(0.6, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.48);
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.5);
+  }
+
+  playBell() {
+    this.init();
+    if (!this.ctx) return;
+    const now = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(660, now);
+    gain.gain.setValueAtTime(0.4, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.9);
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.95);
+  }
+}
+
+const sfx = new SoundFX();
+const textDecoder = new TextDecoder('utf-8');
+
+// --- Ultra-Fast Full-Body Pose Tracker (MediaPipe Pose Lite @ 60 FPS) ---
+const poseTracker = {
+  slots: [
+    { id: 'left', normX: 0.32, normY: 0.7, vx: 0, vy: 0, angle: -0.2, active: false, lastSeen: 0 },
+    { id: 'right', normX: 0.68, normY: 0.7, vx: 0, vy: 0, angle: 0.2, active: false, lastSeen: 0 }
+  ],
+
+  filterCoord(prev, next) {
+    const delta = Math.abs(next - prev);
+    if (delta < 0.0012) return prev;
+    const alpha = Math.min(0.96, Math.max(0.68, delta * 18.0));
+    return prev + (next - prev) * alpha;
+  },
+
+  expandReachX(x) {
+    return Math.max(0.02, Math.min(0.98, 0.5 + (x - 0.5) * 1.65));
+  },
+  expandReachY(y) {
+    return Math.max(0.02, Math.min(0.98, 0.55 + (y - 0.55) * 1.55));
+  },
+
+  extractFistAndBody(poseLandmarks) {
+    const now = performance.now();
+    if (!poseLandmarks || poseLandmarks.length < 27) {
+      return { hands: [], body: null };
+    }
+
+    const pt = (idx) => {
+      const lm = poseLandmarks[idx];
+      if (!lm) return null;
+      return {
+        x: this.expandReachX(1 - lm.x),
+        y: this.expandReachY(lm.y),
+        v: lm.visibility !== undefined ? lm.visibility : 1.0
+      };
+    };
+
+    const head = pt(0);
+    const lShoulder = pt(11);
+    const rShoulder = pt(12);
+    const lElbow = pt(13);
+    const rElbow = pt(14);
+    const lWrist = pt(15);
+    const rWrist = pt(16);
+    const lPinky = pt(17);
+    const rPinky = pt(18);
+    const lIndex = pt(19);
+    const rIndex = pt(20);
+    const lThumb = pt(21);
+    const rThumb = pt(22);
+    const lHip = pt(23);
+    const rHip = pt(24);
+    const lKnee = pt(25);
+    const rKnee = pt(26);
+
+    const computeArmFist = (shoulder, elbow, wrist, indexPt, pinkyPt, thumbPt, slotIdx) => {
+      const slot = this.slots[slotIdx];
+      if (!wrist || !elbow || (wrist.v < 0.22 && elbow.v < 0.28)) {
+        if (now - slot.lastSeen > 550) {
+          slot.active = false;
+        }
+        return null;
+      }
+
+      let fistX = wrist.x;
+      let fistY = wrist.y;
+
+      if (indexPt && pinkyPt && indexPt.v > 0.3 && pinkyPt.v > 0.3) {
+        const knuckleX = indexPt.x * 0.45 + pinkyPt.x * 0.35 + (thumbPt ? thumbPt.x * 0.2 : wrist.x * 0.2);
+        const knuckleY = indexPt.y * 0.45 + pinkyPt.y * 0.35 + (thumbPt ? thumbPt.y * 0.2 : wrist.y * 0.2);
+        fistX = wrist.x * 0.25 + knuckleX * 0.75;
+        fistY = wrist.y * 0.25 + knuckleY * 0.75;
+      } else {
+        fistX = wrist.x + (wrist.x - elbow.x) * 0.38;
+        fistY = wrist.y + (wrist.y - elbow.y) * 0.38;
+      }
+
+      fistX = Math.max(0.02, Math.min(0.98, fistX));
+      fistY = Math.max(0.02, Math.min(0.98, fistY));
+
+      const prevX = slot.normX;
+      const prevY = slot.normY;
+      const dt = Math.max(8, Math.min(80, now - (slot.lastSeen || now - 16)));
+
+      if (!slot.active || now - slot.lastSeen > 650) {
+        slot.normX = fistX;
+        slot.normY = fistY;
+        slot.vx = 0;
+        slot.vy = 0;
+      } else {
+        slot.normX = this.filterCoord(slot.normX, fistX);
+        slot.normY = this.filterCoord(slot.normY, fistY);
+        slot.vx = ((slot.normX - prevX) / dt) * 16.67;
+        slot.vy = ((slot.normY - prevY) / dt) * 16.67;
+      }
+
+      const dx = slot.normX - elbow.x;
+      const dy = slot.normY - elbow.y;
+      slot.angle = Math.atan2(dy, dx) + Math.PI * 0.5;
+      slot.active = true;
+      slot.lastSeen = now;
+
+      return {
+        slot: slotIdx,
+        normX: +slot.normX.toFixed(4),
+        normY: +slot.normY.toFixed(4),
+        vx: +slot.vx.toFixed(4),
+        vy: +slot.vy.toFixed(4),
+        angle: +slot.angle.toFixed(3)
+      };
+    };
+
+    const leftFist = computeArmFist(lShoulder, lElbow, lWrist, lIndex, lPinky, lThumb, 0);
+    const rightFist = computeArmFist(rShoulder, rElbow, rWrist, rIndex, rPinky, rThumb, 1);
+
+    const hands = [];
+    if (leftFist) hands.push(leftFist);
+    if (rightFist) hands.push(rightFist);
+
+    const roundPt = (p) => (p && p.v > 0.25 ? [+p.x.toFixed(3), +p.y.toFixed(3)] : null);
+    const chest =
+      lShoulder && rShoulder
+        ? [+((lShoulder.x + rShoulder.x) * 0.5).toFixed(3), +((lShoulder.y + rShoulder.y) * 0.5).toFixed(3)]
+        : null;
+    const pelvis =
+      lHip && rHip
+        ? [+((lHip.x + rHip.x) * 0.5).toFixed(3), +((lHip.y + rHip.y) * 0.5).toFixed(3)]
+        : null;
+
+    const body = {
+      head: roundPt(head),
+      chest,
+      pelvis,
+      lS: roundPt(lShoulder),
+      rS: roundPt(rShoulder),
+      lE: roundPt(lElbow),
+      rE: roundPt(rElbow),
+      lW: leftFist ? [leftFist.normX, leftFist.normY] : roundPt(lWrist),
+      rW: rightFist ? [rightFist.normX, rightFist.normY] : roundPt(rWrist),
+      lH: roundPt(lHip),
+      rH: roundPt(rHip),
+      lK: roundPt(lKnee),
+      rK: roundPt(rKnee)
+    };
+
+    return { hands, body };
+  }
+};
+
+// --- Bright Vector Fruit & Bomb Renderer (For 2D BoxFruit Mode) ---
+function drawCustomFruitShape(ctx, f) {
+  const r = f.radius;
+  ctx.shadowColor = f.isBomb ? '#ff1744' : f.color;
+  ctx.shadowBlur = 22;
+
+  switch (f.kind) {
+    case 'watermelon': {
+      ctx.fillStyle = '#00e676';
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(0, 0, r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = '#e8f5e9';
+      ctx.beginPath();
+      ctx.arc(0, 0, r * 0.86, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#ff1744';
+      ctx.beginPath();
+      ctx.arc(0, 0, r * 0.78, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#111622';
+      for (let i = 0; i < 6; i++) {
+        const a = (i * Math.PI) / 3;
+        ctx.beginPath();
+        ctx.ellipse(Math.cos(a) * r * 0.42, Math.sin(a) * r * 0.42, 4, 7, a, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      break;
+    }
+
+    case 'orange': {
+      const grad = ctx.createRadialGradient(-r * 0.25, -r * 0.25, 4, 0, 0, r);
+      grad.addColorStop(0, '#ffd180');
+      grad.addColorStop(0.4, '#ff9100');
+      grad.addColorStop(1, '#ff3d00');
+      ctx.fillStyle = grad;
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(0, 0, r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = '#00e676';
+      ctx.beginPath();
+      ctx.ellipse(8, -r - 4, 14, 7, -0.4, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
+      ctx.beginPath();
+      ctx.ellipse(-r * 0.32, -r * 0.32, r * 0.28, r * 0.14, -0.6, 0, Math.PI * 2);
+      ctx.fill();
+      break;
+    }
+
+    case 'apple': {
+      const grad = ctx.createRadialGradient(-r * 0.25, -r * 0.25, 4, 0, 0, r);
+      grad.addColorStop(0, '#ccff90');
+      grad.addColorStop(0.5, '#76ff03');
+      grad.addColorStop(1, '#00c853');
+      ctx.fillStyle = grad;
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(0, 2, r * 0.96, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.strokeStyle = '#8d6e63';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(0, -r * 0.85);
+      ctx.lineTo(4, -r * 1.15);
+      ctx.stroke();
+
+      ctx.fillStyle = '#ffeb3b';
+      ctx.beginPath();
+      ctx.ellipse(12, -r * 1.0, 12, 6, 0.3, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+      ctx.beginPath();
+      ctx.ellipse(-r * 0.35, -r * 0.25, r * 0.24, r * 0.14, -0.5, 0, Math.PI * 2);
+      ctx.fill();
+      break;
+    }
+
+    case 'pineapple': {
+      ctx.fillStyle = '#00e676';
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2;
+      for (const offset of [-14, 0, 14]) {
+        ctx.beginPath();
+        ctx.ellipse(offset, -r * 0.95, 9, 22, offset * 0.02, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+      }
+
+      ctx.fillStyle = '#ffd600';
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.ellipse(0, 6, r * 0.82, r * 0.95, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.strokeStyle = '#ff6d00';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(-r * 0.5, -r * 0.4);
+      ctx.lineTo(r * 0.5, r * 0.6);
+      ctx.moveTo(r * 0.5, -r * 0.4);
+      ctx.lineTo(-r * 0.5, r * 0.6);
+      ctx.stroke();
+      break;
+    }
+
+    case 'banana': {
+      ctx.fillStyle = '#ffee58';
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 3.5;
+      ctx.beginPath();
+      ctx.arc(0, -r * 0.2, r * 0.95, 0.25 * Math.PI, 0.85 * Math.PI, false);
+      ctx.quadraticCurveTo(0, r * 0.35, r * 0.82, 0.25 * Math.PI);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = '#fff59d';
+      ctx.beginPath();
+      ctx.ellipse(0, r * 0.35, r * 0.65, r * 0.26, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      break;
+    }
+
+    case 'coconut': {
+      const grad = ctx.createRadialGradient(-r * 0.2, -r * 0.2, 4, 0, 0, r);
+      grad.addColorStop(0, '#ffffff');
+      grad.addColorStop(0.45, '#00e5ff');
+      grad.addColorStop(1, '#0088cc');
+      ctx.fillStyle = grad;
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 3.5;
+      ctx.beginPath();
+      ctx.arc(0, 0, r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      break;
+    }
+
+    case 'star': {
+      ctx.fillStyle = '#ffff00';
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 3.5;
+      ctx.beginPath();
+      for (let i = 0; i < 10; i++) {
+        const rad = i % 2 === 0 ? r * 1.08 : r * 0.48;
+        const a = (i * Math.PI) / 5 - Math.PI / 2;
+        const px = Math.cos(a) * rad;
+        const py = Math.sin(a) * rad;
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      break;
+    }
+
+    case 'bomb': {
+      ctx.fillStyle = '#1c2430';
+      ctx.strokeStyle = '#ff1744';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.arc(0, 4, r * 0.88, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = '#ff1744';
+      ctx.beginPath();
+      ctx.arc(0, 4, r * 0.48, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(-12, -8);
+      ctx.lineTo(12, 16);
+      ctx.moveTo(12, -8);
+      ctx.lineTo(-12, 16);
+      ctx.stroke();
+
+      ctx.strokeStyle = '#ffb800';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(0, -r * 0.82);
+      ctx.quadraticCurveTo(14, -r * 1.15, 22, -r * 1.05);
+      ctx.stroke();
+
+      ctx.fillStyle = '#ffff00';
+      ctx.beginPath();
+      ctx.arc(24, -r * 1.05, 11 + Math.sin(performance.now() * 0.03) * 4, 0, Math.PI * 2);
+      ctx.fill();
+      break;
+    }
+  }
+}
+
+// --- Game State ---
+const state = {
+  mode: 'menu',
+  activeGame: 'saber3d', // 'saber3d' (3D Saber Slicer) | 'boxfruit' (2D Boxing)
+  isPlaying: false,
+  score: 0,
+  bestScore: Number(localStorage.getItem('boxfruit_best') || 0),
+  combo: 0,
+  lives: 3,
+  timeLeft: 60,
+  kcal: 0,
+  punchesCount: 0,
+  screenShake: 0,
+  roomCode: '7777',
+  peer: null,
+  conn: null,
+  mqttClients: [],
+  remoteConnected: false,
+  lastRemotePacketAt: 0,
+  receivedFramesCount: 0,
+  sentFramesCount: 0,
+  bodySilhouette: null,
+  fruits: [],
+  halves: [],
+  particles: [],
+  floatingTexts: [],
+  shockwaves: [],
+  lastSpawnAt: 0,
+  timerInterval: null,
+  gloves: [
+    {
+      id: 'left',
+      label: 'ЛЕВАЯ',
+      color: '#00d2ff',
+      darkColor: '#006a8e',
+      x: window.innerWidth * 0.32,
+      y: window.innerHeight * 0.72,
+      targetX: window.innerWidth * 0.32,
+      targetY: window.innerHeight * 0.72,
+      netVx: 0,
+      netVy: 0,
+      vx: 0,
+      vy: 0,
+      speed: 0,
+      angle: -0.2,
+      targetAngle: -0.2,
+      scale: 1,
+      active: false,
+      lastSeen: 0,
+      trail: []
+    },
+    {
+      id: 'right',
+      label: 'ПРАВАЯ',
+      color: '#ff3b4b',
+      darkColor: '#9e1420',
+      x: window.innerWidth * 0.68,
+      y: window.innerHeight * 0.72,
+      targetX: window.innerWidth * 0.68,
+      targetY: window.innerHeight * 0.72,
+      netVx: 0,
+      netVy: 0,
+      vx: 0,
+      vy: 0,
+      speed: 0,
+      angle: 0.2,
+      targetAngle: 0.2,
+      scale: 1,
+      active: false,
+      lastSeen: 0,
+      trail: []
+    }
+  ]
+};
+
+// --- DOM Elements ---
+const canvas = document.getElementById('game-canvas');
+const ctx = canvas.getContext('2d');
+const hudBar = document.getElementById('hud-bar');
+const scoreEl = document.getElementById('hud-score');
+const comboEl = document.getElementById('hud-combo');
+const timerEl = document.getElementById('hud-timer');
+const livesEl = document.getElementById('hud-lives');
+const hudPhoneStatusEl = document.getElementById('hud-phone-status');
+const hudSwitchGameBtn = document.getElementById('btn-hud-switch-game');
+
+const menuOverlay = document.getElementById('menu-overlay');
+const tvPairingModal = document.getElementById('tv-pairing-modal');
+const gameOverOverlay = document.getElementById('gameover-overlay');
+const phoneSensorScreen = document.getElementById('phone-sensor-screen');
+
+const pipContainer = document.getElementById('pip-container');
+const inputVideo = document.getElementById('input-video');
+const pipCanvas = document.getElementById('pip-overlay-canvas');
+const pipCtx = pipCanvas.getContext('2d');
+
+const phoneVideo = document.getElementById('phone-video-preview');
+const phoneSkeletonCanvas = document.getElementById('phone-skeleton-canvas');
+const phoneSkeletonCtx = phoneSkeletonCanvas.getContext('2d');
+
+function resizeCanvas() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+function setGameMode(gameId) {
+  state.activeGame = gameId === 'boxfruit' ? 'boxfruit' : 'saber3d';
+  if (window.Saber3DEngine) {
+    window.Saber3DEngine.selectedGameId = state.activeGame;
+    window.Saber3DEngine.reset();
+  }
+  state.fruits = [];
+  state.halves = [];
+
+  const btnSaber = document.getElementById('btn-select-saber3d');
+  const btnBox = document.getElementById('btn-select-boxfruit');
+  const descEl = document.getElementById('selected-game-desc');
+
+  if (btnSaber && btnBox) {
+    if (state.activeGame === 'saber3d') {
+      btnSaber.className = 'btn btn-blue';
+      btnSaber.textContent = '⚔️ Игра 1: 3D SABER SLICER (Из глубины в экран) ✓';
+      btnBox.className = 'btn btn-secondary';
+      btnBox.textContent = '🥊 Игра 2: BOXFRUIT 2D (Боксёрские перчатки)';
+      if (descEl) {
+        descEl.innerHTML =
+          '<strong>Выбрана игра: ⚔️ 3D SABER SLICER.</strong> Предметы вылетают из глубины 3D-туннеля прямо на тебя и растут в размере — руби их светящимися плазменными саблями!';
+      }
+    } else {
+      btnBox.className = 'btn btn-gold';
+      btnBox.textContent = '🥊 Игра 2: BOXFRUIT 2D (Боксёрские перчатки) ✓';
+      btnSaber.className = 'btn btn-secondary';
+      btnSaber.textContent = '⚔️ Игра 1: 3D SABER SLICER (Из глубины в экран)';
+      if (descEl) {
+        descEl.innerHTML =
+          '<strong>Выбрана игра: 🥊 BOXFRUIT 2D.</strong> Классический боксёрский поединок с яркими векторными фруктами и минами на плоскости арены.';
+      }
+    }
+  }
+
+  if (hudSwitchGameBtn) {
+    hudSwitchGameBtn.textContent =
+      state.activeGame === 'saber3d' ? '⚔️ Режим: 3D Сабли' : '🥊 Режим: 2D Бокс';
+  }
+}
+
+// --- Auto-Derive 4-Digit Room Code from Shared Home Wi-Fi Public IP ---
+async function resolveHomeRoomCode() {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('room')) {
+    state.roomCode = params.get('room').trim();
+    updateRoomBadges();
+    return state.roomCode;
+  }
+  try {
+    const res = await fetch('https://api.ipify.org?format=json');
+    const data = await res.json();
+    if (data && data.ip) {
+      let hash = 0;
+      for (let i = 0; i < data.ip.length; i++) {
+        hash = (hash * 31 + data.ip.charCodeAt(i)) % 9000;
+      }
+      state.roomCode = String(1000 + Math.abs(hash));
+    }
+  } catch (e) {}
+  updateRoomBadges();
+  return state.roomCode;
+}
+
+function updateRoomBadges() {
+  const tvCodeEl = document.getElementById('tv-room-code');
+  if (tvCodeEl) tvCodeEl.textContent = state.roomCode;
+
+  const phoneInput = document.getElementById('phone-room-input');
+  if (phoneInput && !phoneInput.value) {
+    phoneInput.value = state.roomCode;
+  }
+
+  if (hudPhoneStatusEl) {
+    if (performance.now() - state.lastRemotePacketAt < 4000) {
+      const modeTag = state.conn && state.conn.open ? 'P2P 60fps' : 'WSS v5.0';
+      hudPhoneStatusEl.textContent = `✅ ${modeTag} (${state.receivedFramesCount})`;
+      hudPhoneStatusEl.style.color = '#18e299';
+    } else {
+      hudPhoneStatusEl.textContent = `Код: ${state.roomCode}`;
+      hudPhoneStatusEl.style.color = '#ffb800';
+    }
+  }
+}
+
+// --- Multi-Broker WebSocket Relay + Direct WebRTC Upgrade ---
+const WSS_BROKERS = [
+  'wss://mqtt.eclipseprojects.io:443/mqtt',
+  'wss://broker.emqx.io:8084/mqtt',
+  'wss://broker.hivemq.com:8884/mqtt'
+];
+
+function decodeMqttPayload(raw) {
+  if (!raw) return '';
+  if (typeof raw === 'string') return raw;
+  if (raw instanceof Uint8Array || ArrayBuffer.isView(raw)) {
+    return textDecoder.decode(raw);
+  }
+  if (raw instanceof ArrayBuffer) {
+    return textDecoder.decode(new Uint8Array(raw));
+  }
+  return String(raw);
+}
+
+function initRealtimeSync() {
+  if (!window.mqtt) return;
+
+  state.mqttClients.forEach((c) => {
+    try {
+      c.end(true);
+    } catch (e) {}
+  });
+  state.mqttClients = [];
+
+  WSS_BROKERS.forEach((brokerUrl) => {
+    try {
+      const client = window.mqtt.connect(brokerUrl, {
+        keepalive: 30,
+        reconnectPeriod: 2000,
+        connectTimeout: 8000,
+        protocolVersion: 4
+      });
+
+      client.on('connect', () => {
+        client.subscribe(`boxfruit/v5/room/${state.roomCode}`, { qos: 0 });
+        client.subscribe('boxfruit/v5/global', { qos: 0 });
+
+        if (state.mode === 'phone') {
+          const dot = document.getElementById('phone-status-dot');
+          const statusLabel = document.getElementById('phone-conn-status');
+          if (dot) dot.classList.add('online');
+          if (statusLabel) {
+            statusLabel.textContent = `Подключено к ТВ #${state.roomCode} (v5.0)`;
+          }
+        }
+      });
+
+      client.on('message', (topic, messageBuffer) => {
+        if (state.mode === 'phone') return;
+        try {
+          const jsonText = decodeMqttPayload(messageBuffer);
+          const payload = JSON.parse(jsonText);
+          handleIncomingRemotePayload(payload);
+        } catch (err) {}
+      });
+
+      state.mqttClients.push(client);
+    } catch (err) {}
+  });
+}
+
+let lastProcessedSeq = -1;
+function handleIncomingRemotePayload(payload) {
+  if (!payload) return;
+  if (payload.seq && payload.seq <= lastProcessedSeq && lastProcessedSeq - payload.seq < 100) {
+    return;
+  }
+  if (payload.seq) lastProcessedSeq = payload.seq;
+
+  state.remoteConnected = true;
+  state.lastRemotePacketAt = performance.now();
+  state.receivedFramesCount++;
+  updateRoomBadges();
+
+  const tvStatusText = document.getElementById('tv-status-text');
+  if (tvStatusText) {
+    tvStatusText.textContent = `✅ Силуэт игрока получен! Пакет #${state.receivedFramesCount}`;
+  }
+
+  if (payload.type === 'POSE') {
+    if (payload.body) {
+      state.bodySilhouette = payload.body;
+    }
+    updateGlovesFromStableSlots(payload.hands);
+    if (
+      state.mode === 'tv' &&
+      !state.isPlaying &&
+      !tvPairingModal.classList.contains('hidden') &&
+      payload.hands &&
+      payload.hands.length > 0
+    ) {
+      startRound();
+    }
+  } else if (payload.type === 'RESTART') {
+    if (state.mode !== 'phone') {
+      startRound();
+    }
+  } else if (payload.type === 'SWITCH_GAME') {
+    if (state.mode !== 'phone') {
+      setGameMode(state.activeGame === 'saber3d' ? 'boxfruit' : 'saber3d');
+    }
+  }
+}
+
+let lastSentAt = 0;
+function broadcastFromPhone(payload) {
+  const now = performance.now();
+  const hasDirectWebRtc = Boolean(state.conn && state.conn.open);
+  const minInterval = hasDirectWebRtc ? 14 : 18;
+  if (payload.type === 'POSE' && now - lastSentAt < minInterval) {
+    return;
+  }
+  lastSentAt = now;
+  state.sentFramesCount++;
+  payload.seq = state.sentFramesCount;
+
+  if (payload.type === 'POSE' && state.sentFramesCount % 2 !== 0) {
+    delete payload.body;
+  }
+
+  let connectedChannels = 0;
+
+  if (hasDirectWebRtc) {
+    try {
+      state.conn.send(payload);
+      connectedChannels++;
+    } catch (e) {}
+  }
+
+  const jsonStr = JSON.stringify(payload);
+  state.mqttClients.forEach((client) => {
+    if (client && client.connected) {
+      connectedChannels++;
+      client.publish(`boxfruit/v5/room/${state.roomCode}`, jsonStr, { qos: 0 });
+      client.publish('boxfruit/v5/global', jsonStr, { qos: 0 });
+    }
+  });
+
+  const dot = document.getElementById('phone-status-dot');
+  const statusLabel = document.getElementById('phone-conn-status');
+  if (dot && connectedChannels > 0) dot.classList.add('online');
+  if (statusLabel && state.sentFramesCount % 15 === 0) {
+    const activeNames = (payload.hands || [])
+      .map((h) => (h.slot === 0 ? '🔵Лев' : '🔴Прав'))
+      .join(' + ');
+    statusLabel.textContent = `ТВ #${state.roomCode} ● ${activeNames || 'Встань в кадр'} (${state.sentFramesCount})`;
+  }
+}
+
+// --- Intercept TV Remote Back Button ---
+function pushSubScreenHistory(screenName) {
+  try {
+    window.history.pushState({ screen: screenName }, '');
+  } catch (e) {}
+}
+
+function returnToMainMenu() {
+  state.isPlaying = false;
+  state.mode = 'menu';
+  if (state.timerInterval) clearInterval(state.timerInterval);
+
+  tvPairingModal.classList.add('hidden');
+  gameOverOverlay.classList.add('hidden');
+  phoneSensorScreen.classList.add('hidden');
+  hudBar.classList.add('hidden');
+  pipContainer.classList.add('hidden');
+  menuOverlay.classList.remove('hidden');
+}
+
+window.addEventListener('popstate', () => {
+  if (state.mode !== 'menu') {
+    returnToMainMenu();
+  } else {
+    pushSubScreenHistory('menu');
+  }
+});
+
+window.addEventListener('keydown', (e) => {
+  if (
+    e.key === 'Escape' ||
+    e.key === 'GoBack' ||
+    e.key === 'BrowserBack' ||
+    (e.key === 'Backspace' && document.activeElement !== document.getElementById('phone-room-input'))
+  ) {
+    e.preventDefault();
+    returnToMainMenu();
+  }
+});
+
+// --- Pointer / Touch Fallback on TV or Solo Screen ---
+window.addEventListener('pointermove', (e) => {
+  const now = performance.now();
+  if (now - state.lastRemotePacketAt < 4000) return;
+
+  const rightGlove = state.gloves[1];
+  if (now - rightGlove.lastSeen > 600) {
+    rightGlove.targetX = e.clientX;
+    rightGlove.targetY = e.clientY;
+    rightGlove.netVx = 0;
+    rightGlove.netVy = 0;
+    rightGlove.active = true;
+  }
+});
+
+// --- Update TV Gloves from Pose Slots ---
+function updateGlovesFromStableSlots(handsList) {
+  const now = performance.now();
+  const seenSlots = new Set();
+
+  if (handsList && handsList.length > 0) {
+    handsList.forEach((h) => {
+      const slotIdx = h.slot === 0 ? 0 : 1;
+      seenSlots.add(slotIdx);
+      const g = state.gloves[slotIdx];
+      g.targetX = Math.max(45, Math.min(canvas.width - 45, h.normX * canvas.width));
+      g.targetY = Math.max(45, Math.min(canvas.height - 45, h.normY * canvas.height));
+      g.netVx = (h.vx || 0) * canvas.width;
+      g.netVy = (h.vy || 0) * canvas.height;
+      if (typeof h.angle === 'number') {
+        g.targetAngle = h.angle;
+      }
+      g.active = true;
+      g.lastSeen = now;
+    });
+  }
+
+  [0, 1].forEach((idx) => {
+    const g = state.gloves[idx];
+    if (!seenSlots.has(idx) && now - g.lastSeen > 600) {
+      g.active = false;
+      g.netVx = 0;
+      g.netVy = 0;
+      g.targetX = canvas.width * (idx === 0 ? 0.28 : 0.72);
+      g.targetY = canvas.height * 0.85;
+      g.targetAngle = idx === 0 ? -0.2 : 0.2;
+    }
+  });
+}
+
+// --- MediaPipe Pose Initialization (Lite Model 0 @ 60fps for Instant Response) ---
+let poseDetector = null;
+let activeVideoEl = null;
+let activeOverlayCanvas = null;
+let activeOverlayCtx = null;
+let cameraLoopRunning = false;
+
+async function startCameraAndMediaPipePose(videoElement, overlayCanvas, overlayContext, onPoseCallback) {
+  activeVideoEl = videoElement;
+  activeOverlayCanvas = overlayCanvas;
+  activeOverlayCtx = overlayContext;
+
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: {
+        facingMode: 'user',
+        width: { ideal: 480 },
+        height: { ideal: 360 },
+        frameRate: { ideal: 60 }
+      },
+      audio: false
+    });
+    videoElement.srcObject = stream;
+    await videoElement.play();
+
+    overlayCanvas.width = videoElement.videoWidth || 480;
+    overlayCanvas.height = videoElement.videoHeight || 360;
+
+    if (!poseDetector && window.Pose) {
+      poseDetector = new window.Pose({
+        locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`
+      });
+      poseDetector.setOptions({
+        modelComplexity: 0,
+        smoothLandmarks: true,
+        enableSegmentation: false,
+        minDetectionConfidence: 0.45,
+        minTrackingConfidence: 0.45
+      });
+    }
+
+    if (poseDetector) {
+      poseDetector.onResults((results) => {
+        const extracted = poseTracker.extractFistAndBody(results.poseLandmarks);
+        drawPhonePoseSkeleton(extracted, activeOverlayCanvas, activeOverlayCtx);
+        onPoseCallback(extracted);
+      });
+    }
+
+    if (!cameraLoopRunning) {
+      cameraLoopRunning = true;
+      const processFrame = async () => {
+        if (activeVideoEl && activeVideoEl.readyState >= 2 && poseDetector) {
+          try {
+            await poseDetector.send({ image: activeVideoEl });
+          } catch (err) {}
+        }
+        if (cameraLoopRunning) {
+          requestAnimationFrame(processFrame);
+        }
+      };
+      requestAnimationFrame(processFrame);
+    }
+  } catch (err) {
+    alert(
+      'На этом устройстве камера не найдена (' +
+        err.message +
+        '). Если это Телевизор — нажмите «✕ Выход в меню» и выберите 1-ю карточку «📺 Это экран ТВ / Монитор»!'
+    );
+  }
+}
+
+// --- Draw Full Body Skeleton on Phone Preview ---
+function drawPhonePoseSkeleton(extracted, cnv, context) {
+  if (!cnv || !context) return;
+  context.clearRect(0, 0, cnv.width, cnv.height);
+  if (!extracted || !extracted.body) return;
+
+  const b = extracted.body;
+  const toCanvas = (pt) => (pt ? [(1 - pt[0]) * cnv.width, pt[1] * cnv.height] : null);
+
+  const drawBone = (p1, p2, color, width = 4) => {
+    const c1 = toCanvas(p1);
+    const c2 = toCanvas(p2);
+    if (!c1 || !c2) return;
+    context.strokeStyle = color;
+    context.lineWidth = width;
+    context.lineCap = 'round';
+    context.beginPath();
+    context.moveTo(c1[0], c1[1]);
+    context.lineTo(c2[0], c2[1]);
+    context.stroke();
+  };
+
+  drawBone(b.head, b.chest, '#18e299', 4);
+  drawBone(b.lS, b.rS, '#18e299', 5);
+  drawBone(b.chest, b.pelvis, '#18e299', 5);
+  drawBone(b.lS, b.lH, 'rgba(24, 226, 153, 0.5)', 3);
+  drawBone(b.rS, b.rH, 'rgba(24, 226, 153, 0.5)', 3);
+  drawBone(b.lH, b.rH, '#18e299', 4);
+  drawBone(b.lH, b.lK, '#18e299', 4);
+  drawBone(b.rH, b.rK, '#18e299', 4);
+
+  drawBone(b.lS, b.lE, '#00d2ff', 6);
+  drawBone(b.lE, b.lW, '#00d2ff', 7);
+
+  drawBone(b.rS, b.rE, '#ff3b4b', 6);
+  drawBone(b.rE, b.rW, '#ff3b4b', 7);
+
+  const headPx = toCanvas(b.head);
+  if (headPx) {
+    context.strokeStyle = '#18e299';
+    context.lineWidth = 3;
+    context.beginPath();
+    context.arc(headPx[0], headPx[1], 18, 0, Math.PI * 2);
+    context.stroke();
+  }
+
+  (extracted.hands || []).forEach((h) => {
+    const fx = (1 - h.normX) * cnv.width;
+    const fy = h.normY * cnv.height;
+    context.fillStyle = h.slot === 0 ? '#00d2ff' : '#ff3b4b';
+    context.strokeStyle = '#ffffff';
+    context.lineWidth = 3;
+    context.beginPath();
+    context.arc(fx, fy, 20, 0, Math.PI * 2);
+    context.fill();
+    context.stroke();
+  });
+}
+
+// --- Draw Holographic Body Silhouette on TV Arena ---
+function drawArenaBodySilhouette(ctx, b) {
+  if (!b) return;
+  ctx.save();
+  const px = (pt) => (pt ? [pt[0] * canvas.width, pt[1] * canvas.height] : null);
+
+  const bone = (p1, p2, color, width) => {
+    const c1 = px(p1);
+    const c2 = px(p2);
+    if (!c1 || !c2) return;
+    ctx.strokeStyle = color;
+    ctx.lineWidth = width;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    context.moveTo(c1[0], c1[1]);
+    ctx.lineTo(c2[0], c2[1]);
+    ctx.stroke();
+  };
+
+  const torsoColor = 'rgba(255, 255, 255, 0.16)';
+  bone(b.head, b.chest, torsoColor, 6);
+  bone(b.lS, b.rS, torsoColor, 8);
+  bone(b.chest, b.pelvis, torsoColor, 8);
+  bone(b.lH, b.rH, torsoColor, 6);
+  bone(b.lH, b.lK, torsoColor, 6);
+  bone(b.rH, b.rK, torsoColor, 6);
+
+  bone(b.lS, b.lE, 'rgba(0, 210, 255, 0.38)', 10);
+  bone(b.lE, b.lW, 'rgba(0, 210, 255, 0.55)', 12);
+
+  bone(b.rS, b.rE, 'rgba(255, 59, 75, 0.38)', 10);
+  bone(b.rE, b.rW, 'rgba(255, 59, 75, 0.55)', 12);
+
+  const hPt = px(b.head);
+  if (hPt) {
+    ctx.strokeStyle = 'rgba(24, 226, 153, 0.28)';
+    ctx.fillStyle = 'rgba(24, 226, 153, 0.07)';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.arc(hPt[0], hPt[1], 36, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+  }
+
+  ctx.restore();
+}
+
+// --- 2D Spawning & Physics ---
+function spawnFruitWave() {
+  const count = Math.random() < 0.35 ? 2 : 1;
+  for (let i = 0; i < count; i++) {
+    const roll = Math.random();
+    let template;
+    if (roll < 0.14) {
+      template = FRUITS_CATALOG.find((f) => f.isBomb);
+    } else if (roll < 0.24) {
+      template = FRUITS_CATALOG.find((f) => f.isBonus);
+    } else {
+      const normals = FRUITS_CATALOG.filter((f) => !f.isBomb && !f.isBonus);
+      template = normals[Math.floor(Math.random() * normals.length)];
+    }
+
+    const margin = Math.min(160, canvas.width * 0.15);
+    const startX = margin + Math.random() * (canvas.width - margin * 2);
+    const startY = canvas.height + 60;
+
+    const centerBias = (canvas.width * 0.5 - startX) * (0.008 + Math.random() * 0.006);
+    const vx = centerBias + (Math.random() - 0.5) * 4;
+    const vy = -(Math.sqrt(canvas.height) * (0.48 + Math.random() * 0.12));
+
+    state.fruits.push({
+      ...template,
+      x: startX,
+      y: startY,
+      vx,
+      vy,
+      gravity: 0.28,
+      angle: Math.random() * Math.PI * 2,
+      vAngle: (Math.random() - 0.5) * 0.1,
+      hit: false
+    });
+  }
+}
+
+function triggerFruitHit(fruit, glove) {
+  fruit.hit = true;
+  state.punchesCount++;
+  state.kcal = +(state.punchesCount * 0.14).toFixed(1);
+
+  if (fruit.isBomb) {
+    sfx.playBomb();
+    state.combo = 0;
+    state.lives = Math.max(0, state.lives - 1);
+    state.screenShake = 22;
+    createExplosionParticles(fruit.x, fruit.y, '#ff3b4b', 30);
+    state.shockwaves.push({
+      x: fruit.x,
+      y: fruit.y,
+      radius: 20,
+      maxRadius: 180,
+      color: '#ff2222',
+      alpha: 1
+    });
+    state.floatingTexts.push({
+      text: 'БОМБА! -1 ЩИТ',
+      x: fruit.x,
+      y: fruit.y,
+      color: '#ff3b4b',
+      alpha: 1,
+      vy: -3.2,
+      scale: 1.35
+    });
+    updateHUD();
+    if (state.lives <= 0) {
+      endRound('Закончились щиты!');
+    }
+    return;
+  }
+
+  const isHeavyPunch = glove.speed > 14;
+  sfx.playPunch(isHeavyPunch);
+
+  state.combo++;
+  const comboMult = state.combo >= 10 ? 3 : state.combo >= 5 ? 2 : 1;
+  const heavyBonus = isHeavyPunch ? 15 : 0;
+  const gained = fruit.points * comboMult + heavyBonus;
+  state.score += gained;
+  if (state.score > state.bestScore) {
+    state.bestScore = state.score;
+    localStorage.setItem('boxfruit_best', String(state.bestScore));
+  }
+
+  if (isHeavyPunch) {
+    state.screenShake = 12;
+  }
+
+  for (const side of [-1, 1]) {
+    state.halves.push({
+      kind: fruit.kind,
+      color: fruit.color,
+      rind: fruit.rind,
+      x: fruit.x + side * 14,
+      y: fruit.y,
+      vx: fruit.vx + side * (5 + Math.random() * 3) + glove.vx * 0.2,
+      vy: fruit.vy - 3 + glove.vy * 0.14,
+      angle: fruit.angle,
+      vAngle: side * 0.18,
+      side,
+      radius: fruit.radius,
+      alpha: 1
+    });
+  }
+
+  createExplosionParticles(fruit.x, fruit.y, fruit.color, isHeavyPunch ? 28 : 18);
+
+  state.shockwaves.push({
+    x: fruit.x,
+    y: fruit.y,
+    radius: 16,
+    maxRadius: isHeavyPunch ? 140 : 95,
+    color: isHeavyPunch ? '#ffb800' : fruit.color,
+    alpha: 0.95
+  });
+
+  const label = isHeavyPunch
+    ? `НОКАУТ +${gained}!`
+    : comboMult > 1
+    ? `+${gained} (x${comboMult} КОМБО!)`
+    : `+${gained}`;
+
+  state.floatingTexts.push({
+    text: label,
+    x: fruit.x,
+    y: fruit.y - 10,
+    color: isHeavyPunch ? '#ffb800' : '#ffffff',
+    alpha: 1,
+    vy: -2.8,
+    scale: isHeavyPunch ? 1.28 : 1.0
+  });
+
+  updateHUD();
+}
+
+// --- 3D Saber Slice Trigger ---
+function trigger3DSaberSlice(obj3d, screenX, screenY, radius, glove, saber) {
+  obj3d.sliced = true;
+  state.punchesCount++;
+  state.kcal = +(state.punchesCount * 0.15).toFixed(1);
+
+  if (obj3d.isBomb) {
+    sfx.playBomb();
+    state.combo = 0;
+    state.lives = Math.max(0, state.lives - 1);
+    state.screenShake = 24;
+    createExplosionParticles(screenX, screenY, '#ff1744', 32);
+    state.shockwaves.push({
+      x: screenX,
+      y: screenY,
+      radius: 24,
+      maxRadius: 190,
+      color: '#ff1744',
+      alpha: 1
+    });
+    state.floatingTexts.push({
+      text: 'МИНА! -1 ЩИТ',
+      x: screenX,
+      y: screenY,
+      color: '#ff1744',
+      alpha: 1,
+      vy: -3.2,
+      scale: 1.35
+    });
+    updateHUD();
+    if (state.lives <= 0) {
+      endRound('Закончились щиты!');
+    }
+    return;
+  }
+
+  const isCritical = glove.speed > 14;
+  if (window.playKatanaSlashSound) {
+    window.playKatanaSlashSound(sfx, isCritical);
+  } else {
+    sfx.playPunch(isCritical);
+  }
+
+  state.combo++;
+  const comboMult = state.combo >= 10 ? 3 : state.combo >= 5 ? 2 : 1;
+  const critBonus = isCritical ? 20 : 0;
+  const gained = obj3d.points * comboMult + critBonus;
+  state.score += gained;
+  if (state.score > state.bestScore) {
+    state.bestScore = state.score;
+    localStorage.setItem('boxfruit_best', String(state.bestScore));
+  }
+
+  if (isCritical) {
+    state.screenShake = 10;
+  }
+
+  // Cut angle follows saber blade / swing direction
+  const cutAngle = Math.atan2(glove.vy || Math.sin(saber.dirAngle), glove.vx || Math.cos(saber.dirAngle));
+  const normalX = -Math.sin(cutAngle);
+  const normalY = Math.cos(cutAngle);
+
+  for (const side of [-1, 1]) {
+    window.Saber3DEngine.slicedHalves3D.push({
+      outerColor: obj3d.outerColor,
+      fleshColor: obj3d.fleshColor,
+      seedColor: obj3d.seedColor,
+      x: screenX + normalX * side * 12,
+      y: screenY + normalY * side * 12,
+      vx: normalX * side * (6 + Math.random() * 3) + glove.vx * 0.15,
+      vy: normalY * side * (5 + Math.random() * 2) - 3,
+      cutAngle,
+      vAngle: side * 0.08,
+      side,
+      radius,
+      alpha: 1
+    });
+  }
+
+  createExplosionParticles(screenX, screenY, obj3d.fleshColor, isCritical ? 28 : 18);
+
+  state.shockwaves.push({
+    x: screenX,
+    y: screenY,
+    radius: 18,
+    maxRadius: isCritical ? 145 : 95,
+    color: isCritical ? '#00f0ff' : obj3d.outerColor,
+    alpha: 0.95
+  });
+
+  const label = isCritical
+    ? `КРИТ-РАЗРЕЗ +${gained}!`
+    : comboMult > 1
+    ? `+${gained} (x${comboMult} КОМБО!)`
+    : `+${gained}`;
+
+  state.floatingTexts.push({
+    text: label,
+    x: screenX,
+    y: screenY - 12,
+    color: isCritical ? '#00f0ff' : '#ffffff',
+    alpha: 1,
+    vy: -3.0,
+    scale: isCritical ? 1.3 : 1.05
+  });
+
+  updateHUD();
+}
+
+function createExplosionParticles(x, y, color, count) {
+  for (let i = 0; i < count; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 3 + Math.random() * 12;
+    state.particles.push({
+      x,
+      y,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed - 2,
+      radius: 5 + Math.random() * 8,
+      color,
+      alpha: 1
+    });
+  }
+}
+
+// --- Custom Vector Boxing Glove Renderer (For 2D BoxFruit Mode) ---
+function drawBoxingGlove(ctx, g) {
+  ctx.save();
+  ctx.globalAlpha = g.active ? 1.0 : 0.42;
+
+  for (let i = 0; i < g.trail.length; i++) {
+    const pt = g.trail[i];
+    const ratio = (i + 1) / g.trail.length;
+    ctx.beginPath();
+    ctx.arc(pt.x, pt.y, 26 * ratio, 0, Math.PI * 2);
+    ctx.fillStyle =
+      g.id === 'right'
+        ? `rgba(255, 59, 75, ${ratio * 0.28})`
+        : `rgba(0, 210, 255, ${ratio * 0.28})`;
+    ctx.fill();
+  }
+
+  ctx.translate(g.x, g.y);
+  ctx.rotate(g.angle);
+  const punchPopupScale = 1 + Math.min(0.32, g.speed * 0.012);
+  ctx.scale(punchPopupScale, punchPopupScale);
+
+  if (g.speed > 14) {
+    ctx.shadowColor = '#ffb800';
+    ctx.shadowBlur = 24;
+  } else {
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.55)';
+    ctx.shadowBlur = 16;
+  }
+
+  ctx.fillStyle = '#1e2636';
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.roundRect(-26, 22, 52, 28, 8);
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.fillStyle = '#ffb800';
+  ctx.fillRect(-20, 31, 40, 10);
+
+  const thumbSide = g.id === 'right' ? -1 : 1;
+  ctx.fillStyle = g.darkColor;
+  ctx.beginPath();
+  ctx.ellipse(thumbSide * 34, -2, 18, 26, thumbSide * 0.35, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.fillStyle = g.color;
+  ctx.beginPath();
+  ctx.arc(0, -10, 42, Math.PI * 0.85, Math.PI * 2.15, false);
+  ctx.quadraticCurveTo(40, 26, 26, 26);
+  ctx.lineTo(-26, 26);
+  ctx.quadraticCurveTo(-40, 26, -38, 8);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.28)';
+  ctx.beginPath();
+  ctx.ellipse(-8, -28, 22, 10, -0.15, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.restore();
+}
+
+// --- Main Render & Physics Loop ---
+function gameLoop(timestamp) {
+  ctx.save();
+
+  ctx.fillStyle = '#0b0e14';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  const grad = ctx.createRadialGradient(
+    canvas.width * 0.5,
+    canvas.height * 0.25,
+    40,
+    canvas.width * 0.5,
+    canvas.height * 0.5,
+    canvas.width * 0.75
+  );
+  grad.addColorStop(0, 'rgba(36, 48, 72, 0.48)');
+  grad.addColorStop(1, 'rgba(11, 14, 20, 0.95)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  if (state.screenShake > 0.4) {
+    const dx = (Math.random() - 0.5) * state.screenShake;
+    const dy = (Math.random() - 0.5) * state.screenShake;
+    ctx.translate(dx, dy);
+    state.screenShake *= 0.86;
+  } else {
+    state.screenShake = 0;
+  }
+
+  // Draw 3D tunnel grid if in 3D Saber Slicer mode
+  const is3DSaberMode = state.activeGame === 'saber3d' && Boolean(window.Saber3DEngine);
+  if (is3DSaberMode) {
+    window.Saber3DEngine.draw3DArenaBackdrop(ctx, canvas.width, canvas.height, state.combo);
+  }
+
+  if (state.bodySilhouette) {
+    drawArenaBodySilhouette(ctx, state.bodySilhouette);
+  }
+
+  // Ultra-fast 60fps hand/saber tracking with velocity lead prediction
+  const now = performance.now();
+  state.gloves.forEach((g) => {
+    const prevX = g.x;
+    const prevY = g.y;
+
+    if (g.active && now - g.lastSeen < 50) {
+      g.targetX = Math.max(45, Math.min(canvas.width - 45, g.targetX + g.netVx * 0.5));
+      g.targetY = Math.max(45, Math.min(canvas.height - 45, g.targetY + g.netVy * 0.5));
+    }
+
+    const distToTarget = Math.hypot(g.targetX - g.x, g.targetY - g.y);
+    const lerpRate = distToTarget > 25 ? 0.88 : 0.65;
+    g.x += (g.targetX - g.x) * lerpRate;
+    g.y += (g.targetY - g.y) * lerpRate;
+    g.vx = g.x - prevX;
+    g.vy = g.y - prevY;
+    g.speed = Math.hypot(g.vx, g.vy);
+
+    const angleDiff = g.targetAngle - g.angle;
+    g.angle += Math.max(-0.55, Math.min(0.55, angleDiff * 0.55));
+
+    g.trail.push({ x: g.x, y: g.y });
+    if (g.trail.length > 7) g.trail.shift();
+  });
+
+  if (is3DSaberMode) {
+    // --- 3D SABER SLICER MODE (Objects fly from z=1.0 toward z=0.0) ---
+    const eng = window.Saber3DEngine;
+    const sabers = state.gloves.map((g) => eng.computeSaberSegment(g, canvas.width, canvas.height));
+
+    if (state.isPlaying) {
+      const spawnInterval = Math.max(520, 1150 - state.score * 1.1);
+      if (timestamp - state.lastSpawnAt > spawnInterval) {
+        eng.spawn3DWave(state.score);
+        state.lastSpawnAt = timestamp;
+      }
+    }
+
+    // Sort far-to-near (painter's algorithm)
+    eng.objects3D.sort((a, b) => b.z - a.z);
+
+    for (let i = eng.objects3D.length - 1; i >= 0; i--) {
+      const obj = eng.objects3D[i];
+      obj.z -= obj.zSpeed;
+      const progress = 1 - obj.z;
+      // Smoothly interpolate X/Y from vanishing point toward player's strike zone with an arc lift
+      obj.worldX = obj.targetWorldX * progress;
+      obj.worldY = obj.targetWorldY * progress - Math.sin(progress * Math.PI) * obj.arcLift;
+      obj.rotation += obj.vRotation;
+
+      const proj = eng.project3D(obj.worldX, obj.worldY, obj.z, canvas.width, canvas.height);
+      const radius = Math.max(12, obj.baseRadius * proj.scale);
+
+      // Check saber blade collision when object is within reachable 3D depth (z < 0.52)
+      if (obj.z < 0.52 && obj.z > 0.03) {
+        for (let gIdx = 0; gIdx < state.gloves.length; gIdx++) {
+          const g = state.gloves[gIdx];
+          if (!g.active) continue;
+          const sb = sabers[gIdx];
+          if (eng.segmentCircleHit(sb.handleX, sb.handleY, sb.tipX, sb.tipY, proj.screenX, proj.screenY, radius + 24)) {
+            trigger3DSaberSlice(obj, proj.screenX, proj.screenY, radius, g, sb);
+            break;
+          }
+        }
+      }
+
+      if (obj.sliced) {
+        eng.objects3D.splice(i, 1);
+        continue;
+      }
+
+      // Passed behind the camera / screen
+      if (obj.z <= 0.03) {
+        if (!obj.isBomb && state.isPlaying) {
+          state.combo = 0;
+          updateHUD();
+        }
+        eng.objects3D.splice(i, 1);
+        continue;
+      }
+
+      eng.draw3DObject(ctx, obj, proj.screenX, proj.screenY, radius);
+    }
+
+    // Draw sliced 3D halves
+    for (let i = eng.slicedHalves3D.length - 1; i >= 0; i--) {
+      const sh = eng.slicedHalves3D[i];
+      sh.x += sh.vx;
+      sh.y += sh.vy;
+      sh.vy += 0.35;
+      sh.cutAngle += sh.vAngle;
+      sh.alpha -= 0.024;
+      if (sh.alpha <= 0) {
+        eng.slicedHalves3D.splice(i, 1);
+        continue;
+      }
+      eng.drawSlicedHalf3D(ctx, sh);
+    }
+
+    // Draw glowing Plasma Sabers in player's hands
+    state.gloves.forEach((g) => eng.drawPlasmaSaber(ctx, g, canvas.width, canvas.height));
+  } else {
+    // --- 2D BOXFRUIT ARENA MODE ---
+    if (state.isPlaying) {
+      const spawnInterval = Math.max(580, 1250 - state.score * 1.2);
+      if (timestamp - state.lastSpawnAt > spawnInterval) {
+        spawnFruitWave();
+        state.lastSpawnAt = timestamp;
+      }
+    }
+
+    for (let i = state.fruits.length - 1; i >= 0; i--) {
+      const f = state.fruits[i];
+      f.x += f.vx;
+      f.y += f.vy;
+      f.vy += f.gravity;
+      f.angle += f.vAngle;
+
+      for (const g of state.gloves) {
+        if (!g.active) continue;
+        const dist = Math.hypot(f.x - g.x, f.y - g.y);
+        if (dist < f.radius + 54) {
+          triggerFruitHit(f, g);
+          break;
+        }
+      }
+
+      if (f.hit) {
+        state.fruits.splice(i, 1);
+        continue;
+      }
+
+      if (f.y > canvas.height + 100 && f.vy > 0) {
+        if (!f.isBomb && state.isPlaying) {
+          state.combo = 0;
+          updateHUD();
+        }
+        state.fruits.splice(i, 1);
+        continue;
+      }
+
+      ctx.save();
+      ctx.translate(f.x, f.y);
+      ctx.rotate(f.angle);
+      drawCustomFruitShape(ctx, f);
+      ctx.restore();
+    }
+
+    for (let i = state.halves.length - 1; i >= 0; i--) {
+      const h = state.halves[i];
+      h.x += h.vx;
+      h.y += h.vy;
+      h.vy += 0.36;
+      h.angle += h.vAngle;
+      h.alpha -= 0.022;
+
+      if (h.alpha <= 0) {
+        state.halves.splice(i, 1);
+        continue;
+      }
+
+      ctx.save();
+      ctx.globalAlpha = Math.max(0, h.alpha);
+      ctx.translate(h.x, h.y);
+      ctx.rotate(h.angle);
+      ctx.beginPath();
+      if (h.side < 0) {
+        ctx.rect(-h.radius * 1.4, -h.radius * 1.4, h.radius * 1.4, h.radius * 2.8);
+      } else {
+        ctx.rect(0, -h.radius * 1.4, h.radius * 1.4, h.radius * 2.8);
+      }
+      ctx.clip();
+      drawCustomFruitShape(ctx, h);
+      ctx.restore();
+    }
+
+    state.gloves.forEach((g) => drawBoxingGlove(ctx, g));
+  }
+
+  // Particles & Shockwaves (shared by both modes)
+  for (let i = state.particles.length - 1; i >= 0; i--) {
+    const p = state.particles[i];
+    p.x += p.vx;
+    p.y += p.vy;
+    p.vy += 0.25;
+    p.alpha -= 0.024;
+    if (p.alpha <= 0) {
+      state.particles.splice(i, 1);
+      continue;
+    }
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, p.alpha);
+    ctx.fillStyle = p.color;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  for (let i = state.shockwaves.length - 1; i >= 0; i--) {
+    const sw = state.shockwaves[i];
+    sw.radius += (sw.maxRadius - sw.radius) * 0.22;
+    sw.alpha -= 0.045;
+    if (sw.alpha <= 0) {
+      state.shockwaves.splice(i, 1);
+      continue;
+    }
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, sw.alpha);
+    ctx.strokeStyle = sw.color;
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.arc(sw.x, sw.y, sw.radius, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  for (let i = state.floatingTexts.length - 1; i >= 0; i--) {
+    const ft = state.floatingTexts[i];
+    ft.y += ft.vy;
+    ft.alpha -= 0.022;
+    if (ft.alpha <= 0) {
+      state.floatingTexts.splice(i, 1);
+      continue;
+    }
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, ft.alpha);
+    ctx.font = `900 ${Math.round(26 * ft.scale)}px 'Russo One', sans-serif`;
+    ctx.fillStyle = ft.color;
+    ctx.strokeStyle = 'rgba(0,0,0,0.75)';
+    ctx.lineWidth = 5;
+    ctx.textAlign = 'center';
+    ctx.strokeText(ft.text, ft.x, ft.y);
+    ctx.fillText(ft.text, ft.x, ft.y);
+    ctx.restore();
+  }
+
+  ctx.restore();
+  requestAnimationFrame(gameLoop);
+}
+
+// --- HUD & Round Lifecycle ---
+function updateHUD() {
+  scoreEl.textContent = state.score;
+  comboEl.textContent = state.combo > 1 ? `x${state.combo}` : '—';
+  timerEl.textContent = `${state.timeLeft}с`;
+  // Use high-contrast text/bars so Smart TVs without emoji fonts never show grey hearts
+  livesEl.textContent = `${state.lives} / 3`;
+  updateRoomBadges();
+}
+
+function startRound() {
+  sfx.playBell();
+  state.isPlaying = true;
+  state.score = 0;
+  state.combo = 0;
+  state.lives = 3;
+  state.timeLeft = 60;
+  state.kcal = 0;
+  state.punchesCount = 0;
+  state.fruits = [];
+  state.halves = [];
+  state.particles = [];
+  state.floatingTexts = [];
+  if (window.Saber3DEngine) {
+    window.Saber3DEngine.reset();
+  }
+  state.lastSpawnAt = performance.now();
+
+  menuOverlay.classList.add('hidden');
+  tvPairingModal.classList.add('hidden');
+  gameOverOverlay.classList.add('hidden');
+  hudBar.classList.remove('hidden');
+  updateHUD();
+
+  if (state.timerInterval) clearInterval(state.timerInterval);
+  state.timerInterval = setInterval(() => {
+    if (!state.isPlaying) return;
+    state.timeLeft--;
+    updateHUD();
+    if (state.timeLeft <= 0) {
+      endRound('Время раунда вышло!');
+    }
+  }, 1000);
+}
+
+function endRound(reasonText) {
+  sfx.playBell();
+  state.isPlaying = false;
+  if (state.timerInterval) clearInterval(state.timerInterval);
+
+  document.getElementById('gameover-reason').textContent = reasonText;
+  document.getElementById('final-score').textContent = state.score;
+  document.getElementById('final-best').textContent = state.bestScore;
+  document.getElementById('final-kcal').textContent = `${state.kcal} ккал (${state.punchesCount} ударов)`;
+  gameOverOverlay.classList.remove('hidden');
+}
+
+// --- Mode 1: Solo Mode (Single Device Camera + Game) ---
+async function launchSoloMode() {
+  state.mode = 'solo';
+  pushSubScreenHistory('solo');
+  pipContainer.classList.remove('hidden');
+  startRound();
+  await startCameraAndMediaPipePose(inputVideo, pipCanvas, pipCtx, (extracted) => {
+    state.bodySilhouette = extracted.body;
+    updateGlovesFromStableSlots(extracted.hands);
+  });
+}
+
+// --- Mode 2: TV Host Mode (NO Camera Needed on TV!) ---
+async function launchTvHostMode() {
+  state.mode = 'tv';
+  pushSubScreenHistory('tv');
+  await resolveHomeRoomCode();
+  initRealtimeSync();
+
+  const connectUrl = `${window.location.origin}${window.location.pathname}?mode=phone&room=${state.roomCode}`;
+
+  const qrContainer = document.getElementById('tv-qr-container');
+  qrContainer.innerHTML = '';
+  if (window.QRCode) {
+    new window.QRCode(qrContainer, {
+      text: connectUrl,
+      width: 176,
+      height: 176,
+      colorDark: '#0b0e14',
+      colorLight: '#ffffff'
+    });
+  }
+
+  menuOverlay.classList.add('hidden');
+  tvPairingModal.classList.remove('hidden');
+
+  if (window.Peer) {
+    if (state.peer) state.peer.destroy();
+    const peerId = `boxfruit-tv-${state.roomCode}`;
+    state.peer = new window.Peer(peerId);
+    state.peer.on('connection', (conn) => {
+      state.conn = conn;
+      conn.on('data', (payload) => {
+        handleIncomingRemotePayload(payload);
+      });
+    });
+  }
+}
+
+// --- Mode 3: Phone Camera Controller Mode ---
+async function launchPhoneSensorMode(prefilledCode = '') {
+  state.mode = 'phone';
+  pushSubScreenHistory('phone');
+  menuOverlay.classList.add('hidden');
+  phoneSensorScreen.classList.remove('hidden');
+
+  await resolveHomeRoomCode();
+  if (prefilledCode) {
+    state.roomCode = prefilledCode.trim();
+  }
+
+  const codeInput = document.getElementById('phone-room-input');
+  if (codeInput) {
+    codeInput.value = state.roomCode;
+  }
+
+  initRealtimeSync();
+  connectPhonePeerJs(state.roomCode);
+
+  await startCameraAndMediaPipePose(phoneVideo, phoneSkeletonCanvas, phoneSkeletonCtx, (extracted) => {
+    broadcastFromPhone({
+      type: 'POSE',
+      hands: extracted.hands,
+      body: extracted.body
+    });
+  });
+}
+
+function connectPhonePeerJs(roomCode) {
+  const cleanCode = String(roomCode || '').trim();
+  if (!cleanCode) return;
+  state.roomCode = cleanCode;
+  initRealtimeSync();
+
+  if (!window.Peer) return;
+  if (state.peer) state.peer.destroy();
+  state.peer = new window.Peer();
+  state.peer.on('open', () => {
+    const conn = state.peer.connect(`boxfruit-tv-${cleanCode}`);
+    state.conn = conn;
+  });
+}
+
+// --- Wire Up UI Buttons ---
+const btnSelectSaber = document.getElementById('btn-select-saber3d');
+if (btnSelectSaber) {
+  btnSelectSaber.addEventListener('click', () => setGameMode('saber3d'));
+}
+const btnSelectBox = document.getElementById('btn-select-boxfruit');
+if (btnSelectBox) {
+  btnSelectBox.addEventListener('click', () => setGameMode('boxfruit'));
+}
+if (hudSwitchGameBtn) {
+  hudSwitchGameBtn.addEventListener('click', () => {
+    setGameMode(state.activeGame === 'saber3d' ? 'boxfruit' : 'saber3d');
+  });
+}
+const btnPhoneSwitchGame = document.getElementById('btn-phone-switch-game');
+if (btnPhoneSwitchGame) {
+  btnPhoneSwitchGame.addEventListener('click', () => {
+    broadcastFromPhone({ type: 'SWITCH_GAME' });
+  });
+}
+
+document.getElementById('btn-mode-solo').addEventListener('click', () => {
+  launchSoloMode();
+});
+
+document.getElementById('btn-mode-tv').addEventListener('click', () => {
+  launchTvHostMode();
+});
+
+document.getElementById('btn-mode-phone').addEventListener('click', () => {
+  launchPhoneSensorMode('');
+});
+
+document.getElementById('btn-tv-start-now').addEventListener('click', () => {
+  tvPairingModal.classList.add('hidden');
+  startRound();
+});
+
+[
+  'btn-tv-back',
+  'btn-tv-top-back',
+  'btn-phone-exit',
+  'btn-back-menu',
+  'btn-gameover-top-exit',
+  'btn-hud-exit',
+  'btn-main-exit'
+].forEach((id) => {
+  const el = document.getElementById(id);
+  if (el) {
+    el.addEventListener('click', () => {
+      returnToMainMenu();
+    });
+  }
+});
+
+document.getElementById('btn-hud-restart').addEventListener('click', () => {
+  startRound();
+});
+
+document.getElementById('btn-phone-connect').addEventListener('click', () => {
+  const val = document.getElementById('phone-room-input').value;
+  connectPhonePeerJs(val);
+});
+
+document.getElementById('btn-phone-restart').addEventListener('click', () => {
+  broadcastFromPhone({ type: 'RESTART' });
+});
+
+document.getElementById('btn-play-again').addEventListener('click', () => {
+  startRound();
+});
+
+// Initialize background sync & check URL Params
+resolveHomeRoomCode().then(() => {
+  initRealtimeSync();
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('mode') === 'phone') {
+    launchPhoneSensorMode(params.get('room') || state.roomCode);
+  }
+});
+
+pushSubScreenHistory('menu');
+requestAnimationFrame(gameLoop);
+
+</script>
+</body>
+</html>
