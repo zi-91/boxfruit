@@ -549,7 +549,7 @@ h1.game-title {
             <h1 class="game-title">
               MOTION ARENA TV
               <span style="display: inline-block; font-size: 18px; background: var(--accent-gold); color: #0b0e14; padding: 5px 12px; border-radius: 8px; vertical-align: middle; margin-left: 8px; font-weight: 900;">
-                ВЕРСИЯ: v4.5 / v5.1 FIX
+                ВЕРСИЯ: v4.6 / v5.2 TV-FIX
               </span>
             </h1>
           </div>
@@ -828,6 +828,34 @@ function playKatanaSlashSound(sfxInstance, isCritical = false) {
   zing.stop(now + 0.16);
 }
 
+// --- Safe Canvas Helpers for Smart TV Browsers ---
+function saberSafeEllipse(ctx, x, y, rx, ry, rot) {
+  const safeRx = Math.max(1, Math.abs(Number(rx) || 1));
+  const safeRy = Math.max(1, Math.abs(Number(ry) || 1));
+  if (typeof ctx.ellipse === 'function') {
+    try {
+      ctx.ellipse(x, y, safeRx, safeRy, rot || 0, 0, Math.PI * 2);
+      return;
+    } catch (e) {}
+  }
+  ctx.save();
+  ctx.translate(x, y);
+  if (rot) ctx.rotate(rot);
+  ctx.scale(1, safeRy / safeRx);
+  ctx.arc(0, 0, safeRx, 0, Math.PI * 2);
+  ctx.restore();
+}
+
+function saberSafeRoundRect(ctx, x, y, w, h, r) {
+  if (typeof ctx.roundRect === 'function') {
+    try {
+      ctx.roundRect(x, y, w, h, r);
+      return;
+    } catch (e) {}
+  }
+  ctx.rect(x, y, w, h);
+}
+
 // ============================================================================
 // 3D SABER SLICER ENGINE (Перспектива z: 1.0 -> 0.0 + Виртуальные Сабли)
 // ============================================================================
@@ -970,7 +998,7 @@ const Saber3DEngine = {
       const ry = h * 0.36 * p.scale;
       const isStrikeRing = idx === 3;
       ctx.beginPath();
-      ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+      saberSafeEllipse(ctx, cx, cy, rx, ry, 0);
       ctx.strokeStyle = isStrikeRing
         ? 'rgba(0, 240, 255, 0.32)'
         : 'rgba(255, 255, 255, 0.06)';
@@ -988,6 +1016,7 @@ const Saber3DEngine = {
 
   // Отрисовка 3-слойного 3D-предмета (Сфера с объёмным градиентом, полосами, бликом и индикатором зоны удара)
   draw3DObject(ctx, obj, screenX, screenY, radius) {
+    const safeR = Math.max(10, Number.isFinite(radius) ? radius : 40);
     ctx.save();
     ctx.translate(screenX, screenY);
 
@@ -998,16 +1027,16 @@ const Saber3DEngine = {
       ctx.strokeStyle = obj.isBonus ? `rgba(0, 240, 255, ${readyAlpha})` : `rgba(24, 226, 153, ${readyAlpha})`;
       ctx.lineWidth = 3.5;
       ctx.beginPath();
-      ctx.arc(0, 0, radius * 1.16, 0, Math.PI * 2);
+      ctx.arc(0, 0, safeR * 1.16, 0, Math.PI * 2);
       ctx.stroke();
       ctx.restore();
     }
 
-    ctx.rotate(obj.rotation);
+    ctx.rotate(obj.rotation || 0);
 
     // Тень/свечение позади 3D-объекта
-    ctx.shadowColor = obj.isBomb ? '#ff2222' : obj.outerColor;
-    ctx.shadowBlur = Math.min(32, radius * 0.45);
+    ctx.shadowColor = obj.isBomb ? '#ff2222' : obj.outerColor || '#10b981';
+    ctx.shadowBlur = Math.min(32, safeR * 0.45);
 
     if (obj.isBomb) {
       // 3D Шипованная Плазменная Мина
@@ -1016,50 +1045,50 @@ const Saber3DEngine = {
       for (let s = 0; s < spikes; s++) {
         const a = (s / spikes) * Math.PI * 2;
         ctx.beginPath();
-        ctx.moveTo(Math.cos(a - 0.18) * radius * 0.85, Math.sin(a - 0.18) * radius * 0.85);
-        ctx.lineTo(Math.cos(a) * radius * 1.24, Math.sin(a) * radius * 1.24);
-        ctx.lineTo(Math.cos(a + 0.18) * radius * 0.85, Math.sin(a + 0.18) * radius * 0.85);
+        ctx.moveTo(Math.cos(a - 0.18) * safeR * 0.85, Math.sin(a - 0.18) * safeR * 0.85);
+        ctx.lineTo(Math.cos(a) * safeR * 1.24, Math.sin(a) * safeR * 1.24);
+        ctx.lineTo(Math.cos(a + 0.18) * safeR * 0.85, Math.sin(a + 0.18) * safeR * 0.85);
         ctx.closePath();
         ctx.fill();
       }
-      const bombGrad = ctx.createRadialGradient(-radius * 0.28, -radius * 0.28, radius * 0.1, 0, 0, radius);
+      const bombGrad = ctx.createRadialGradient(-safeR * 0.28, -safeR * 0.28, safeR * 0.1, 0, 0, safeR);
       bombGrad.addColorStop(0, '#475569');
       bombGrad.addColorStop(0.55, '#1e293b');
       bombGrad.addColorStop(1, '#090d16');
       ctx.fillStyle = bombGrad;
       ctx.beginPath();
-      ctx.arc(0, 0, radius * 0.92, 0, Math.PI * 2);
+      ctx.arc(0, 0, safeR * 0.92, 0, Math.PI * 2);
       ctx.fill();
 
       // Пульсирующее красное ядро мины
       ctx.fillStyle = '#ff2a5f';
       ctx.beginPath();
-      ctx.arc(0, 0, radius * 0.36, 0, Math.PI * 2);
+      ctx.arc(0, 0, safeR * 0.36, 0, Math.PI * 2);
       ctx.fill();
     } else {
       // 1. Внешняя 3D-сфера фрукта с объёмным шейдингом
-      const sphereGrad = ctx.createRadialGradient(-radius * 0.32, -radius * 0.32, radius * 0.12, 0, 0, radius);
+      const sphereGrad = ctx.createRadialGradient(-safeR * 0.32, -safeR * 0.32, safeR * 0.12, 0, 0, safeR);
       sphereGrad.addColorStop(0, '#ffffff');
-      sphereGrad.addColorStop(0.18, obj.outerColor);
-      sphereGrad.addColorStop(0.82, obj.stripeColor);
+      sphereGrad.addColorStop(0.18, obj.outerColor || '#10b981');
+      sphereGrad.addColorStop(0.82, obj.stripeColor || '#064e3b');
       sphereGrad.addColorStop(1, '#090d16');
 
       ctx.fillStyle = sphereGrad;
       ctx.beginPath();
-      ctx.arc(0, 0, radius, 0, Math.PI * 2);
+      ctx.arc(0, 0, safeR, 0, Math.PI * 2);
       ctx.fill();
 
       // 2. Экваториальные полосы/текстура для ощущения 3D-вращения
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.22)';
-      ctx.lineWidth = Math.max(2, radius * 0.08);
+      ctx.lineWidth = Math.max(2, safeR * 0.08);
       ctx.beginPath();
-      ctx.ellipse(0, 0, radius * 0.72, radius * 0.32, 0.3, 0, Math.PI * 2);
+      saberSafeEllipse(ctx, 0, 0, safeR * 0.72, safeR * 0.32, 0.3);
       ctx.stroke();
 
       // 3. Глянцевый 3D-блик сверху-слева (Specular Highlight)
       ctx.fillStyle = 'rgba(255, 255, 255, 0.42)';
       ctx.beginPath();
-      ctx.ellipse(-radius * 0.32, -radius * 0.34, radius * 0.28, radius * 0.14, -0.45, 0, Math.PI * 2);
+      saberSafeEllipse(ctx, -safeR * 0.32, -safeR * 0.34, safeR * 0.28, safeR * 0.14, -0.45);
       ctx.fill();
     }
 
@@ -1174,22 +1203,14 @@ const Saber3DEngine = {
     ctx.strokeStyle = '#94a3b8';
     ctx.lineWidth = 2;
     ctx.beginPath();
-    if (ctx.roundRect) {
-      ctx.roundRect(-42, -7, 42, 14, 5);
-    } else {
-      ctx.rect(-42, -7, 42, 14);
-    }
+    saberSafeRoundRect(ctx, -42, -7, 42, 14, 5);
     ctx.fill();
     ctx.stroke();
 
     // Золотая цуба (гарда)
     ctx.fillStyle = '#ffb800';
     ctx.beginPath();
-    if (ctx.roundRect) {
-      ctx.roundRect(-4, -18, 9, 36, 4);
-    } else {
-      ctx.rect(-4, -18, 9, 36);
-    }
+    saberSafeRoundRect(ctx, -4, -18, 9, 36, 4);
     ctx.fill();
 
     ctx.restore();
@@ -1462,13 +1483,42 @@ const poseTracker = {
   }
 };
 
+// --- Safe Canvas Helpers for Smart TV Browsers ---
+function safeEllipse(ctx, x, y, rx, ry, rot) {
+  const safeRx = Math.max(1, Math.abs(Number(rx) || 1));
+  const safeRy = Math.max(1, Math.abs(Number(ry) || 1));
+  if (typeof ctx.ellipse === 'function') {
+    try {
+      ctx.ellipse(x, y, safeRx, safeRy, rot || 0, 0, Math.PI * 2);
+      return;
+    } catch (e) {}
+  }
+  ctx.save();
+  ctx.translate(x, y);
+  if (rot) ctx.rotate(rot);
+  ctx.scale(1, safeRy / safeRx);
+  ctx.arc(0, 0, safeRx, 0, Math.PI * 2);
+  ctx.restore();
+}
+
+function safeRoundRect(ctx, x, y, w, h, r) {
+  if (typeof ctx.roundRect === 'function') {
+    try {
+      ctx.roundRect(x, y, w, h, r);
+      return;
+    } catch (e) {}
+  }
+  ctx.rect(x, y, w, h);
+}
+
 // --- Bright Vector Fruit & Bomb Renderer (For 2D BoxFruit Mode) ---
 function drawCustomFruitShape(ctx, f) {
-  const r = f.radius;
-  ctx.shadowColor = f.isBomb ? '#ff1744' : f.color;
+  const r = f.radius || 46;
+  const kind = f.kind || 'watermelon';
+  ctx.shadowColor = f.isBomb ? '#ff1744' : f.color || '#ff1744';
   ctx.shadowBlur = 22;
 
-  switch (f.kind) {
+  switch (kind) {
     case 'watermelon': {
       ctx.fillStyle = '#00e676';
       ctx.strokeStyle = '#ffffff';
@@ -1492,7 +1542,7 @@ function drawCustomFruitShape(ctx, f) {
       for (let i = 0; i < 6; i++) {
         const a = (i * Math.PI) / 3;
         ctx.beginPath();
-        ctx.ellipse(Math.cos(a) * r * 0.42, Math.sin(a) * r * 0.42, 4, 7, a, 0, Math.PI * 2);
+        safeEllipse(ctx, Math.cos(a) * r * 0.42, Math.sin(a) * r * 0.42, 4, 7, a);
         ctx.fill();
       }
       break;
@@ -1513,12 +1563,12 @@ function drawCustomFruitShape(ctx, f) {
 
       ctx.fillStyle = '#00e676';
       ctx.beginPath();
-      ctx.ellipse(8, -r - 4, 14, 7, -0.4, 0, Math.PI * 2);
+      safeEllipse(ctx, 8, -r - 4, 14, 7, -0.4);
       ctx.fill();
 
       ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
       ctx.beginPath();
-      ctx.ellipse(-r * 0.32, -r * 0.32, r * 0.28, r * 0.14, -0.6, 0, Math.PI * 2);
+      safeEllipse(ctx, -r * 0.32, -r * 0.32, r * 0.28, r * 0.14, -0.6);
       ctx.fill();
       break;
     }
@@ -1545,12 +1595,12 @@ function drawCustomFruitShape(ctx, f) {
 
       ctx.fillStyle = '#ffeb3b';
       ctx.beginPath();
-      ctx.ellipse(12, -r * 1.0, 12, 6, 0.3, 0, Math.PI * 2);
+      safeEllipse(ctx, 12, -r * 1.0, 12, 6, 0.3);
       ctx.fill();
 
       ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
       ctx.beginPath();
-      ctx.ellipse(-r * 0.35, -r * 0.25, r * 0.24, r * 0.14, -0.5, 0, Math.PI * 2);
+      safeEllipse(ctx, -r * 0.35, -r * 0.25, r * 0.24, r * 0.14, -0.5);
       ctx.fill();
       break;
     }
@@ -1561,7 +1611,7 @@ function drawCustomFruitShape(ctx, f) {
       ctx.lineWidth = 2;
       for (const offset of [-14, 0, 14]) {
         ctx.beginPath();
-        ctx.ellipse(offset, -r * 0.95, 9, 22, offset * 0.02, 0, Math.PI * 2);
+        safeEllipse(ctx, offset, -r * 0.95, 9, 22, offset * 0.02);
         ctx.fill();
         ctx.stroke();
       }
@@ -1570,7 +1620,7 @@ function drawCustomFruitShape(ctx, f) {
       ctx.strokeStyle = '#ffffff';
       ctx.lineWidth = 3;
       ctx.beginPath();
-      ctx.ellipse(0, 6, r * 0.82, r * 0.95, 0, 0, Math.PI * 2);
+      safeEllipse(ctx, 0, 6, r * 0.82, r * 0.95, 0);
       ctx.fill();
       ctx.stroke();
 
@@ -1598,7 +1648,7 @@ function drawCustomFruitShape(ctx, f) {
 
       ctx.fillStyle = '#fff59d';
       ctx.beginPath();
-      ctx.ellipse(0, r * 0.32, r * 0.58, r * 0.22, 0, 0, Math.PI * 2);
+      safeEllipse(ctx, 0, r * 0.32, r * 0.58, r * 0.22, 0);
       ctx.fill();
       ctx.stroke();
       break;
@@ -1638,7 +1688,8 @@ function drawCustomFruitShape(ctx, f) {
       break;
     }
 
-    case 'bomb': {
+    case 'bomb':
+    default: {
       ctx.fillStyle = '#1c2430';
       ctx.strokeStyle = '#ff1744';
       ctx.lineWidth = 4;
@@ -1824,9 +1875,9 @@ function setGameMode(gameId) {
       state.activeGame === 'saber3d' ? '⚔️ Режим: 3D Сабли' : '🥊 Режим: 2D Бокс';
     hudSwitchGameBtn.className = state.activeGame === 'saber3d' ? 'btn btn-blue' : 'btn btn-gold';
   }
+  state.lastSpawnAt = 0;
   if (!state.isPlaying && state.mode !== 'phone') {
     state.isPlaying = true;
-    state.lastSpawnAt = performance.now() - 800;
   }
 }
 
@@ -1918,6 +1969,8 @@ function initRealtimeSync() {
       client.on('connect', () => {
         client.subscribe(`boxfruit/v5/room/${state.roomCode}`, { qos: 0 });
         client.subscribe('boxfruit/v5/global', { qos: 0 });
+        client.subscribe(`boxfruit/v4/room/${state.roomCode}`, { qos: 0 });
+        client.subscribe('boxfruit/v4/global', { qos: 0 });
 
         if (state.mode === 'phone') {
           const dot = document.getElementById('phone-status-dot');
@@ -2016,6 +2069,8 @@ function broadcastFromPhone(payload) {
       connectedChannels++;
       client.publish(`boxfruit/v5/room/${state.roomCode}`, jsonStr, { qos: 0 });
       client.publish('boxfruit/v5/global', jsonStr, { qos: 0 });
+      client.publish(`boxfruit/v4/room/${state.roomCode}`, jsonStr, { qos: 0 });
+      client.publish('boxfruit/v4/global', jsonStr, { qos: 0 });
     }
   });
 
@@ -2594,11 +2649,7 @@ function drawBoxingGlove(ctx, g) {
   ctx.strokeStyle = '#ffffff';
   ctx.lineWidth = 3;
   ctx.beginPath();
-  if (ctx.roundRect) {
-    ctx.roundRect(-26, 22, 52, 28, 8);
-  } else {
-    ctx.rect(-26, 22, 52, 28);
-  }
+  safeRoundRect(ctx, -26, 22, 52, 28, 8);
   ctx.fill();
   ctx.stroke();
 
@@ -2608,7 +2659,7 @@ function drawBoxingGlove(ctx, g) {
   const thumbSide = g.id === 'right' ? -1 : 1;
   ctx.fillStyle = g.darkColor;
   ctx.beginPath();
-  ctx.ellipse(thumbSide * 34, -2, 18, 26, thumbSide * 0.35, 0, Math.PI * 2);
+  safeEllipse(ctx, thumbSide * 34, -2, 18, 26, thumbSide * 0.35);
   ctx.fill();
   ctx.stroke();
 
@@ -2624,15 +2675,22 @@ function drawBoxingGlove(ctx, g) {
 
   ctx.fillStyle = 'rgba(255, 255, 255, 0.28)';
   ctx.beginPath();
-  ctx.ellipse(-8, -28, 22, 10, -0.15, 0, Math.PI * 2);
+  safeEllipse(ctx, -8, -28, 22, 10, -0.15);
   ctx.fill();
 
   ctx.restore();
 }
 
+let lastRenderError = '';
 // --- Main Render & Physics Loop ---
 function gameLoop(timestamp) {
-  ctx.save();
+  try {
+    if (!canvas.width || !canvas.height || canvas.width < 100 || canvas.height < 100) {
+      canvas.width = Math.max(window.innerWidth || 0, document.documentElement.clientWidth || 0, 1280);
+      canvas.height = Math.max(window.innerHeight || 0, document.documentElement.clientHeight || 0, 720);
+    }
+    const nowTime = performance.now();
+    ctx.save();
 
   ctx.fillStyle = '#0b0e14';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -2667,13 +2725,30 @@ function gameLoop(timestamp) {
     phoneSensorScreen.classList.contains('hidden');
   if (allOverlaysHidden && !state.isPlaying) {
     state.isPlaying = true;
-    state.lastSpawnAt = timestamp;
+    state.lastSpawnAt = 0;
   }
 
-  // Draw 3D tunnel grid if in 3D Saber Slicer mode
+  // Draw 3D tunnel grid if in 3D Saber Slicer mode, or illuminated 2D Boxing Ring in 2D mode
   const is3DSaberMode = state.activeGame === 'saber3d' && Boolean(window.Saber3DEngine);
   if (is3DSaberMode) {
-    window.Saber3DEngine.draw3DArenaBackdrop(ctx, canvas.width, canvas.height, state.combo);
+    try {
+      window.Saber3DEngine.draw3DArenaBackdrop(ctx, canvas.width, canvas.height, state.combo);
+    } catch (e) {}
+  } else {
+    // Подсветка 2D боксёрского ринга (чтобы экран ТВ никогда не казался пустым тёмным фоном)
+    ctx.save();
+    ctx.strokeStyle = 'rgba(0, 210, 255, 0.14)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(canvas.width * 0.5, canvas.height * 0.54, Math.min(canvas.width, canvas.height) * 0.34, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(255, 184, 0, 0.12)';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(0, canvas.height * 0.84);
+    ctx.lineTo(canvas.width, canvas.height * 0.84);
+    ctx.stroke();
+    ctx.restore();
   }
 
   if (state.bodySilhouette) {
@@ -2681,7 +2756,7 @@ function gameLoop(timestamp) {
   }
 
   // Ultra-fast 60fps hand/saber tracking with velocity lead prediction
-  const now = performance.now();
+  const now = nowTime;
   state.gloves.forEach((g) => {
     const prevX = g.x;
     const prevY = g.y;
@@ -2724,9 +2799,9 @@ function gameLoop(timestamp) {
 
     if (state.isPlaying) {
       const spawnInterval = Math.max(520, 1150 - state.score * 1.1);
-      if (timestamp - state.lastSpawnAt > spawnInterval) {
+      if (nowTime - state.lastSpawnAt > spawnInterval || state.lastSpawnAt > nowTime || eng.objects3D.length === 0) {
         eng.spawn3DWave(state.score);
-        state.lastSpawnAt = timestamp;
+        state.lastSpawnAt = nowTime;
       }
     }
 
@@ -2773,7 +2848,16 @@ function gameLoop(timestamp) {
         continue;
       }
 
-      eng.draw3DObject(ctx, obj, proj.screenX, proj.screenY, radius);
+      try {
+        eng.draw3DObject(ctx, obj, proj.screenX, proj.screenY, radius);
+      } catch (e) {
+        ctx.save();
+        ctx.fillStyle = obj.outerColor || '#10b981';
+        ctx.beginPath();
+        ctx.arc(proj.screenX, proj.screenY, Math.max(14, radius), 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
     }
 
     // Draw sliced 3D halves
@@ -2788,18 +2872,24 @@ function gameLoop(timestamp) {
         eng.slicedHalves3D.splice(i, 1);
         continue;
       }
-      eng.drawSlicedHalf3D(ctx, sh);
+      try {
+        eng.drawSlicedHalf3D(ctx, sh);
+      } catch (e) {}
     }
 
     // Draw glowing Plasma Sabers in player's hands
-    state.gloves.forEach((g) => eng.drawPlasmaSaber(ctx, g, canvas.width, canvas.height));
+    state.gloves.forEach((g) => {
+      try {
+        eng.drawPlasmaSaber(ctx, g, canvas.width, canvas.height);
+      } catch (e) {}
+    });
   } else {
     // --- 2D BOXFRUIT ARENA MODE ---
     if (state.isPlaying) {
       const spawnInterval = Math.max(580, 1250 - state.score * 1.2);
-      if (timestamp - state.lastSpawnAt > spawnInterval) {
+      if (nowTime - state.lastSpawnAt > spawnInterval || state.lastSpawnAt > nowTime || state.fruits.length === 0) {
         spawnFruitWave();
-        state.lastSpawnAt = timestamp;
+        state.lastSpawnAt = nowTime;
       }
     }
 
@@ -2834,9 +2924,16 @@ function gameLoop(timestamp) {
       }
 
       ctx.save();
-      ctx.translate(f.x, f.y);
-      ctx.rotate(f.angle);
-      drawCustomFruitShape(ctx, f);
+      try {
+        ctx.translate(f.x, f.y);
+        ctx.rotate(f.angle);
+        drawCustomFruitShape(ctx, f);
+      } catch (e) {
+        ctx.fillStyle = f.color || '#ff1744';
+        ctx.beginPath();
+        ctx.arc(0, 0, f.radius || 46, 0, Math.PI * 2);
+        ctx.fill();
+      }
       ctx.restore();
     }
 
@@ -2854,21 +2951,27 @@ function gameLoop(timestamp) {
       }
 
       ctx.save();
-      ctx.globalAlpha = Math.max(0, h.alpha);
-      ctx.translate(h.x, h.y);
-      ctx.rotate(h.angle);
-      ctx.beginPath();
-      if (h.side < 0) {
-        ctx.rect(-h.radius * 1.4, -h.radius * 1.4, h.radius * 1.4, h.radius * 2.8);
-      } else {
-        ctx.rect(0, -h.radius * 1.4, h.radius * 1.4, h.radius * 2.8);
-      }
-      ctx.clip();
-      drawCustomFruitShape(ctx, h);
+      try {
+        ctx.globalAlpha = Math.max(0, h.alpha);
+        ctx.translate(h.x, h.y);
+        ctx.rotate(h.angle);
+        ctx.beginPath();
+        if (h.side < 0) {
+          ctx.rect(-h.radius * 1.4, -h.radius * 1.4, h.radius * 1.4, h.radius * 2.8);
+        } else {
+          ctx.rect(0, -h.radius * 1.4, h.radius * 1.4, h.radius * 2.8);
+        }
+        ctx.clip();
+        drawCustomFruitShape(ctx, h);
+      } catch (e) {}
       ctx.restore();
     }
 
-    state.gloves.forEach((g) => drawBoxingGlove(ctx, g));
+    state.gloves.forEach((g) => {
+      try {
+        drawBoxingGlove(ctx, g);
+      } catch (e) {}
+    });
   }
 
   // Particles & Shockwaves (shared by both modes)
@@ -2929,7 +3032,20 @@ function gameLoop(timestamp) {
     ctx.restore();
   }
 
-  ctx.restore();
+    ctx.restore();
+  } catch (err) {
+    lastRenderError = err && err.message ? err.message : String(err);
+    try {
+      ctx.restore();
+    } catch (e) {}
+  }
+  if (lastRenderError) {
+    ctx.save();
+    ctx.fillStyle = '#ff3b4b';
+    ctx.font = '16px sans-serif';
+    ctx.fillText('Render err: ' + lastRenderError, 24, canvas.height - 24);
+    ctx.restore();
+  }
   requestAnimationFrame(gameLoop);
 }
 
@@ -2959,12 +3075,10 @@ function startRound() {
   if (window.Saber3DEngine) {
     window.Saber3DEngine.reset();
   }
-  state.lastSpawnAt = performance.now() - 900;
-  if (state.activeGame === 'saber3d' && window.Saber3DEngine) {
-    window.Saber3DEngine.spawn3DWave(0);
-  } else {
-    spawnFruitWave();
-  }
+  // Важно: не спавним синхронно и не вычитаем 900мс из performance.now(),
+  // потому что в gameLoop(timestamp) на части браузеров timestamp < performance.now(),
+  // из-за чего (timestamp - state.lastSpawnAt) становится отрицательным и фрукты никогда не спавнятся!
+  state.lastSpawnAt = 0;
 
   menuOverlay.classList.add('hidden');
   tvPairingModal.classList.add('hidden');
@@ -3017,12 +3131,7 @@ async function launchTvHostMode() {
   // Сразу запускаем живую арену (перчатки/сабли и полёт фруктов) на фоне ТВ, не дожидаясь сетевых запросов!
   if (!state.isPlaying) {
     state.isPlaying = true;
-    state.lastSpawnAt = performance.now() - 900;
-    if (state.activeGame === 'saber3d' && window.Saber3DEngine) {
-      window.Saber3DEngine.spawn3DWave(0);
-    } else {
-      spawnFruitWave();
-    }
+    state.lastSpawnAt = 0;
   }
 
   await resolveHomeRoomCode();
