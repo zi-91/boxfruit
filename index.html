@@ -549,7 +549,7 @@ h1.game-title {
             <h1 class="game-title">
               MOTION ARENA TV
               <span style="display: inline-block; font-size: 18px; background: var(--accent-gold); color: #0b0e14; padding: 5px 12px; border-radius: 8px; vertical-align: middle; margin-left: 8px; font-weight: 900;">
-                ВЕРСИЯ: v4.6 / v5.2 TV-FIX
+                ВЕРСИЯ: v4.7 / v5.3 FIX
               </span>
             </h1>
           </div>
@@ -2321,7 +2321,7 @@ function drawArenaBodySilhouette(ctx, b) {
     ctx.lineWidth = width;
     ctx.lineCap = 'round';
     ctx.beginPath();
-    context.moveTo(c1[0], c1[1]);
+    ctx.moveTo(c1[0], c1[1]);
     ctx.lineTo(c2[0], c2[1]);
     ctx.stroke();
   };
@@ -2684,6 +2684,7 @@ function drawBoxingGlove(ctx, g) {
 let lastRenderError = '';
 // --- Main Render & Physics Loop ---
 function gameLoop(timestamp) {
+  lastRenderError = '';
   try {
     if (!canvas.width || !canvas.height || canvas.width < 100 || canvas.height < 100) {
       canvas.width = Math.max(window.innerWidth || 0, document.documentElement.clientWidth || 0, 1280);
@@ -2752,7 +2753,12 @@ function gameLoop(timestamp) {
   }
 
   if (state.bodySilhouette) {
-    drawArenaBodySilhouette(ctx, state.bodySilhouette);
+    try {
+      drawArenaBodySilhouette(ctx, state.bodySilhouette);
+    } catch (e) {
+      lastRenderError = 'silhouette: ' + (e && e.message ? e.message : String(e));
+      try { ctx.restore(); } catch (e2) {}
+    }
   }
 
   // Ultra-fast 60fps hand/saber tracking with velocity lead prediction
