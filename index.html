@@ -613,7 +613,7 @@ h1.game-title {
             <h1 class="game-title">
               MOTION ARENA TV
               <span style="display: inline-block; font-size: 18px; background: var(--accent-gold); color: #0b0e14; padding: 5px 12px; border-radius: 8px; vertical-align: middle; margin-left: 8px; font-weight: 900;">
-                ВЕРСИЯ: v8.0 ARCANE 3D (WebGL)
+                ВЕРСИЯ: v9.0 3D-ТРАПЕЦИИ & МОНЕТКИ
               </span>
             </h1>
           </div>
@@ -925,12 +925,13 @@ const Saber3DEngine = {
   hitStopUntil: 0,
   tunnelPulse: 0,
 
-  // 3D-каталог целей с параметрами 3D-граней и меридианов
+  // 3D-каталог целей с параметрами 3D-граней, меридианов и Золотых 3D-Монеток на 3 дорожках-трапециях!
   targetsCatalog: [
-    { id: 'watermelon', name: 'Кибер-Арбуз',   outerColor: '#10b981', stripeColor: '#047857', rimColor: '#34d399', fleshColor: '#ff2a5f', seedColor: '#111827', baseRadius: 90, points: 15 },
-    { id: 'orange',     name: 'Неон-Апельсин', outerColor: '#ff7b00', stripeColor: '#c2410c', rimColor: '#fdba74', fleshColor: '#ffb703', seedColor: '#fffbeb', baseRadius: 80, points: 12 },
-    { id: 'dragon',     name: 'Драгонфрут',    outerColor: '#ff1e78', stripeColor: '#9d174d', rimColor: '#f472b6', fleshColor: '#f8fafc', seedColor: '#0f172a', baseRadius: 84, points: 20 },
-    { id: 'cybercore',  name: 'Плазма-Ядро',   outerColor: '#00f0ff', stripeColor: '#0369a1', rimColor: '#bae6fd', fleshColor: '#e0f2fe', seedColor: '#38bdf8', baseRadius: 86, points: 30, isBonus: true },
+    { id: 'goldcoin',   name: 'Золотая Монетка', outerColor: '#fbbf24', stripeColor: '#b45309', rimColor: '#fef08a', fleshColor: '#fde047', seedColor: '#92400e', baseRadius: 84, points: 25, isCoin: true },
+    { id: 'watermelon', name: 'Кибер-Арбуз',     outerColor: '#10b981', stripeColor: '#047857', rimColor: '#34d399', fleshColor: '#ff2a5f', seedColor: '#111827', baseRadius: 90, points: 15 },
+    { id: 'orange',     name: 'Неон-Апельсин',   outerColor: '#ff7b00', stripeColor: '#c2410c', rimColor: '#fdba74', fleshColor: '#ffb703', seedColor: '#fffbeb', baseRadius: 80, points: 12 },
+    { id: 'dragon',     name: 'Драгонфрут',      outerColor: '#ff1e78', stripeColor: '#9d174d', rimColor: '#f472b6', fleshColor: '#f8fafc', seedColor: '#0f172a', baseRadius: 84, points: 20 },
+    { id: 'cybercore',  name: 'Плазма-Ядро',     outerColor: '#00f0ff', stripeColor: '#0369a1', rimColor: '#bae6fd', fleshColor: '#e0f2fe', seedColor: '#38bdf8', baseRadius: 86, points: 30, isBonus: true },
     { id: 'bomb3d',     name: 'Шипованная Мина', outerColor: '#ef4444', stripeColor: '#7f1d1d', rimColor: '#fca5a5', fleshColor: '#f97316', seedColor: '#000000', baseRadius: 82, points: 0, isBomb: true }
   ],
 
@@ -960,29 +961,42 @@ const Saber3DEngine = {
     };
   },
 
-  // 6 пространственных 3D-коридоров (3 колонки × 2 эшелона высоты)
+  // 6 пространственных 3D-коридоров (3 трапециевидные дорожки × 2 эшелона: верхний полёт и нижнее качение по трапеции)
   LANES: [
-    { col: 0, row: 0, fx: 0.20, fy: 0.33, floorFx: 0.18, arcLift: 0.19 },
-    { col: 1, row: 0, fx: 0.50, fy: 0.29, floorFx: 0.50, arcLift: 0.21 },
-    { col: 2, row: 0, fx: 0.80, fy: 0.33, floorFx: 0.82, arcLift: 0.19 },
-    { col: 0, row: 1, fx: 0.19, fy: 0.68, floorFx: 0.16, arcLift: 0.13 },
-    { col: 1, row: 1, fx: 0.50, fy: 0.66, floorFx: 0.50, arcLift: 0.14 },
-    { col: 2, row: 1, fx: 0.81, fy: 0.68, floorFx: 0.84, arcLift: 0.13 }
+    { col: 0, row: 0, fx: 0.22, fy: 0.36, floorFx: 0.22, arcLift: 0.16 },
+    { col: 1, row: 0, fx: 0.50, fy: 0.32, floorFx: 0.50, arcLift: 0.18 },
+    { col: 2, row: 0, fx: 0.78, fy: 0.36, floorFx: 0.78, arcLift: 0.16 },
+    { col: 0, row: 1, fx: 0.22, fy: 0.76, floorFx: 0.22, arcLift: 0.05 },
+    { col: 1, row: 1, fx: 0.50, fy: 0.76, floorFx: 0.50, arcLift: 0.05 },
+    { col: 2, row: 1, fx: 0.78, fy: 0.76, floorFx: 0.78, arcLift: 0.05 }
   ],
-  // Глубина «Зоны Удара»: резать можно, когда предмет подлетел близко к плоскости самурая
-  STRIKE_Z: 0.32,
+  // Глубина «Зоны Удара»: резать/ловить можно, когда предмет подлетел к переднему широкому краю трапеции
+  STRIKE_Z: 0.34,
   lastLaneIdx: -1,
 
-  // Спавн 3D-предмета из портала Тории
+  // Спавн 3D-предмета или 3D Золотой Монетки, катящейся по одной из 3 трапециевидных дорог
   spawn3DWave(score = 0) {
-    const isBomb = Math.random() < 0.16;
-    const pool = isBomb
-      ? this.targetsCatalog.filter((t) => t.isBomb)
-      : this.targetsCatalog.filter((t) => !t.isBomb);
-    const spec = pool[Math.floor(Math.random() * pool.length)];
+    const roll = Math.random();
+    let spec;
+    if (roll < 0.15) {
+      spec = this.targetsCatalog.find((t) => t.isBomb);
+    } else if (roll < 0.52) {
+      // 37% шанс: Золотая 3D-Монетка катится прямо по одной из 3 трапециевидных дорожек!
+      spec = this.targetsCatalog.find((t) => t.isCoin);
+    } else {
+      const pool = this.targetsCatalog.filter((t) => !t.isBomb && !t.isCoin);
+      spec = pool[Math.floor(Math.random() * pool.length)];
+    }
 
-    let laneIdx = Math.floor(Math.random() * this.LANES.length);
-    if (laneIdx === this.lastLaneIdx) laneIdx = (laneIdx + 1 + Math.floor(Math.random() * 5)) % 6;
+    let laneIdx;
+    if (spec && spec.isCoin) {
+      // Монетки катятся по нижнему ярусу прямо вдоль 3 дорожек-трапеций (индексы 3, 4, 5)
+      laneIdx = 3 + Math.floor(Math.random() * 3);
+      if (laneIdx === this.lastLaneIdx) laneIdx = 3 + ((laneIdx - 2) % 3);
+    } else {
+      laneIdx = Math.floor(Math.random() * this.LANES.length);
+      if (laneIdx === this.lastLaneIdx) laneIdx = (laneIdx + 1 + Math.floor(Math.random() * 5)) % 6;
+    }
     this.lastLaneIdx = laneIdx;
 
     const zSpeed = 0.0064 + Math.min(0.004, score * 0.000012) + Math.random() * 0.0014;
@@ -1260,10 +1274,17 @@ const Saber3DEngine = {
     }
 
     // Внешнее неоновое свечение
-    ctx.shadowColor = obj.isBomb ? '#ff2222' : obj.outerColor || '#10b981';
+    ctx.shadowColor = obj.isBomb ? '#ff2222' : obj.isCoin ? '#fbbf24' : obj.outerColor || '#10b981';
     ctx.shadowBlur = Math.min(34, safeR * 0.45);
 
-    if (obj.isBomb) {
+    if (obj.isCoin) {
+      // ======================================================================
+      // 3D ЗОЛОТАЯ МОНЕТКА (🪙 Катится по одной из 3 трапециевидных дорожек!)
+      // ======================================================================
+      if (window.ArenaVisuals && typeof window.ArenaVisuals.draw3DRollingCoin === 'function') {
+        window.ArenaVisuals.draw3DRollingCoin(ctx, 0, 0, safeR, rot3D, 1.0);
+      }
+    } else if (obj.isBomb) {
       // ======================================================================
       // 3D ШИПОВАННАЯ МОРСКАЯ МИНА (С 3D-шипами разной глубины + металлической сферой)
       // ======================================================================
@@ -1730,51 +1751,296 @@ window.playKatanaSlashSound = playKatanaSlashSound;
     ctx.fill();
   }
 
-  // Движущиеся в 3D-перспективе поперечные линии пола и 3D-арки глубины (создают 100% ощущение полёта по оси Z!)
-  function drawAnimated3DFloorAndArches(ctx, w, h, now, comboGlow) {
-    const horizon = h * 0.42;
-    const vx = w * 0.5;
-    const floorH = h - horizon;
+  // ===========================================================================
+  // 1B. ТРИ 3D-ДОРОГИ В ФОРМЕ ТРАПЕЦИЙ С НАПРАВЛЯЮЩИМИ РЕЛЬСАМИ И МОНЕТКАМИ
+  // (Узкий дальний край z=1.0 у ворот Тории -> Широкий передний край z=0.0 у игрока)
+  // ===========================================================================
+  const LANE_COLORS = [
+    { main: '#00f0ff', rgb: '0, 240, 255', label: 'ЛЕВАЯ' },
+    { main: '#ffb800', rgb: '255, 184, 0', label: 'ЦЕНТР' },
+    { main: '#ff2a5f', rgb: '255, 42, 95', label: 'ПРАВАЯ' }
+  ];
+
+  function projectTrapezoidLane(laneIdx, z, w, h) {
+    const safeLane = Math.max(0, Math.min(2, Number(laneIdx) || 0));
+    const clampedZ = Math.max(-0.08, Math.min(1.05, Number(z) || 0));
+    const progress = Math.max(0, Math.min(1.08, 1 - clampedZ));
+    // Нелинейное перспективное расширение трапеции по мере приближения к зрителю (1/z)
+    const projT = Math.pow(progress, 1.78);
+
+    const yTop = h * 0.41; // Узкий дальний край у ворот Тории (z = 1.0)
+    const yBot = h * 0.96; // Широкий передний край у ног игрока (z = 0.0)
+    const y = yTop + (yBot - yTop) * projT;
+
+    // Общая ширина всех 3 дорог: вдали узкая (16.5% экрана), спереди широкая (84% экрана, полностью в кадре!)
+    const totalTopW = w * 0.165;
+    const totalBotW = w * 0.84;
+    const totalW = totalTopW + (totalBotW - totalTopW) * projT;
+    const laneW = totalW / 3;
+
+    const highwayLeftX = w * 0.5 - totalW * 0.5;
+    const leftX = highwayLeftX + safeLane * laneW;
+    const rightX = leftX + laneW;
+    const centerX = leftX + laneW * 0.5;
+    const scale = 0.14 + 0.94 * projT;
+
+    return {
+      x: centerX,
+      y: y,
+      laneW: laneW,
+      leftX: leftX,
+      rightX: rightX,
+      highwayLeftX: highwayLeftX,
+      highwayRightX: highwayLeftX + totalW,
+      totalW: totalW,
+      scale: scale,
+      projT: projT,
+      progress: progress
+    };
+  }
+
+  // Отрисовка 3D-магистрали из 3 трапеций с 4 неоновыми направляющими рельсами, 3D-бортиками и шевронами
+  function drawAnimated3DFloorAndArches(ctx, w, h, now, comboGlow, activeLanes) {
+    const top0 = projectTrapezoidLane(0, 1.0, w, h);
+    const bot0 = projectTrapezoidLane(0, 0.0, w, h);
+    const CurbHTop = Math.max(4, h * 0.014);
+    const CurbHBot = Math.max(14, h * 0.042);
 
     ctx.save();
-    // 1. Бегущие на зрителя перспективные 3D-ступени пола (z: 1.0 -> 0.0)
-    const speedPhase = ((now * 0.00028) % 1 + 1) % 1;
-    const numRows = 11;
-    for (let k = 0; k < numRows; k++) {
-      // p ∈ (0..1], где 0 — горизонт, 1 — край экрана у ног игрока
-      const linearP = ((k + speedPhase) / numRows) % 1;
-      const zDepth = 1 - linearP; // z=1 у горизонта, z=0 у камеры
-      // Квадратично-кубическое ускорение по мере приближения к камере (настоящий закон 1/z перспективы!)
-      const projT = Math.pow(linearP, 2.35);
-      const y = horizon + floorH * projT;
-      const halfWidth = w * (0.055 + 0.48 * projT);
 
-      const alpha = Math.min(0.42, 0.04 + projT * 0.32);
-      ctx.strokeStyle = comboGlow >= 5 ? 'rgba(0, 240, 255, ' + alpha.toFixed(3) + ')' : 'rgba(255, 184, 0, ' + (alpha * 0.75).toFixed(3) + ')';
-      ctx.lineWidth = 1 + projT * 2.5;
+    // 1. Внешние 3D-бортики трассы (придают дорожному полотну реальную толщину и 3D-объём!)
+    // Левый 3D-бортик
+    const leftCurbGrad = ctx.createLinearGradient(bot0.highwayLeftX - CurbHBot, bot0.y, top0.highwayLeftX, top0.y);
+    leftCurbGrad.addColorStop(0, 'rgba(0, 240, 255, 0.42)');
+    leftCurbGrad.addColorStop(1, 'rgba(8, 16, 36, 0.85)');
+    ctx.fillStyle = leftCurbGrad;
+    ctx.beginPath();
+    ctx.moveTo(top0.highwayLeftX, top0.y);
+    ctx.lineTo(bot0.highwayLeftX, bot0.y);
+    ctx.lineTo(bot0.highwayLeftX - CurbHBot * 0.9, bot0.y + CurbHBot * 0.35);
+    ctx.lineTo(top0.highwayLeftX - CurbHTop * 0.8, top0.y - CurbHTop);
+    ctx.closePath();
+    ctx.fill();
+
+    // Правый 3D-бортик
+    const rightCurbGrad = ctx.createLinearGradient(top0.highwayRightX, top0.y, bot0.highwayRightX + CurbHBot, bot0.y);
+    rightCurbGrad.addColorStop(0, 'rgba(8, 16, 36, 0.85)');
+    rightCurbGrad.addColorStop(1, 'rgba(255, 42, 95, 0.42)');
+    ctx.fillStyle = rightCurbGrad;
+    ctx.beginPath();
+    ctx.moveTo(top0.highwayRightX, top0.y);
+    ctx.lineTo(bot0.highwayRightX, bot0.y);
+    ctx.lineTo(bot0.highwayRightX + CurbHBot * 0.9, bot0.y + CurbHBot * 0.35);
+    ctx.lineTo(top0.highwayRightX + CurbHTop * 0.8, top0.y - CurbHTop);
+    ctx.closePath();
+    ctx.fill();
+
+    // 2. Отрисовка ТРЁХ ДОРОГ-ТРАПЕЦИЙ (Левая = Cyan, Центральная = Gold, Правая = Crimson)
+    for (let lane = 0; lane < 3; lane++) {
+      const pTop = projectTrapezoidLane(lane, 1.0, w, h);
+      const pBot = projectTrapezoidLane(lane, 0.0, w, h);
+      const lc = LANE_COLORS[lane];
+      const boost = activeLanes && activeLanes[lane] ? Math.min(1, activeLanes[lane]) : 0;
+
+      const laneGrad = ctx.createLinearGradient(pTop.x, pTop.y, pBot.x, pBot.y);
+      laneGrad.addColorStop(0, `rgba(${lc.rgb}, ${(0.10 + boost * 0.22).toFixed(3)})`);
+      laneGrad.addColorStop(0.55, `rgba(10, 16, 34, ${(0.72 - boost * 0.15).toFixed(3)})`);
+      laneGrad.addColorStop(1, `rgba(${lc.rgb}, ${(0.26 + boost * 0.34).toFixed(3)})`);
+
+      ctx.fillStyle = laneGrad;
       ctx.beginPath();
-      ctx.moveTo(vx - halfWidth, y);
-      ctx.lineTo(vx + halfWidth, y);
+      ctx.moveTo(pTop.leftX, pTop.y);
+      ctx.lineTo(pTop.rightX, pTop.y);
+      ctx.lineTo(pBot.rightX, pBot.y);
+      ctx.lineTo(pBot.leftX, pBot.y);
+      ctx.closePath();
+      ctx.fill();
+
+      // Внутренняя продольная осевая линия каждой трапеции
+      ctx.strokeStyle = `rgba(${lc.rgb}, ${(0.18 + boost * 0.35).toFixed(3)})`;
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([10, 14]);
+      ctx.lineDashOffset = -(now * 0.08) % 24;
+      ctx.beginPath();
+      ctx.moveTo(pTop.x, pTop.y);
+      ctx.lineTo(pBot.x, pBot.y);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    // 3. Бегущие на зрителя поперечные шпалы перспективы (z: 1.0 -> 0.0) и 3D-шевроны (>>>) внутри каждой из 3 трапеций!
+    const speedPhase = ((now * 0.00042) % 1 + 1) % 1;
+    const numRows = 12;
+    for (let k = 0; k < numRows; k++) {
+      const linearP = ((k + speedPhase) / numRows) % 1;
+      const zDepth = 1 - linearP;
+      const pRow = projectTrapezoidLane(1, zDepth, w, h);
+      const alpha = Math.min(0.55, 0.06 + pRow.projT * 0.44);
+
+      ctx.strokeStyle = comboGlow >= 5
+        ? `rgba(0, 240, 255, ${alpha.toFixed(3)})`
+        : `rgba(255, 255, 255, ${(alpha * 0.55).toFixed(3)})`;
+      ctx.lineWidth = 1 + pRow.projT * 2.8;
+      ctx.beginPath();
+      ctx.moveTo(pRow.highwayLeftX, pRow.y);
+      ctx.lineTo(pRow.highwayRightX, pRow.y);
       ctx.stroke();
 
-      // Боковые 3D-световые столбики (Pylons) вдоль дорожки на 3 ключевых рубежах глубины
-      if (k % 3 === 0 && zDepth < 0.88 && zDepth > 0.12) {
-        const pylonH = h * 0.22 * projT;
-        const pylonAlpha = Math.min(0.45, projT * 0.55);
-        ctx.strokeStyle = 'rgba(0, 240, 255, ' + pylonAlpha.toFixed(3) + ')';
-        ctx.lineWidth = Math.max(1.5, 4 * projT);
+      // Бегущие перспективные стрелки-шевроны внутри каждой из 3 дорог-трапеций
+      if (k % 3 === 0 && zDepth < 0.90 && zDepth > 0.08) {
+        const zTip = Math.max(0.02, zDepth - 0.045);
+        for (let lane = 0; lane < 3; lane++) {
+          const pBack = projectTrapezoidLane(lane, zDepth, w, h);
+          const pFront = projectTrapezoidLane(lane, zTip, w, h);
+          const lc = LANE_COLORS[lane];
+          ctx.strokeStyle = `rgba(${lc.rgb}, ${(alpha * 0.85).toFixed(3)})`;
+          ctx.lineWidth = Math.max(1.5, 3.2 * pRow.projT);
+          ctx.beginPath();
+          ctx.moveTo(pBack.leftX + pBack.laneW * 0.24, pBack.y);
+          ctx.lineTo(pFront.x, pFront.y);
+          ctx.lineTo(pBack.rightX - pBack.laneW * 0.24, pBack.y);
+          ctx.stroke();
+        }
+      }
+
+      // Боковые 3D-световые пилоны вдоль внешних рельсов трапеции
+      if (k % 4 === 0 && zDepth < 0.88 && zDepth > 0.12) {
+        const pylonH = h * 0.19 * pRow.projT;
+        const pylonAlpha = Math.min(0.52, pRow.projT * 0.62);
+        ctx.strokeStyle = `rgba(0, 240, 255, ${pylonAlpha.toFixed(3)})`;
+        ctx.lineWidth = Math.max(1.5, 3.8 * pRow.projT);
         ctx.beginPath();
-        // Левая стойка 3D-коридора
-        ctx.moveTo(vx - halfWidth, y);
-        ctx.lineTo(vx - halfWidth, y - pylonH);
-        ctx.lineTo(vx - halfWidth * 0.82, y - pylonH * 1.18);
-        // Правая стойка 3D-коридора
-        ctx.moveTo(vx + halfWidth, y);
-        ctx.lineTo(vx + halfWidth, y - pylonH);
-        ctx.lineTo(vx + halfWidth * 0.82, y - pylonH * 1.18);
+        ctx.moveTo(pRow.highwayLeftX, pRow.y);
+        ctx.lineTo(pRow.highwayLeftX, pRow.y - pylonH);
+        ctx.lineTo(pRow.highwayLeftX + pRow.laneW * 0.18, pRow.y - pylonH * 1.15);
+        ctx.stroke();
+
+        ctx.strokeStyle = `rgba(255, 42, 95, ${pylonAlpha.toFixed(3)})`;
+        ctx.beginPath();
+        ctx.moveTo(pRow.highwayRightX, pRow.y);
+        ctx.lineTo(pRow.highwayRightX, pRow.y - pylonH);
+        ctx.lineTo(pRow.highwayRightX - pRow.laneW * 0.18, pRow.y - pylonH * 1.15);
         ctx.stroke();
       }
     }
+
+    // 4. ЧЕТЫРЕ ЯРКИХ НЕОНОВЫХ НАПРАВЛЯЮЩИХ РЕЛЬСА (Делят трассу на 3 чёткие трапеции!)
+    const railColors = ['#00f0ff', '#ffb800', '#ffb800', '#ff2a5f'];
+    for (let rIdx = 0; rIdx <= 3; rIdx++) {
+      const topX = top0.highwayLeftX + rIdx * top0.laneW;
+      const botX = bot0.highwayLeftX + rIdx * bot0.laneW;
+      const rCol = railColors[rIdx];
+
+      // Неоновый ореол направляющей
+      ctx.strokeStyle = rCol;
+      ctx.shadowColor = rCol;
+      ctx.shadowBlur = 14;
+      ctx.lineWidth = rIdx === 0 || rIdx === 3 ? 5.5 : 4.0;
+      ctx.beginPath();
+      ctx.moveTo(topX, top0.y);
+      ctx.lineTo(botX, bot0.y);
+      ctx.stroke();
+
+      // Белое лазерное ядро направляющей
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = rIdx === 0 || rIdx === 3 ? 2.0 : 1.4;
+      ctx.beginPath();
+      ctx.moveTo(topX, top0.y);
+      ctx.lineTo(botX, bot0.y);
+      ctx.stroke();
+    }
+
+    // 5. ТРИ ПЕРЕДНИЕ ПЛОЩАДКИ-РЕЦЕПТОРА (На широком переднем крае каждой трапеции z = 0.14)
+    const zCatch = 0.14;
+    for (let lane = 0; lane < 3; lane++) {
+      const pPad = projectTrapezoidLane(lane, zCatch, w, h);
+      const lc = LANE_COLORS[lane];
+      const padRx = pPad.laneW * 0.36;
+      const padRy = Math.max(8, padRx * 0.24);
+
+      ctx.save();
+      ctx.strokeStyle = lc.main;
+      ctx.fillStyle = `rgba(${lc.rgb}, 0.18)`;
+      ctx.shadowColor = lc.main;
+      ctx.shadowBlur = 12;
+      ctx.lineWidth = 2.8;
+      ctx.beginPath();
+      ell(ctx, pPad.x, pPad.y, padRx, padRy, 0);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ell(ctx, pPad.x, pPad.y, padRx * 0.65, padRy * 0.65, 0);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    ctx.restore();
+  }
+
+  // Отрисовка объёмной 3D Золотой Монетки (🪙), катящейся по трапециевидной дорожке
+  function draw3DRollingCoin(ctx, x, y, r, phase, alpha) {
+    const safeR = Math.max(6, Number(r) || 24);
+    const spin = Number(phase) || 0;
+    // При вращении монетки её видимая ширина сжимается по косинусу, открывая 3D-толщину ребра!
+    const cosSpin = Math.cos(spin);
+    const rx = Math.max(safeR * 0.28, Math.abs(cosSpin) * safeR);
+    const edgeThick = Math.max(3, (1 - Math.abs(cosSpin)) * safeR * 0.34 + safeR * 0.12);
+    const edgeDir = cosSpin >= 0 ? 1 : -1;
+
+    ctx.save();
+    ctx.globalAlpha = alpha !== undefined ? alpha : 1.0;
+
+    // 1. Внешнее золотое свечение
+    const halo = ctx.createRadialGradient(x, y, safeR * 0.2, x, y, safeR * 1.65);
+    halo.addColorStop(0, 'rgba(255, 215, 0, 0.48)');
+    halo.addColorStop(0.6, 'rgba(255, 184, 0, 0.18)');
+    halo.addColorStop(1, 'rgba(255, 184, 0, 0)');
+    ctx.fillStyle = halo;
+    ctx.beginPath();
+    ctx.arc(x, y, safeR * 1.65, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 2. Боковое 3D-ребро монеты (золотой цилиндр толщины)
+    ctx.fillStyle = '#b45309';
+    ctx.strokeStyle = '#78350f';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ell(ctx, x + edgeDir * edgeThick, y, rx, safeR, 0);
+    ctx.fill();
+    ctx.stroke();
+
+    // 3. Лицевая грань 3D-монеты
+    const coinGrad = ctx.createLinearGradient(x - rx, y - safeR, x + rx, y + safeR);
+    coinGrad.addColorStop(0, '#fffbeb');
+    coinGrad.addColorStop(0.28, '#fde047');
+    coinGrad.addColorStop(0.62, '#f59e0b');
+    coinGrad.addColorStop(1, '#b45309');
+    ctx.fillStyle = coinGrad;
+    ctx.beginPath();
+    ell(ctx, x, y, rx, safeR, 0);
+    ctx.fill();
+
+    // Внешний чеканный золотой обод
+    ctx.strokeStyle = '#fef08a';
+    ctx.lineWidth = Math.max(2, safeR * 0.09);
+    ctx.stroke();
+
+    // Внутренний чеканный ободок и символ кредита/звезды
+    ctx.strokeStyle = 'rgba(146, 64, 14, 0.75)';
+    ctx.lineWidth = Math.max(1.5, safeR * 0.05);
+    ctx.beginPath();
+    ell(ctx, x, y, rx * 0.72, safeR * 0.72, 0);
+    ctx.stroke();
+
+    // Вертикальная прорезь кибер-монеты в центре
+    ctx.fillStyle = '#fffbeb';
+    ctx.fillRect(x - Math.max(1.5, rx * 0.14), y - safeR * 0.36, Math.max(3, rx * 0.28), safeR * 0.72);
+
     ctx.restore();
   }
 
@@ -2308,6 +2574,9 @@ window.playKatanaSlashSound = playKatanaSlashSound;
     drawBackground: drawBackground,
     drawSamurai: drawSamurai,
     drawKatana: drawKatana,
+    projectTrapezoidLane: projectTrapezoidLane,
+    draw3DTrapezoidHighway: drawAnimated3DFloorAndArches,
+    draw3DRollingCoin: draw3DRollingCoin,
     ellipse: ell
   };
 })();
@@ -2901,45 +3170,112 @@ window.playKatanaSlashSound = playKatanaSlashSound;
   };
 
   // ==========================================================================
-  // 2. LASER MATRIX
+  // 2. LASER MATRIX 3D (Лазерные барьеры по направляющим 3 трапеций + 3D Монетки!)
   // ==========================================================================
+  function projTrap(laneIdx, z, w, h) {
+    if (window.ArenaVisuals && typeof window.ArenaVisuals.projectTrapezoidLane === 'function') {
+      return window.ArenaVisuals.projectTrapezoidLane(laneIdx, z, w, h);
+    }
+    var p = Math.pow(clamp(1 - z, 0, 1.08), 1.78);
+    var y = h * 0.41 + (h * 0.96 - h * 0.41) * p;
+    var totalW = w * 0.165 + (w * 0.84 - w * 0.165) * p;
+    var laneW = totalW / 3;
+    var hwL = w * 0.5 - totalW * 0.5;
+    var leftX = hwL + laneIdx * laneW;
+    return {
+      x: leftX + laneW * 0.5,
+      y: y,
+      laneW: laneW,
+      leftX: leftX,
+      rightX: leftX + laneW,
+      highwayLeftX: hwL,
+      highwayRightX: hwL + totalW,
+      totalW: totalW,
+      scale: 0.14 + 0.94 * p,
+      projT: p
+    };
+  }
+
+  function drawCoin3D(ctx, x, y, r, phase, alpha) {
+    if (window.ArenaVisuals && typeof window.ArenaVisuals.draw3DRollingCoin === 'function') {
+      window.ArenaVisuals.draw3DRollingCoin(ctx, x, y, r, phase, alpha);
+      return;
+    }
+    ctx.save();
+    ctx.globalAlpha = alpha !== undefined ? alpha : 1;
+    ctx.fillStyle = COL.gold;
+    ctx.beginPath();
+    circle(ctx, x, y, r);
+    ctx.fill();
+    ctx.restore();
+  }
+
   AG.laserdodge = {
-    id: 'laserdodge', title: 'LASER MATRIX', icon: '🔴', hands: 'none',
+    id: 'laserdodge', title: 'LASER MATRIX', icon: '🔴', hands: 'gloves',
     reset: function (api) {
       fxInit(this);
       this.t0 = api ? api.now : 0;
       this.beams = [];
+      this.coins = [];
       this.sparks = [];
       this.survived = 0;
       this.beamCount = 0;
-      this.nextAt = this.t0 + 3000;
+      this.nextAt = this.t0 + 2200;
+      this.nextCoinAt = this.t0 + 900;
       this.base = null;
       this.lastType = '';
+      this.lastCoinLane = -1;
       this._errCount = 0;
     },
+    spawnCoin: function (api, safeLaneHint) {
+      var lane = typeof safeLaneHint === 'number' ? safeLaneHint : Math.floor(Math.random() * 3);
+      if (lane === this.lastCoinLane && safeLaneHint === undefined) lane = (lane + 1) % 3;
+      this.lastCoinLane = lane;
+      this.coins.push({
+        lane: lane,
+        z: 1.0,
+        speed: 0.00046,
+        phase: Math.random() * 6.28,
+        caught: false
+      });
+    },
     spawn: function (api) {
-      var n = this.survived, b = this.base;
-      var types = n < 4 ? ['low', 'high'] : ['low', 'high', 'vert'];
+      var n = this.survived;
+      var types = n < 3 ? ['low', 'high', 'vert'] : ['low', 'high', 'vert'];
       var t = pick(types), g = 0;
-      while (t === this.lastType && g++ < 4 && Math.random() < 0.7) t = pick(types);
+      while (t === this.lastType && g++ < 4) t = pick(types);
       this.lastType = t;
-      var warn = Math.max(750, 1350 - n * 30);
+      var warn = Math.max(950, 1550 - n * 28);
       this.addBeam(api, t, warn);
-      if (n >= 14 && Math.random() < 0.3) {
-        var t2 = t === 'vert' ? pick(['low', 'high']) : 'vert';
-        this.addBeam(api, t2, warn);
-      }
     },
     addBeam: function (api, type, warn) {
-      var b = this.base, pos, side = 0;
-      if (type === 'low') pos = clamp(b.knee !== null ? b.knee + 0.01 : b.head + 0.5, 0.62, 0.92);
-      else if (type === 'high') pos = clamp(b.head + 0.01, 0.1, 0.55);
-      else {
-        side = b.x < 0.42 ? 1 : (b.x > 0.58 ? -1 : (Math.random() < 0.5 ? -1 : 1)); // dodge direction
-        pos = clamp(b.x - side * 0.02, 0.12, 0.88);
+      var b = this.base, pos, side = 0, dangerLane = 1;
+      if (type === 'low') {
+        pos = clamp(b.knee !== null ? b.knee + 0.01 : b.head + 0.5, 0.68, 0.90);
+      } else if (type === 'high') {
+        pos = clamp(b.head + 0.01, 0.16, 0.52);
+      } else {
+        side = b.x < 0.42 ? 1 : (b.x > 0.58 ? -1 : (Math.random() < 0.5 ? -1 : 1));
+        dangerLane = b.x < 0.38 ? 0 : (b.x > 0.62 ? 2 : 1);
+        pos = clamp(b.x - side * 0.02, 0.18, 0.82);
       }
       this.beamCount++;
-      this.beams.push({ id: this.beamCount, type: type, pos: pos, side: side, t0: api.now, warn: warn, act: 650, state: 'warn', acc: 0, hit: false });
+      this.beams.push({
+        id: this.beamCount,
+        type: type,
+        pos: pos,
+        side: side,
+        dangerLane: dangerLane,
+        t0: api.now,
+        warn: warn,
+        act: 650,
+        state: 'warn',
+        acc: 0,
+        hit: false
+      });
+      // Одновременно выкатываем Золотые 3D-Монетки по безопасным трапециевидным дорожкам!
+      var safeLane = type === 'vert' ? ((dangerLane + (side > 0 ? 1 : 2)) % 3) : Math.floor(Math.random() * 3);
+      this.spawnCoin(api, safeLane);
     },
     inBeam: function (bm, B) {
       var b = this.base;
@@ -2953,79 +3289,205 @@ window.playKatanaSlashSound = playKatanaSlashSound;
     },
     drawEmitter: function (ctx, x, y, r, color, a) {
       var g = radGrad(ctx, x, y, 0, r * 2.4);
-      g.addColorStop(0, hexA('#ffffff', a)); g.addColorStop(0.25, hexA(color, a)); g.addColorStop(1, hexA(color, 0));
+      g.addColorStop(0, hexA('#ffffff', a)); g.addColorStop(0.28, hexA(color, a)); g.addColorStop(1, hexA(color, 0));
       ctx.fillStyle = g;
       ctx.beginPath(); circle(ctx, x, y, r * 2.4); ctx.fill();
     },
-    beamLine: function (api, bm) {
-      var w = api.w, h = api.h;
-      if (bm.type === 'vert') return [bm.pos * w, 0, bm.pos * w, h];
-      return [0, bm.pos * h, w, bm.pos * h];
-    },
+    // Отрисовка 3D-лазерного барьера, который катится по направляющим рельсам 3 трапеций из глубины (z=1.0) на игрока (z=0.12)!
     drawBeam: function (api, bm) {
       var ctx = api.ctx, w = api.w, h = api.h, now = api.now;
-      var L = this.beamLine(api, bm), x1 = L[0], y1 = L[1], x2 = L[2], y2 = L[3];
-      var t = now - bm.t0, vert = bm.type === 'vert';
-      var halfBand = vert ? 0.105 * w : 0.05 * h;
+      var t = now - bm.t0;
+      var kWarn = clamp(t / bm.warn, 0, 1);
+      // Лазер летит из узкого дальнего края трапеции (z=1.0) к широкому переднему краю (z=0.12)
+      var zCur = bm.state === 'warn' ? (1.0 - kWarn * 0.88) : 0.12;
+      var pMid = projTrap(1, zCur, w, h);
+      var blink = (Math.floor(t / (kWarn > 0.6 ? 70 : 130)) % 2) ? 1 : 0.42;
+      var isAct = bm.state === 'active';
+      var ka = isAct ? clamp((t - bm.warn) / bm.act, 0, 1) : 0;
+      var alphaOut = isAct && ka > 0.85 ? (1 - ka) / 0.15 : 1;
+
       ctx.save();
-      if (bm.state === 'warn') {
-        var k = clamp(t / bm.warn, 0, 1);
-        var blink = (Math.floor(t / (k > 0.6 ? 70 : 130)) % 2) ? 1 : 0.35;
-        // danger zone band
-        ctx.fillStyle = hexA(COL.crimson, 0.07 + 0.08 * k * blink);
-        if (vert) ctx.fillRect(x1 - halfBand, 0, halfBand * 2, h); else ctx.fillRect(0, y1 - halfBand, w, halfBand * 2);
-        // dashed aim line
-        ctx.setLineDash([18, 14]);
-        ctx.lineDashOffset = -now / 20;
-        ctx.lineWidth = 3; ctx.strokeStyle = hexA(COL.crimson, 0.5 + 0.5 * blink);
-        ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
-        ctx.setLineDash([]);
-        // charging emitters
-        this.drawEmitter(ctx, x1, y1, 8 + 14 * k, COL.crimson, 0.6 + 0.4 * blink);
-        this.drawEmitter(ctx, x2, y2, 8 + 14 * k, COL.crimson, 0.6 + 0.4 * blink);
-        // instruction label
-        var lp = bigPx(api, 0.07), label, lx, ly;
-        if (bm.type === 'low') { label = '↑ ПРЫГАЙ! ↑'; lx = w / 2; ly = y1 - lp * 1.1; }
-        else if (bm.type === 'high') { label = '↓ ПРИСЯДЬ! ↓'; lx = w / 2; ly = y1 + lp * 1.2; }
-        else { label = bm.side > 0 ? 'ШАГ ВПРАВО →' : '← ШАГ ВЛЕВО'; lx = clamp(x1 + bm.side * w * 0.22, w * 0.2, w * 0.8); ly = h * 0.24; }
-        ly = Math.max(ly, topY(api) + lp * 0.85);
-        ctx.save();
-        ctx.font = F(lp);
-        var lw = ctx.measureText(label).width + lp * 1.2;
-        ctx.beginPath(); rrect(api, ctx, lx - lw / 2, ly - lp * 0.8, lw, lp * 1.6, lp * 0.4);
-        ctx.fillStyle = 'rgba(8,10,22,0.82)'; ctx.fill();
-        ctx.lineWidth = 3; ctx.strokeStyle = hexA(k > 0.6 ? COL.crimson : COL.gold, 0.5 + 0.5 * blink); ctx.stroke();
-        ctx.restore();
-        glowText(ctx, label, lx, ly, lp, k > 0.6 ? '#ff5c80' : COL.gold, 0.75 + 0.25 * blink);
-        // countdown ring at center of beam
-        var cx = vert ? x1 : w / 2, cy = vert ? h * 0.5 : y1, rr = h * 0.035;
-        ctx.lineWidth = 6; ctx.strokeStyle = COL.gold;
-        ctx.beginPath(); ctx.arc(cx, cy, rr, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * (1 - k)); ctx.stroke();
-      } else if (bm.state === 'active') {
-        var ka = clamp((t - bm.warn) / bm.act, 0, 1);
-        var fl = 0.85 + 0.15 * Math.sin(now / 18);
-        var wob = Math.sin(now / 40) * 1.5;
+      ctx.globalAlpha = alphaOut;
+
+      if (bm.type === 'vert') {
+        // 3D ЛАЗЕРНАЯ СТЕНКА ВДОЛЬ ОДНОЙ ИЗ 3 ДОРОГ-ТРАПЕЦИЙ
+        var laneIdx = bm.dangerLane !== undefined ? bm.dangerLane : 1;
+        var pTop = projTrap(laneIdx, 1.0, w, h);
+        var pCur = projTrap(laneIdx, zCur, w, h);
+        var pBot = projTrap(laneIdx, 0.04, w, h);
+
+        // Заливка опасной трапеции
+        var trapGrad = ctx.createLinearGradient(pTop.x, pTop.y, pBot.x, pBot.y);
+        trapGrad.addColorStop(0, hexA(COL.crimson, isAct ? 0.55 : 0.18 * blink));
+        trapGrad.addColorStop(1, hexA(COL.crimson, isAct ? 0.78 : 0.36 * kWarn));
+        ctx.fillStyle = trapGrad;
+        ctx.beginPath();
+        ctx.moveTo(pTop.leftX, pTop.y);
+        ctx.lineTo(pTop.rightX, pTop.y);
+        ctx.lineTo(pCur.rightX, pCur.y);
+        ctx.lineTo(pCur.leftX, pCur.y);
+        ctx.closePath();
+        ctx.fill();
+
+        // Вертикальный 3D-портал лазера на текущей глубине zCur
+        var gateH = h * 0.46 * pCur.scale;
+        ctx.strokeStyle = isAct ? '#ffffff' : COL.crimson;
+        ctx.shadowColor = COL.crimson;
+        ctx.shadowBlur = isAct ? 26 : 14;
+        ctx.lineWidth = Math.max(3, (isAct ? 14 : 6) * pCur.scale);
+        ctx.beginPath();
+        ctx.moveTo(pCur.leftX, pCur.y);
+        ctx.lineTo(pCur.leftX, pCur.y - gateH);
+        ctx.lineTo(pCur.rightX, pCur.y - gateH);
+        ctx.lineTo(pCur.rightX, pCur.y);
+        ctx.stroke();
+
+        this.drawEmitter(ctx, pCur.leftX, pCur.y, 14 * pCur.scale, COL.crimson, 0.9);
+        this.drawEmitter(ctx, pCur.rightX, pCur.y, 14 * pCur.scale, COL.crimson, 0.9);
+      } else {
+        // 3D ПОПЕРЕЧНЫЙ ЛАЗЕРНЫЙ БАРЬЕР, СКОЛЬЗЯЩИЙ ПО НАПРАВЛЯЮЩИМ РЕЛЬСАМ ТРАПЕЦИИ (z: 1.0 -> 0.12)
+        var railLeftX = pMid.highwayLeftX;
+        var railRightX = pMid.highwayRightX;
+        var floorY = pMid.y;
+        // Высота луча над полотном трапеции: для 'low' — у самой земли (прыгай!), для 'high' — на уровне головы (присядь!)
+        var beamLift = bm.type === 'low' ? (h * 0.045 * pMid.scale) : (h * 0.42 * pMid.scale);
+        var beamY = floorY - beamLift;
+
+        // 1. Тень и световой след под лазером прямо поперёк всех 3 трапециевидных дорог
+        ctx.strokeStyle = hexA(COL.crimson, isAct ? 0.65 : 0.35);
+        ctx.lineWidth = Math.max(2, 8 * pMid.scale);
+        ctx.beginPath();
+        ctx.moveTo(railLeftX, floorY);
+        ctx.lineTo(railRightX, floorY);
+        ctx.stroke();
+
+        // 2. Боковые 3D-стойки (пилоны), скользящие по внешним направляющим рельсам трапеции!
+        ctx.strokeStyle = '#e2e8f0';
+        ctx.lineWidth = Math.max(3, 9 * pMid.scale);
+        ctx.beginPath();
+        ctx.moveTo(railLeftX, floorY);
+        ctx.lineTo(railLeftX, beamY);
+        ctx.moveTo(railRightX, floorY);
+        ctx.lineTo(railRightX, beamY);
+        ctx.stroke();
+
+        // 3. Перспективный шлейф за летящим 3D-лазером вдоль боковых рельсов
+        var zTrail = Math.min(1.0, zCur + 0.16);
+        var pTrail = projTrap(1, zTrail, w, h);
+        var trailY = pTrail.y - (bm.type === 'low' ? (h * 0.045 * pTrail.scale) : (h * 0.42 * pTrail.scale));
+        var ribbonGrad = ctx.createLinearGradient(0, trailY, 0, beamY);
+        ribbonGrad.addColorStop(0, 'rgba(255, 42, 95, 0)');
+        ribbonGrad.addColorStop(1, hexA(COL.crimson, isAct ? 0.42 : 0.24));
+        ctx.fillStyle = ribbonGrad;
+        ctx.beginPath();
+        ctx.moveTo(pTrail.highwayLeftX, trailY);
+        ctx.lineTo(pTrail.highwayRightX, trailY);
+        ctx.lineTo(railRightX, beamY);
+        ctx.lineTo(railLeftX, beamY);
+        ctx.closePath();
+        ctx.fill();
+
+        // 4. Сам 3D лазерный луч между направляющими рельсами трапеции
         ctx.lineCap = 'round';
-        ctx.globalAlpha = ka > 0.85 ? (1 - ka) / 0.15 : 1;
-        ctx.lineWidth = 50 * fl; ctx.strokeStyle = 'rgba(255,42,95,0.16)';
-        ctx.beginPath(); ctx.moveTo(x1, y1 + (vert ? 0 : wob)); ctx.lineTo(x2, y2 + (vert ? 0 : wob)); ctx.stroke();
-        ctx.shadowColor = COL.crimson; ctx.shadowBlur = 24;
-        ctx.lineWidth = 20 * fl; ctx.strokeStyle = COL.crimson;
-        ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+        ctx.shadowColor = COL.crimson;
+        ctx.shadowBlur = isAct ? 28 : 16;
+        ctx.strokeStyle = COL.crimson;
+        ctx.lineWidth = Math.max(4, (isAct ? 22 : 10) * pMid.scale);
+        ctx.beginPath();
+        ctx.moveTo(railLeftX, beamY);
+        ctx.lineTo(railRightX, beamY);
+        ctx.stroke();
+
         ctx.shadowBlur = 0;
-        ctx.lineWidth = 7; ctx.strokeStyle = '#ffffff';
-        ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
-        this.drawEmitter(ctx, x1, y1, 22, COL.crimson, 1);
-        this.drawEmitter(ctx, x2, y2, 22, COL.crimson, 1);
-        // scanning spark spawn
-        if (this.sparks.length < 40) {
-          for (var i = 0; i < 2; i++) {
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = Math.max(2, (isAct ? 7 : 3.5) * pMid.scale);
+        ctx.beginPath();
+        ctx.moveTo(railLeftX, beamY);
+        ctx.lineTo(railRightX, beamY);
+        ctx.stroke();
+
+        this.drawEmitter(ctx, railLeftX, beamY, (isAct ? 20 : 13) * pMid.scale, COL.crimson, 0.95);
+        this.drawEmitter(ctx, railRightX, beamY, (isAct ? 20 : 13) * pMid.scale, COL.crimson, 0.95);
+
+        if (isAct && this.sparks.length < 40) {
+          for (var s = 0; s < 2; s++) {
             var u = Math.random();
-            this.sparks.push({ x: lerp(x1, x2, u), y: lerp(y1, y2, u), vx: rnd(-3, 3), vy: rnd(-4, 2), life: 1 });
+            this.sparks.push({ x: lerp(railLeftX, railRightX, u), y: beamY, vx: rnd(-3, 3), vy: rnd(-4, 2), life: 1 });
           }
         }
       }
+
+      // Подсказка действия для игрока
+      if (!isAct) {
+        var lp = bigPx(api, 0.062), label, lx = w * 0.5, ly = topY(api) + lp * 0.95;
+        if (bm.type === 'low') label = '↑ ПРЫГАЙ ЧЕРЕЗ ЛАЗЕР! ↑';
+        else if (bm.type === 'high') label = '↓ ПРИСЯДЬ ПОД ЛАЗЕР! ↓';
+        else label = bm.side > 0 ? 'ШАГ ВПРАВО + ЛОВИ 🪙 →' : '← ШАГ ВЛЕВО + ЛОВИ 🪙';
+        ctx.save();
+        ctx.font = F(lp);
+        var lw = ctx.measureText(label).width + lp * 1.1;
+        ctx.beginPath(); rrect(api, ctx, lx - lw / 2, ly - lp * 0.78, lw, lp * 1.56, lp * 0.38);
+        ctx.fillStyle = 'rgba(8,10,22,0.86)'; ctx.fill();
+        ctx.lineWidth = 3; ctx.strokeStyle = hexA(kWarn > 0.6 ? COL.crimson : COL.gold, 0.6 + 0.4 * blink); ctx.stroke();
+        ctx.restore();
+        glowText(ctx, label, lx, ly, lp, kWarn > 0.6 ? '#ff5c80' : COL.gold, 0.85 + 0.15 * blink);
+      }
+
       ctx.restore();
+    },
+    drawCoinsAndCatch: function (api, B) {
+      var ctx = api.ctx, w = api.w, h = api.h, now = api.now;
+      var gl = api.gloves || [];
+      for (var i = this.coins.length - 1; i >= 0; i--) {
+        var c = this.coins[i];
+        c.z -= c.speed * api.dt;
+        c.phase += 0.008 * api.dt;
+        if (c.z < -0.04) {
+          this.coins.splice(i, 1);
+          continue;
+        }
+        var p = projTrap(c.lane, Math.max(0, c.z), w, h);
+        var r = Math.max(10, Math.min(w, h) * 0.052 * p.scale);
+        var bounceY = Math.abs(Math.sin(c.phase * 1.7)) * r * 0.45;
+        var cx = p.x;
+        var cy = p.y - r * 0.85 - bounceY;
+
+        // Тень 3D-монетки на полотне трапеции
+        ctx.save();
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.48)';
+        ctx.beginPath();
+        if (window.ArenaVisuals && window.ArenaVisuals.ellipse) {
+          window.ArenaVisuals.ellipse(ctx, cx, p.y, r * 0.85, Math.max(3, r * 0.26), 0);
+        } else {
+          circle(ctx, cx, p.y, r * 0.45);
+        }
+        ctx.fill();
+        ctx.restore();
+
+        // Сама 3D Золотая Монетка
+        drawCoin3D(ctx, cx, cy, r, c.phase, clamp((1 - c.z) * 3.0, 0.25, 1));
+
+        // Проверка ловли монетки руками (gloves) или корпусом в зоне рецептора (z <= 0.28)
+        if (c.z <= 0.30 && c.z >= 0.02 && api.isPlaying) {
+          var caught = false;
+          for (var g = 0; g < gl.length; g++) {
+            if (gl[g] && fin(gl[g].x) && fin(gl[g].y)) {
+              var d = Math.hypot(gl[g].x - cx, gl[g].y - cy);
+              if (d <= r * 1.95) { caught = true; break; }
+            }
+          }
+          var playerLane = B.cx < 0.38 ? 0 : (B.cx > 0.62 ? 2 : 1);
+          if (!caught && c.z <= 0.18 && playerLane === c.lane) caught = true;
+
+          if (caught) {
+            api.addScore(35, cx, cy, '+35 🪙 МОНЕТКА!');
+            popText(this, now, '+35 🪙', cx, cy - r * 1.3, COL.gold, bigPx(api, 0.055));
+            api.particles(cx, cy, COL.gold, 16);
+            api.sfx.hit(false);
+            this.coins.splice(i, 1);
+          }
+        }
+      }
     },
     drawSparks: function (api) {
       var ctx = api.ctx, k = api.dt / 16.67;
@@ -3073,6 +3535,10 @@ window.playKatanaSlashSound = playKatanaSlashSound;
           if (B.kneeY !== null) this.base.knee = this.base.knee === null ? B.kneeY : lerp(this.base.knee, B.kneeY, a);
         }
         if (!busy && api.isPlaying && now >= this.nextAt) this.spawn(api);
+        if (api.isPlaying && now >= this.nextCoinAt) {
+          this.spawnCoin(api);
+          this.nextCoinAt = now + 1350;
+        }
 
         for (var i = this.beams.length - 1; i >= 0; i--) {
           var bm = this.beams[i], t = now - bm.t0;
@@ -3109,36 +3575,37 @@ window.playKatanaSlashSound = playKatanaSlashSound;
           }
         }
         this.drawBaseline(api, B);
+        this.drawCoinsAndCatch(api, B);
         for (var j = 0; j < this.beams.length; j++) this.drawBeam(api, this.beams[j]);
         this.drawSparks(api);
         // survived counter (small, top-right)
         glowText(ctx, 'x' + this.survived, w * 0.95, topY(api) + bigPx(api, 0.045) * 0.7, bigPx(api, 0.045), COL.cyan, 0.9, 'right');
         drawFx(api, this);
         drawFlash(api, this);
-        drawBanner(api, this, 'LASER MATRIX', B.real ?
-          ['Низкий луч — ПРЫГАЙ', 'Высокий луч — ПРИСЯДЬ', 'Вертикальный — ШАГ В СТОРОНУ'] :
-          ['Без камеры: руки ВВЕРХ = прыжок', 'Руки ВНИЗ = присед, руки в сторону = шаг'], COL.crimson);
+        drawBanner(api, this, 'LASER MATRIX 3D', B.real ?
+          ['Лазеры и 🪙 Монетки катятся по 3 трапециям!', 'Низкий — ПРЫГАЙ, Высокий — ПРИСЯДЬ, Лови 🪙 руками!'] :
+          ['Лазеры и 🪙 Монетки катятся по 3 трапециям!', 'Руки ВВЕРХ = прыжок, ВНИЗ = присед, лови 🪙 монетки!'], COL.crimson);
       } catch (e) { reportErr(api, this, e); }
     }
   };
 
   // ==========================================================================
-  // 3. RHYTHM DOJO
+  // 3. RHYTHM DOJO 3D (Бит-Диски и 🪙 Золотые Монетки катятся по 3 трапециям!)
   // ==========================================================================
-  var ZCOLS = [1 / 6, 3 / 6, 5 / 6], ZROWS = [0.32, 0.70];
+  var ZCOLS = [0.22, 0.50, 0.78], ZROWS = [0.36, 0.76];
   AG.beatdojo = {
     id: 'beatdojo', title: 'RHYTHM DOJO', icon: '🥁', hands: 'gloves',
     reset: function (api) {
       fxInit(this);
       this.t0 = api ? api.now : 0;
       this.beatMs = 600; // 100 BPM
-      this.songStart = this.t0 + 2400;
+      this.songStart = this.t0 + 2000;
       this.targets = [];
       this.rings = [];
       this.hits = 0;
       this.missStreak = 0;
       this.spawned = 0;
-      this.nextBeat = 4; // first target hits on beat 4 after start
+      this.nextBeat = 3; // first target hits on beat 3 after start
       this.lastZone = -1;
       this.lastBeatIdx = -1;
       this.glovePrev = {};
@@ -3149,12 +3616,38 @@ window.playKatanaSlashSound = playKatanaSlashSound;
       var n = this.hits;
       return {
         every: n < 10 ? 2 : (n < 24 ? 2 : 1),
-        approach: n < 10 ? 1300 : (n < 24 ? 1200 : 1050),
-        maxVis: n < 24 ? 2 : 3,
+        approach: n < 10 ? 1500 : (n < 24 ? 1350 : 1150),
+        maxVis: n < 24 ? 3 : 4,
         cross: n >= 30 ? 0.25 : 0
       };
     },
     radius: function (api) { return Math.max(34, Math.min(api.w, api.h) * 0.085); },
+    // Проекция положения монетки/бит-диска, катящегося по одной из 3 трапеций из глубины (z=1.0) к переднему краю (z=0.14)
+    projectBeatTarget: function (api, tg, now) {
+      var w = api.w, h = api.h;
+      var col = tg.zone % 3, row = Math.floor(tg.zone / 3);
+      var tt = tg.hitT - now;
+      var prog = clamp(1 - tt / Math.max(1, tg.appr), 0, 1.08);
+      var zDepth = clamp(1.0 - prog * 0.86, 0.04, 1.0); // В момент удара (prog=1) находится на широком крае трапеции z=0.14!
+      var pTrap = projTrap(col, zDepth, w, h);
+      var baseR = this.radius(api);
+      var r = Math.max(12, baseR * pTrap.scale);
+      // Нижний ряд (row=1) катится прямо по полотну трапеции, верхний ряд (row=0) летит над трапецией с параболой
+      var lift = row === 1
+        ? (r * 0.65 + Math.abs(Math.sin(prog * Math.PI * 4)) * r * 0.35)
+        : (h * 0.26 * pTrap.scale + Math.sin(prog * Math.PI) * h * 0.08);
+      return {
+        x: pTrap.x,
+        y: pTrap.y - lift,
+        floorY: pTrap.y,
+        r: r,
+        scale: pTrap.scale,
+        z: zDepth,
+        prog: prog,
+        col: col,
+        row: row
+      };
+    },
     spawnDue: function (api) {
       var lv = this.level(), now = api.now;
       var hitT = this.songStart + this.nextBeat * this.beatMs;
@@ -3166,23 +3659,39 @@ window.playKatanaSlashSound = playKatanaSlashSound;
       do { zone = Math.floor(Math.random() * 6); } while ((zone === this.lastZone) && g++ < 6);
       this.lastZone = zone;
       var col = zone % 3, row = Math.floor(zone / 3);
-      var color = col === 0 ? 'left' : (col === 2 ? 'right' : 'any');
-      if (lv.cross && color !== 'any' && Math.random() < lv.cross) color = color === 'left' ? 'right' : 'left';
+      var isCoin = row === 1 || Math.random() < 0.45;
+      var color = isCoin ? 'any' : (col === 0 ? 'left' : (col === 2 ? 'right' : 'any'));
+      if (!isCoin && lv.cross && color !== 'any' && Math.random() < lv.cross) color = color === 'left' ? 'right' : 'left';
       if (this.hits < 4 && col === 1) color = 'any';
       this.spawned++;
-      this.targets.push({ id: this.spawned, zone: zone, x: ZCOLS[col], y: ZROWS[row], color: color, hitT: hitT, appr: lv.approach, done: false, res: '', tDone: 0 });
+      this.targets.push({
+        id: this.spawned,
+        zone: zone,
+        x: ZCOLS[col],
+        y: ZROWS[row],
+        color: color,
+        isCoin: isCoin,
+        hitT: hitT,
+        appr: lv.approach,
+        done: false,
+        res: '',
+        tDone: 0
+      });
       this.nextBeat += lv.every;
     },
     tcolor: function (c) { return c === 'left' ? COL.blue : (c === 'right' ? COL.red : COL.gold); },
     resolve: function (api, tg, res, gl) {
-      var w = api.w, h = api.h, x = tg.x * w, y = tg.y * h, now = api.now, col = this.tcolor(tg.color);
+      var w = api.w, h = api.h, now = api.now, col = this.tcolor(tg.color);
+      var proj = this.projectBeatTarget(api, tg, now);
+      var x = proj.x, y = proj.y;
       tg.done = true; tg.res = res; tg.tDone = now;
       if (res === 'perfect' || res === 'good') {
         var perfect = res === 'perfect';
         this.hits++; this.missStreak = 0;
-        api.addScore(perfect ? 100 : 50, x, y, perfect ? 'ИДЕАЛЬНО' : 'ХОРОШО');
-        popText(this, now, perfect ? 'ИДЕАЛЬНО' : 'ХОРОШО', x, y - this.radius(api) * 1.6, perfect ? COL.gold : COL.jade, bigPx(api, 0.06));
-        api.particles(x, y, col, perfect ? 22 : 12);
+        var labelHit = tg.isCoin ? '+100 🪙 МОНЕТКА!' : (perfect ? 'ИДЕАЛЬНО!' : 'ХОРОШО!');
+        api.addScore(perfect ? 100 : 60, x, y, labelHit);
+        popText(this, now, labelHit, x, y - this.radius(api) * 1.3, perfect || tg.isCoin ? COL.gold : COL.jade, bigPx(api, 0.058));
+        api.particles(x, y, col, perfect ? 22 : 14);
         if (perfect) api.particles(x, y, '#ffffff', 8);
         api.sfx.hit(false);
         api.shake(perfect ? 6 : 3);
@@ -3190,12 +3699,12 @@ window.playKatanaSlashSound = playKatanaSlashSound;
       } else if (res === 'wrong') {
         this.missStreak = 0;
         api.comboReset();
-        popText(this, now, 'НЕ ТА РУКА', x, y - this.radius(api) * 1.6, COL.crimson, bigPx(api, 0.05));
+        popText(this, now, 'НЕ ТА РУКА', x, y - this.radius(api) * 1.4, COL.crimson, bigPx(api, 0.05));
         api.particles(x, y, '#888888', 8);
       } else { // miss
         this.missStreak++;
         api.comboReset();
-        popText(this, now, 'МИМО', x, y - this.radius(api) * 1.6, '#9aa4b8', bigPx(api, 0.05));
+        popText(this, now, 'МИМО', x, y - this.radius(api) * 1.4, '#9aa4b8', bigPx(api, 0.05));
         if (this.missStreak >= 3) {
           this.missStreak = 0;
           api.loseLife(x, y, '3 ПРОМАХА');
@@ -3209,52 +3718,83 @@ window.playKatanaSlashSound = playKatanaSlashSound;
     drawZones: function (api, pulse) {
       var ctx = api.ctx, w = api.w, h = api.h, r = this.radius(api);
       ctx.save();
-      ctx.lineWidth = 2;
-      for (var z = 0; z < 6; z++) {
-        var x = ZCOLS[z % 3] * w, y = ZROWS[Math.floor(z / 3)] * h;
-        ctx.strokeStyle = hexA(COL.cyan, 0.10 + 0.12 * pulse);
+      ctx.lineWidth = 2.5;
+      // 3 передних 3D-кольца зоны ловли монеток и удара на широком крае каждой из 3 трапеций (z=0.14)
+      var zCatch = 0.14;
+      var laneColors = [COL.blue, COL.gold, COL.red];
+      for (var c = 0; c < 3; c++) {
+        var pCatch = projTrap(c, zCatch, w, h);
+        var rx = pCatch.laneW * 0.34;
+        var ry = rx * 0.32;
+        ctx.strokeStyle = hexA(laneColors[c], 0.45 + 0.35 * pulse);
         ctx.beginPath();
-        for (var k = 0; k < 6; k++) { // hexagon marker
-          var a = Math.PI / 6 + k * Math.PI / 3, rx = x + Math.cos(a) * r * 1.15, ry = y + Math.sin(a) * r * 1.15;
-          if (k === 0) ctx.moveTo(rx, ry); else ctx.lineTo(rx, ry);
+        if (window.ArenaVisuals && window.ArenaVisuals.ellipse) {
+          window.ArenaVisuals.ellipse(ctx, pCatch.x, pCatch.y - r * 0.55, rx, ry, 0);
+        } else {
+          circle(ctx, pCatch.x, pCatch.y - r * 0.55, rx * 0.65);
         }
-        ctx.closePath(); ctx.stroke();
+        ctx.stroke();
       }
       ctx.restore();
     },
     drawTarget: function (api, tg) {
-      var ctx = api.ctx, w = api.w, h = api.h, r = this.radius(api), now = api.now;
-      var x = tg.x * w, y = tg.y * h, col = this.tcolor(tg.color);
-      var tt = tg.hitT - now; // ms until perfect
-      var appear = clamp(1 - (tt - tg.appr * 0.85) / (tg.appr * 0.15), 0, 1);
-      var near = Math.abs(tt) < 160;
+      var ctx = api.ctx, w = api.w, h = api.h, now = api.now;
+      var proj = this.projectBeatTarget(api, tg, now);
+      var x = proj.x, y = proj.y, r = proj.r, col = this.tcolor(tg.color);
+      var tt = tg.hitT - now;
+      var appear = clamp(proj.prog * 3.2, 0.2, 1);
+      var near = Math.abs(tt) < 200;
+
       ctx.save();
       ctx.globalAlpha = appear;
-      // glow halo
-      var g = radGrad(ctx, x, y, r * 0.3, r * (near ? 2.1 : 1.7));
-      g.addColorStop(0, hexA(col, near ? 0.55 : 0.35)); g.addColorStop(1, hexA(col, 0));
-      ctx.fillStyle = g; ctx.beginPath(); circle(ctx, x, y, r * (near ? 2.1 : 1.7)); ctx.fill();
-      // body disc
-      var d = radGrad(ctx, x - r * 0.3, y - r * 0.35, r * 0.1, r * 1.05);
-      d.addColorStop(0, '#ffffff'); d.addColorStop(0.25, col); d.addColorStop(1, hexA(col, 0.35));
-      ctx.fillStyle = d; ctx.beginPath(); circle(ctx, x, y, r); ctx.fill();
-      ctx.lineWidth = Math.max(3, r * 0.1); ctx.strokeStyle = near ? '#ffffff' : 'rgba(255,255,255,0.75)';
-      ctx.stroke();
-      ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(255,255,255,0.45)';
-      ctx.beginPath(); circle(ctx, x, y, r * 0.62); ctx.stroke();
+
+      // 1. Тень на полотне трапециевидной дорожки + вертикальный лазерный перпендикуляр к монетке/диску
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.48)';
+      ctx.beginPath();
+      if (window.ArenaVisuals && window.ArenaVisuals.ellipse) {
+        window.ArenaVisuals.ellipse(ctx, x, proj.floorY, r * 0.88, Math.max(3, r * 0.25), 0);
+      } else {
+        circle(ctx, x, proj.floorY, r * 0.45);
+      }
+      ctx.fill();
+
+      if (proj.floorY > y + r * 0.4) {
+        ctx.strokeStyle = hexA(col, 0.38);
+        ctx.lineWidth = Math.max(1.5, 2.5 * proj.scale);
+        ctx.setLineDash([5, 6]);
+        ctx.beginPath();
+        ctx.moveTo(x, y + r * 0.5);
+        ctx.lineTo(x, proj.floorY);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+
+      if (tg.isCoin) {
+        // 2A. 3D ЗОЛОТАЯ МОНЕТКА (🪙 Катится по трапециевидной дорожке на игрока!)
+        drawCoin3D(ctx, x, y, r * 1.05, now * 0.007 + tg.id, appear);
+      } else {
+        // 2B. 3D БИТ-ДИСК С ОБОДОМ И НАПРАВЛЕННЫМ ОСВЕЩЕНИЕМ
+        var g = radGrad(ctx, x, y, r * 0.3, r * (near ? 2.1 : 1.7));
+        g.addColorStop(0, hexA(col, near ? 0.55 : 0.35)); g.addColorStop(1, hexA(col, 0));
+        ctx.fillStyle = g; ctx.beginPath(); circle(ctx, x, y, r * (near ? 2.1 : 1.7)); ctx.fill();
+
+        var d = radGrad(ctx, x - r * 0.3, y - r * 0.35, r * 0.1, r * 1.05);
+        d.addColorStop(0, '#ffffff'); d.addColorStop(0.25, col); d.addColorStop(1, hexA(col, 0.35));
+        ctx.fillStyle = d; ctx.beginPath(); circle(ctx, x, y, r); ctx.fill();
+        ctx.lineWidth = Math.max(3, r * 0.1); ctx.strokeStyle = near ? '#ffffff' : 'rgba(255,255,255,0.75)';
+        ctx.stroke();
+        var label = tg.color === 'left' ? 'Л' : (tg.color === 'right' ? 'П' : '★');
+        glowText(ctx, label, x, y + r * 0.04, Math.max(18, r * 0.82), '#ffffff', appear);
+      }
       ctx.restore();
-      var label = tg.color === 'left' ? 'Л' : (tg.color === 'right' ? 'П' : '★');
-      glowText(ctx, label, x, y + r * 0.04, Math.max(28, r * 0.85), '#ffffff', appear);
-      // approach ring
-      if (tt > -120) {
+
+      // Сходящееся 3D-кольцо синхронизации удара/ловли
+      if (tt > -140) {
         var k = clamp(tt / tg.appr, 0, 1);
-        var rr = r * (1 + 2.3 * k);
+        var rr = r * (1 + 1.65 * k);
         ctx.save();
         ctx.globalAlpha = clamp(0.35 + (1 - k) * 0.65, 0, 1) * appear;
-        ctx.lineWidth = Math.max(4, r * 0.12) + 7;
-        ctx.strokeStyle = 'rgba(4,6,14,0.7)';
-        ctx.beginPath(); circle(ctx, x, y, rr); ctx.stroke();
-        ctx.lineWidth = Math.max(5, r * 0.14);
+        ctx.lineWidth = Math.max(3, r * 0.12);
         ctx.strokeStyle = near ? '#ffffff' : col;
         ctx.shadowColor = col; ctx.shadowBlur = near ? 18 : 8;
         ctx.beginPath(); circle(ctx, x, y, rr); ctx.stroke();
@@ -3306,28 +3846,32 @@ window.playKatanaSlashSound = playKatanaSlashSound;
         this.drawZones(api, sT > 0 ? pulse : 0);
         if (api.isPlaying) this.spawnDue(api);
 
-        // hit detection
+        // hit detection along the 3 Trapezoidal Lanes
         var gl = api.gloves || [], r = this.radius(api);
         for (var gi = 0; gi < gl.length; gi++) {
           var g = gl[gi];
           if (!g || !fin(g.x) || !fin(g.y)) continue;
           var sp = fin(g.speed) ? g.speed : 0;
-          if (sp < 8 || !api.isPlaying) continue;
+          if (!api.isPlaying) continue;
           if (this.cool[g.id] && now < this.cool[g.id]) continue;
           var best = null, bestTT = 1e9;
           for (var ti = 0; ti < this.targets.length; ti++) {
             var tg = this.targets[ti];
             if (tg.done) continue;
-            var dx = g.x - tg.x * w, dy = g.y - tg.y * h;
-            if (dx * dx + dy * dy > (r * 1.35) * (r * 1.35)) continue;
+            // Coins can be caught with hand contact (lower speed threshold); beat discs require a strike
+            if (!tg.isCoin && sp < 7) continue;
+            var proj = this.projectBeatTarget(api, tg, now);
+            var dx = g.x - proj.x, dy = g.y - proj.y;
+            var hitRad = tg.isCoin ? r * 1.48 : r * 1.38;
+            if (dx * dx + dy * dy > hitRad * hitRad) continue;
             var tt = tg.hitT - now;
-            if (tt > 480 || tt < -300) continue;
+            if (tt > 520 || tt < -320) continue;
             if (Math.abs(tt) < Math.abs(bestTT)) { best = tg; bestTT = tt; }
           }
           if (best) {
-            this.cool[g.id] = now + 160;
-            if (best.color !== 'any' && best.color !== g.id) this.resolve(api, best, 'wrong', g);
-            else this.resolve(api, best, Math.abs(bestTT) < 150 ? 'perfect' : 'good', g);
+            this.cool[g.id] = now + 150;
+            if (!best.isCoin && best.color !== 'any' && best.color !== g.id) this.resolve(api, best, 'wrong', g);
+            else this.resolve(api, best, Math.abs(bestTT) < 160 ? 'perfect' : 'good', g);
           }
         }
         // misses + cleanup
@@ -3338,16 +3882,17 @@ window.playKatanaSlashSound = playKatanaSlashSound;
           }
           if (t2.done && now - t2.tDone > 250) this.targets.splice(mi, 1);
         }
-        // draw: later targets underneath, soonest on top
+        // draw: farther targets (later hitT) underneath, closest on top
         var order = this.targets.slice().sort(function (a, b) { return b.hitT - a.hitT; });
         for (var di = 0; di < order.length; di++) {
           var tg2 = order[di];
           if (tg2.done) {
             var k = clamp((now - tg2.tDone) / 250, 0, 1);
             if (tg2.res === 'perfect' || tg2.res === 'good') continue;
+            var pMiss = this.projectBeatTarget(api, tg2, tg2.hitT);
             ctx.save(); ctx.globalAlpha = 1 - k;
             ctx.strokeStyle = tg2.res === 'wrong' ? COL.crimson : '#5a6478'; ctx.lineWidth = 4;
-            ctx.beginPath(); circle(ctx, tg2.x * w, tg2.y * h, r * (1 - 0.3 * k)); ctx.stroke();
+            ctx.beginPath(); circle(ctx, pMiss.x, pMiss.y, r * (1 - 0.3 * k)); ctx.stroke();
             ctx.restore();
           } else this.drawTarget(api, tg2);
         }
@@ -3358,7 +3903,7 @@ window.playKatanaSlashSound = playKatanaSlashSound;
         }
         drawFx(api, this);
         drawFlash(api, this);
-        drawBanner(api, this, 'RHYTHM DOJO', ['Бей мишень, когда кольцо сожмётся', 'СИНЯЯ — левой, КРАСНАЯ — правой, ★ — любой'], COL.gold);
+        drawBanner(api, this, 'RHYTHM DOJO 3D', ['По 3 дорожкам-трапециям катятся диски и 🪙 МОНЕТКИ', 'СИНЯЯ — левой, КРАСНАЯ — правой, 🪙 МОНЕТКА — лови любой рукой!'], COL.gold);
       } catch (e) { reportErr(api, this, e); }
     }
   };
@@ -3714,29 +4259,210 @@ window.playKatanaSlashSound = playKatanaSlashSound;
 
     build3DArenaEnvironment() {
       this.floorGridTex = this.createNeonFloorTexture();
-      const floorGeo = new THREE.PlaneGeometry(26, 60);
-      const floorMat = new THREE.MeshStandardMaterial({
-        color: 0xffffff,
-        map: this.floorGridTex,
-        roughness: 0.20,
-        metalness: 0.35,
-        bumpMap: this.floorGridTex,
-        bumpScale: 0.015
+
+      // 1. Тёмное зеркально-обсидиановое основание арены вокруг трассы
+      const subFloorGeo = new THREE.PlaneGeometry(36, 70);
+      const subFloorMat = new THREE.MeshStandardMaterial({
+        color: 0x050711,
+        roughness: 0.35,
+        metalness: 0.55
       });
-      const floorMesh = new THREE.Mesh(floorGeo, floorMat);
-      floorMesh.rotation.x = -Math.PI / 2;
-      floorMesh.position.set(0, 0, -14);
-      floorMesh.receiveShadow = true;
-      this.scene.add(floorMesh);
+      const subFloorMesh = new THREE.Mesh(subFloorGeo, subFloorMat);
+      subFloorMesh.rotation.x = -Math.PI / 2;
+      subFloorMesh.position.set(0, -0.03, -12);
+      subFloorMesh.receiveShadow = true;
+      this.scene.add(subFloorMesh);
 
-      const railGeo = new THREE.BoxGeometry(0.14, 0.14, 52);
-      const leftRail = new THREE.Mesh(railGeo, new THREE.MeshBasicMaterial({ color: 0x00f0ff }));
-      leftRail.position.set(-4.6, 0.08, -14);
-      this.scene.add(leftRail);
+      // ======================================================================
+      // 2. ТРИ 3D-ДОРОГИ В ФОРМЕ ТРАПЕЦИЙ С НАПРАВЛЯЮЩИМИ РЕЛЬСАМИ И БОРТИКАМИ
+      // (Узкий дальний край у ворот Тории zFar=-21.0 -> Широкий передний край zNear=+2.2)
+      // Все 3 трапеции и все 4 светящиеся направляющие 100% видны в кадре камеры!
+      // ======================================================================
+      const zFar = -21.0;
+      const zNear = 2.2;
+      const halfFar = 1.05; // Общая полуширина 3 дорожек вдалеке (узкое основание трапеции)
+      const halfNear = 2.34; // Общая полуширина 3 дорожек спереди (широкое основание трапеции)
 
-      const rightRail = new THREE.Mesh(railGeo, new THREE.MeshBasicMaterial({ color: 0xff1e78 }));
-      rightRail.position.set(4.6, 0.08, -14);
-      this.scene.add(rightRail);
+      const laneConfigs = [
+        { idx: 0, color: 0x00f0ff, emissive: 0x042f4b, padColor: 0x00f0ff }, // Левая трапеция (Cyan)
+        { idx: 1, color: 0xffb800, emissive: 0x3b2506, padColor: 0xffb800 }, // Центральная трапеция (Gold)
+        { idx: 2, color: 0xff2a5f, emissive: 0x450a1f, padColor: 0xff2a5f }  // Правая трапеция (Crimson)
+      ];
+
+      this.laneDeckMeshes = [];
+      this.laneReceptorPads = [];
+      this.highwayCrossBars = [];
+
+      const makeTrapezoidStripGeo = (xFarL, xFarR, xNearL, xNearR, yLevel) => {
+        const geo = new THREE.BufferGeometry();
+        const vertices = new Float32Array([
+          xFarL,  yLevel, zFar,
+          xFarR,  yLevel, zFar,
+          xNearR, yLevel, zNear,
+          xFarL,  yLevel, zFar,
+          xNearR, yLevel, zNear,
+          xNearL, yLevel, zNear
+        ]);
+        const uvs = new Float32Array([
+          0, 1,
+          1, 1,
+          1, 0,
+          0, 1,
+          1, 0,
+          0, 0
+        ]);
+        geo.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+        geo.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
+        geo.computeVertexNormals();
+        return geo;
+      };
+
+      for (let i = 0; i < 3; i++) {
+        const f0 = -1 + (i / 3) * 2;
+        const f1 = -1 + ((i + 1) / 3) * 2;
+        const xFarL = f0 * halfFar;
+        const xFarR = f1 * halfFar;
+        const xNearL = f0 * halfNear;
+        const xNearR = f1 * halfNear;
+
+        const stripGeo = makeTrapezoidStripGeo(xFarL, xFarR, xNearL, xNearR, 0.01);
+        const stripMat = new THREE.MeshStandardMaterial({
+          color: 0x10192e,
+          emissive: laneConfigs[i].emissive,
+          emissiveIntensity: 0.95,
+          map: this.floorGridTex,
+          roughness: 0.22,
+          metalness: 0.45
+        });
+        const stripMesh = new THREE.Mesh(stripGeo, stripMat);
+        stripMesh.receiveShadow = true;
+        stripMesh.frustumCulled = false;
+        this.scene.add(stripMesh);
+        this.laneDeckMeshes.push(stripMesh);
+
+        // Продольная светящаяся осевая линия внутри каждой из 3 трапеций
+        const midFarX = (xFarL + xFarR) * 0.5;
+        const midNearX = (xNearL + xNearR) * 0.5;
+        const centerCurve = new THREE.LineCurve3(
+          new THREE.Vector3(midFarX, 0.025, zFar),
+          new THREE.Vector3(midNearX, 0.025, zNear)
+        );
+        const centerLineGeo = new THREE.TubeGeometry(centerCurve, 1, 0.018, 6, false);
+        const centerLineMesh = new THREE.Mesh(
+          centerLineGeo,
+          new THREE.MeshBasicMaterial({
+            color: laneConfigs[i].color,
+            transparent: true,
+            opacity: 0.48
+          })
+        );
+        centerLineMesh.frustumCulled = false;
+        this.scene.add(centerLineMesh);
+
+        // Передняя круглая площадка-рецептор («Зона Ловли Монеток и Удара») на широком крае каждой трапеции (z = 0.65)
+        const zPad = 0.65;
+        const padProgress = (zPad - zFar) / (zNear - zFar);
+        const padX = midFarX + (midNearX - midFarX) * padProgress;
+        const padGroup = new THREE.Group();
+        padGroup.position.set(padX, 0.03, zPad);
+
+        const padRing = new THREE.Mesh(
+          new THREE.RingGeometry(0.28, 0.42, 32),
+          new THREE.MeshBasicMaterial({
+            color: laneConfigs[i].padColor,
+            side: THREE.DoubleSide
+          })
+        );
+        padRing.rotation.x = -Math.PI / 2;
+        padGroup.add(padRing);
+
+        const padCore = new THREE.Mesh(
+          new THREE.CircleGeometry(0.26, 28),
+          new THREE.MeshBasicMaterial({
+            color: laneConfigs[i].padColor,
+            transparent: true,
+            opacity: 0.25,
+            side: THREE.DoubleSide
+          })
+        );
+        padCore.rotation.x = -Math.PI / 2;
+        padGroup.add(padCore);
+
+        this.scene.add(padGroup);
+        this.laneReceptorPads.push(padGroup);
+      }
+
+      // 3. ЧЕТЫРЕ ЯРКИХ НЕОНОВЫХ 3D-РЕЛЬСА (Направляющие трапеций: k = 0, 1, 2, 3)
+      const railPalette = [0x00f0ff, 0xffb800, 0xffb800, 0xff2a5f];
+      for (let k = 0; k <= 3; k++) {
+        const frac = -1 + (k / 3) * 2;
+        const rFarX = frac * halfFar;
+        const rNearX = frac * halfNear;
+        const isOuter = k === 0 || k === 3;
+
+        const railCurve = new THREE.LineCurve3(
+          new THREE.Vector3(rFarX, 0.055, zFar),
+          new THREE.Vector3(rNearX, 0.055, zNear)
+        );
+        const railRadius = isOuter ? 0.055 : 0.038;
+        const railMesh = new THREE.Mesh(
+          new THREE.TubeGeometry(railCurve, 1, railRadius, 10, false),
+          new THREE.MeshBasicMaterial({ color: railPalette[k] })
+        );
+        railMesh.frustumCulled = false;
+        this.scene.add(railMesh);
+
+        // Белое яркое ядро поверх каждого направляющего рельса
+        const coreCurve = new THREE.LineCurve3(
+          new THREE.Vector3(rFarX, 0.085, zFar),
+          new THREE.Vector3(rNearX, 0.085, zNear)
+        );
+        const coreMesh = new THREE.Mesh(
+          new THREE.TubeGeometry(coreCurve, 1, railRadius * 0.42, 8, false),
+          new THREE.MeshBasicMaterial({ color: 0xffffff })
+        );
+        coreMesh.frustumCulled = false;
+        this.scene.add(coreMesh);
+
+        // Внешние 3D-бортики трассы (придают дорожному полотну реальную высоту)
+        if (isOuter) {
+          const curbSign = k === 0 ? -1 : 1;
+          const curbCurve = new THREE.LineCurve3(
+            new THREE.Vector3(rFarX + curbSign * 0.14, 0.14, zFar),
+            new THREE.Vector3(rNearX + curbSign * 0.18, 0.18, zNear)
+          );
+          const curbMesh = new THREE.Mesh(
+            new THREE.TubeGeometry(curbCurve, 1, 0.09, 8, false),
+            this.createArcaneMaterial({
+              color: 0x162038,
+              rimLeft: 0x00f0ff,
+              rimRight: 0xff2a5f,
+              roughness: 0.35,
+              metalness: 0.65
+            })
+          );
+          curbMesh.frustumCulled = false;
+          this.scene.add(curbMesh);
+        }
+      }
+
+      // 4. Движущиеся на зрителя поперечные световые шпалы и 3D-шевроны вдоль 3 трапеций
+      const numBars = 14;
+      for (let b = 0; b < numBars; b++) {
+        const barGroup = new THREE.Group();
+        const barGeo = new THREE.BoxGeometry(1.0, 0.024, 0.08);
+        const barMat = new THREE.MeshBasicMaterial({
+          color: b % 2 === 0 ? 0x00f0ff : 0xffb800,
+          transparent: true,
+          opacity: 0.55
+        });
+        const barMesh = new THREE.Mesh(barGeo, barMat);
+        barGroup.add(barMesh);
+        barGroup.userData.phaseOffset = b / numBars;
+        barGroup.userData.barMesh = barMesh;
+        this.scene.add(barGroup);
+        this.highwayCrossBars.push(barGroup);
+      }
 
       const pillarGeo = new THREE.CylinderGeometry(0.24, 0.30, 5.8, 12);
       const pillarMat = this.createArcaneMaterial({
@@ -3748,7 +4474,7 @@ window.playKatanaSlashSound = playKatanaSlashSound;
       const lanternGeo = new THREE.OctahedronGeometry(0.26, 0);
 
       [-4.5, -10.5, -16.5, -22.5].forEach((zPos, idx) => {
-        [-5.2, 5.2].forEach((xPos, sideIdx) => {
+        [-4.8, 4.8].forEach((xPos, sideIdx) => {
           const p = new THREE.Mesh(pillarGeo, pillarMat);
           p.position.set(xPos, 2.9, zPos);
           p.castShadow = true;
@@ -4294,7 +5020,54 @@ window.playKatanaSlashSound = playKatanaSlashSound;
       const bodyGroup = new THREE.Group();
       group.add(bodyGroup);
 
-      if (obj.isBomb) {
+      if (obj.isCoin) {
+        // ====================================================================
+        // 3D ЗОЛОТАЯ МОНЕТКА (🪙 Катится по одной из 3 трапециевидных дорог!)
+        // ====================================================================
+        const goldMat = this.createArcaneMaterial({
+          color: 0xfbbf24,
+          emissive: 0x78350f,
+          emissiveIntensity: 0.9,
+          rimLeft: 0xffffff,
+          rimRight: 0xfde047,
+          roughness: 0.16,
+          metalness: 0.92
+        });
+        const coinDisc = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.46, 0.46, 0.13, 32),
+          goldMat
+        );
+        coinDisc.rotation.x = Math.PI / 2;
+        coinDisc.castShadow = true;
+        this.addInkOutline(coinDisc, 0.02);
+        bodyGroup.add(coinDisc);
+
+        // Чеканный золотой обод по краю 3D-монеты
+        const rimTorus = new THREE.Mesh(
+          new THREE.TorusGeometry(0.45, 0.052, 12, 32),
+          new THREE.MeshBasicMaterial({ color: 0xfef08a })
+        );
+        bodyGroup.add(rimTorus);
+
+        // Внутренняя кибер-эмблема (кристалл на обеих сторонах монетки)
+        const starGem = new THREE.Mesh(
+          new THREE.OctahedronGeometry(0.22, 0),
+          new THREE.MeshBasicMaterial({ color: 0xffffff })
+        );
+        starGem.scale.set(1, 1, 0.65);
+        bodyGroup.add(starGem);
+
+        const lockRing = new THREE.Mesh(
+          new THREE.TorusGeometry(0.62, 0.026, 10, 32),
+          new THREE.MeshBasicMaterial({
+            color: 0xfbbf24,
+            transparent: true,
+            opacity: 0.78
+          })
+        );
+        bodyGroup.add(lockRing);
+        group.userData.lockRing = lockRing;
+      } else if (obj.isBomb) {
         const coreMat = this.createArcaneMaterial({
           color: 0x1e293b,
           emissive: 0x450a0a,
@@ -4431,13 +5204,25 @@ window.playKatanaSlashSound = playKatanaSlashSound;
       const lane = (LANES && LANES[obj.laneIdx]) || { col: 1, row: 0, arcLift: 0.16 };
       const progress = Math.max(0, Math.min(1.08, 1 - obj.z));
       const worldZ = -20.5 + progress * 21.8;
-      const targetX = (lane.col - 1) * 1.75;
-      const worldX = targetX * Math.pow(progress, 0.92);
-      const targetY = lane.row === 0 ? 2.02 : 1.14;
-      const startY = 3.15;
+
+      // Точная привязка к центрам 3 трапециевидных дорог (вдали узко ±0.70м, вблизи широко ±1.56м)
+      const colSign = (lane.col !== undefined ? lane.col : 1) - 1; // -1 (левая), 0 (центр), +1 (правая)
+      const laneCenterFar = colSign * 0.70;
+      const laneCenterNear = colSign * 1.56;
+      const worldX = laneCenterFar + (laneCenterNear - laneCenterFar) * progress;
+
+      if (obj.isCoin) {
+        // 3D Золотая Монетка катится прямо по полотну своей трапециевидной дорожки с упругим подпрыгиванием!
+        const bounce = Math.abs(Math.sin(progress * Math.PI * 5.0)) * 0.16 * (1 - progress * 0.35);
+        const worldY = 0.54 + bounce;
+        return { worldX, worldY, worldZ, progress, colIdx: colSign + 1 };
+      }
+
+      const targetY = lane.row === 0 ? 1.98 : 1.08;
+      const startY = 2.95;
       const parabola = 4 * progress * Math.max(0, 1 - progress * 0.92);
-      const worldY = startY + (targetY - startY) * progress + parabola * 1.35;
-      return { worldX, worldY, worldZ, progress };
+      const worldY = startY + (targetY - startY) * progress + parabola * (lane.row === 0 ? 1.25 : 0.55);
+      return { worldX, worldY, worldZ, progress, colIdx: colSign + 1 };
     },
 
     spawn3DSlicedHalves(obj, worldPos) {
@@ -4638,8 +5423,28 @@ window.playKatanaSlashSound = playKatanaSlashSound;
         this.innerPortalRingMesh.rotation.z = -elapsed * 1.4;
       }
 
+      // Анимация бегущих поперечных 3D-планок вдоль 3 трапециевидных дорог (zFar=-21.0 -> zNear=+2.2)
+      if (Array.isArray(this.highwayCrossBars)) {
+        const zFar = -21.0;
+        const zNear = 2.2;
+        const halfFar = 1.05;
+        const halfNear = 2.34;
+        for (let b = 0; b < this.highwayCrossBars.length; b++) {
+          const barGroup = this.highwayCrossBars[b];
+          const p = ((barGroup.userData.phaseOffset + elapsed * 0.28) % 1 + 1) % 1;
+          const zCur = zFar + (zNear - zFar) * p;
+          const fullW = (halfFar + (halfNear - halfFar) * p) * 2.0;
+          barGroup.position.set(0, 0.022, zCur);
+          barGroup.scale.set(fullW, 1, 1);
+          if (barGroup.userData.barMesh && barGroup.userData.barMesh.material) {
+            barGroup.userData.barMesh.material.opacity = Math.min(0.68, 0.08 + p * 0.62);
+          }
+        }
+      }
+
       this.updateCharacterPose(state, w, h, elapsed);
 
+      const laneActivity = [0, 0, 0];
       const activeObjs = new Set();
       if (saberEngine && Array.isArray(saberEngine.objects3D)) {
         for (let i = 0; i < saberEngine.objects3D.length; i++) {
@@ -4656,11 +5461,20 @@ window.playKatanaSlashSound = playKatanaSlashSound;
           obj._world3D = wp;
           group.position.set(wp.worldX, wp.worldY, wp.worldZ);
 
+          if (wp.colIdx >= 0 && wp.colIdx <= 2) {
+            laneActivity[wp.colIdx] = Math.max(laneActivity[wp.colIdx], wp.progress);
+          }
+
           const bodyGroup = group.userData.bodyGroup;
           if (bodyGroup) {
-            bodyGroup.rotation.x = elapsed * 2.2 + i;
-            bodyGroup.rotation.y = elapsed * 2.8 + (obj.rotation || 0);
-            bodyGroup.rotation.z = (obj.rotation || 0) * 0.7;
+            if (obj.isCoin) {
+              // Монетка вращается вертикально вокруг оси Y и катится вперёд по трапеции!
+              bodyGroup.rotation.set(0, elapsed * 4.6 + i * 1.2, Math.sin(elapsed * 5 + i) * 0.12);
+            } else {
+              bodyGroup.rotation.x = elapsed * 2.2 + i;
+              bodyGroup.rotation.y = elapsed * 2.8 + (obj.rotation || 0);
+              bodyGroup.rotation.z = (obj.rotation || 0) * 0.7;
+            }
           }
 
           if (group.userData.gyroRings) {
@@ -4668,10 +5482,12 @@ window.playKatanaSlashSound = playKatanaSlashSound;
             group.userData.gyroRings[1].rotation.y = -elapsed * 5.1;
           }
 
-          const isStrike = obj.z <= (saberEngine.STRIKE_Z || 0.32);
+          const isStrike = obj.z <= (saberEngine.STRIKE_Z || 0.34);
           if (group.userData.lockRing) {
-            group.userData.lockRing.material.color.setHex(isStrike ? 0x18e299 : 0x00f0ff);
-            group.userData.lockRing.material.opacity = isStrike ? 0.95 : 0.42;
+            group.userData.lockRing.material.color.setHex(
+              obj.isCoin ? 0xfbbf24 : isStrike ? 0x18e299 : 0x00f0ff
+            );
+            group.userData.lockRing.material.opacity = isStrike ? 0.95 : 0.52;
             const s = isStrike ? 1.15 + Math.sin(elapsed * 18) * 0.08 : 1.0;
             group.userData.lockRing.scale.set(s, s, s);
           }
@@ -4680,7 +5496,7 @@ window.playKatanaSlashSound = playKatanaSlashSound;
           if (shadowDisc) {
             shadowDisc.position.set(wp.worldX, 0.025, wp.worldZ);
             shadowDisc.material.color.setHex(
-              obj.isBomb ? 0xff3b4b : isStrike ? 0x18e299 : 0x00f0ff
+              obj.isBomb ? 0xff3b4b : obj.isCoin ? 0xfbbf24 : isStrike ? 0x18e299 : 0x00f0ff
             );
           }
           const laserTether = group.userData.laserTether;
@@ -4689,7 +5505,7 @@ window.playKatanaSlashSound = playKatanaSlashSound;
             laserTether.position.set(wp.worldX, hDist * 0.5, wp.worldZ);
             laserTether.scale.set(1, hDist, 1);
             laserTether.material.color.setHex(
-              obj.isBomb ? 0xff3b4b : isStrike ? 0x18e299 : 0x00f0ff
+              obj.isBomb ? 0xff3b4b : obj.isCoin ? 0xfbbf24 : isStrike ? 0x18e299 : 0x00f0ff
             );
           }
 
@@ -4702,6 +5518,21 @@ window.playKatanaSlashSound = playKatanaSlashSound;
           edgeVec.project(this.camera);
           const edgeScreenX = (edgeVec.x * 0.5 + 0.5) * w;
           obj._webglRadius = Math.max(18, Math.abs(edgeScreenX - obj._webglScreenX));
+        }
+      }
+
+      // Подсветка активной дорожки-трапеции и передней площадки-рецептора при качении монетки/цели
+      if (Array.isArray(this.laneDeckMeshes)) {
+        for (let l = 0; l < 3; l++) {
+          const deck = this.laneDeckMeshes[l];
+          if (deck && deck.material) {
+            deck.material.emissiveIntensity = 0.75 + laneActivity[l] * 1.15;
+          }
+          const pad = this.laneReceptorPads && this.laneReceptorPads[l];
+          if (pad) {
+            const sc = 1.0 + laneActivity[l] * 0.22 + Math.sin(elapsed * 6 + l) * 0.04;
+            pad.scale.set(sc, 1, sc);
+          }
         }
       }
 
