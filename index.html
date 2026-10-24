@@ -569,7 +569,7 @@ h1.game-title {
         <span id="hud-combo" class="hud-value green">—</span>
       </div>
       <div class="hud-stat">
-        <span class="hud-label">Сенсор (v5.0)</span>
+        <span class="hud-label">Сенсор (v7.0 3D)</span>
         <span id="hud-phone-status" class="hud-value" style="font-size: 16px; margin-top: 6px;">Код: ----</span>
       </div>
     </div>
@@ -4181,7 +4181,7 @@ function updateRoomBadges() {
 
   if (hudPhoneStatusEl) {
     if (performance.now() - state.lastRemotePacketAt < 4000) {
-      const modeTag = state.conn && state.conn.open ? 'P2P 60fps' : 'WSS v5.0';
+      const modeTag = state.conn && state.conn.open ? 'P2P 60fps' : 'WSS v7.0';
       hudPhoneStatusEl.textContent = `✅ ${modeTag} (${state.receivedFramesCount})`;
       hudPhoneStatusEl.style.color = '#18e299';
     } else {
