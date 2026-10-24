@@ -485,8 +485,8 @@ h1.game-title {
       <button id="btn-hud-exit" class="btn btn-secondary" type="button">
         ✕ Выход в меню
       </button>
-      <button id="btn-hud-switch-game" class="btn btn-blue" type="button">
-        ⚔️ Режим: 3D Сабли
+      <button id="btn-hud-switch-game" class="btn btn-gold" type="button">
+        🥊 Режим: 2D Бокс
       </button>
       <div class="hud-stat">
         <span class="hud-label">Счёт</span>
@@ -529,12 +529,12 @@ h1.game-title {
     <section class="modal-card">
       <div class="brand-header">
         <div class="brand-title-wrap">
-          <span class="glove-icon" aria-hidden="true">⚔️</span>
+          <span class="glove-icon" aria-hidden="true">🥊</span>
           <div>
             <h1 class="game-title">
               MOTION ARENA TV
               <span style="display: inline-block; font-size: 18px; background: var(--accent-gold); color: #0b0e14; padding: 5px 12px; border-radius: 8px; vertical-align: middle; margin-left: 8px; font-weight: 900;">
-                ВЕРСИЯ: v5.0 3D SABER
+                ВЕРСИЯ: v4.4 FIX / v5.0
               </span>
             </h1>
           </div>
@@ -546,16 +546,16 @@ h1.game-title {
 
       <!-- Game Mode Selector Bar -->
       <div style="display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap;">
-        <button id="btn-select-saber3d" class="btn btn-blue" style="flex: 1; padding: 14px 18px; font-size: 16px;" type="button">
-          ⚔️ Игра 1: 3D SABER SLICER (Из глубины в экран) ✓
+        <button id="btn-select-boxfruit" class="btn btn-gold" style="flex: 1; padding: 14px 18px; font-size: 16px;" type="button">
+          🥊 Игра 1: BOXFRUIT 2D (Боксёрские перчатки) ✓
         </button>
-        <button id="btn-select-boxfruit" class="btn btn-secondary" style="flex: 1; padding: 14px 18px; font-size: 16px;" type="button">
-          🥊 Игра 2: BOXFRUIT 2D (Боксёрские перчатки)
+        <button id="btn-select-saber3d" class="btn btn-secondary" style="flex: 1; padding: 14px 18px; font-size: 16px;" type="button">
+          ⚔️ Игра 2: 3D SABER SLICER (Сабли из 3D-глубины)
         </button>
       </div>
 
       <p id="selected-game-desc" class="game-subtitle" style="margin-bottom: 20px;">
-        <strong>Выбрана игра: ⚔️ 3D SABER SLICER.</strong> Предметы вылетают из глубины 3D-туннеля прямо на тебя и растут в размере — руби их светящимися плазменными саблями!
+        <strong>Выбрана игра: 🥊 BOXFRUIT 2D.</strong> Классический боксёрский поединок с яркими векторными фруктами, перчатками и минами (а рядом можно включить 3D Сабли!).
       </p>
 
       <div class="mode-grid">
@@ -1320,8 +1320,8 @@ const poseTracker = {
       const lm = poseLandmarks[idx];
       if (!lm) return null;
       return {
-        x: this.expandReachX(1 - lm.x),
-        y: this.expandReachY(lm.y),
+        x: Math.max(0.01, Math.min(0.99, 1 - lm.x)),
+        y: Math.max(0.01, Math.min(0.99, lm.y)),
         v: lm.visibility !== undefined ? lm.visibility : 1.0
       };
     };
@@ -1566,15 +1566,15 @@ function drawCustomFruitShape(ctx, f) {
       ctx.strokeStyle = '#ffffff';
       ctx.lineWidth = 3.5;
       ctx.beginPath();
-      ctx.arc(0, -r * 0.2, r * 0.95, 0.25 * Math.PI, 0.85 * Math.PI, false);
-      ctx.quadraticCurveTo(0, r * 0.35, r * 0.82, 0.25 * Math.PI);
+      ctx.arc(0, -r * 0.15, r * 0.92, 0.18 * Math.PI, 0.82 * Math.PI, false);
+      ctx.quadraticCurveTo(0, r * 0.28, r * 0.78, r * 0.35);
       ctx.closePath();
       ctx.fill();
       ctx.stroke();
 
       ctx.fillStyle = '#fff59d';
       ctx.beginPath();
-      ctx.ellipse(0, r * 0.35, r * 0.65, r * 0.26, 0, 0, Math.PI * 2);
+      ctx.ellipse(0, r * 0.32, r * 0.58, r * 0.22, 0, 0, Math.PI * 2);
       ctx.fill();
       ctx.stroke();
       break;
@@ -1656,7 +1656,7 @@ function drawCustomFruitShape(ctx, f) {
 // --- Game State ---
 const state = {
   mode: 'menu',
-  activeGame: 'saber3d', // 'saber3d' (3D Saber Slicer) | 'boxfruit' (2D Boxing)
+  activeGame: 'boxfruit', // 'boxfruit' (2D Boxing Gloves & Fruits) | 'saber3d' (3D Saber Slicer)
   isPlaying: false,
   score: 0,
   bestScore: Number(localStorage.getItem('boxfruit_best') || 0),
@@ -1700,7 +1700,7 @@ const state = {
       angle: -0.2,
       targetAngle: -0.2,
       scale: 1,
-      active: false,
+      active: true,
       lastSeen: 0,
       trail: []
     },
@@ -1721,7 +1721,7 @@ const state = {
       angle: 0.2,
       targetAngle: 0.2,
       scale: 1,
-      active: false,
+      active: true,
       lastSeen: 0,
       trail: []
     }
@@ -1776,21 +1776,21 @@ function setGameMode(gameId) {
   if (btnSaber && btnBox) {
     if (state.activeGame === 'saber3d') {
       btnSaber.className = 'btn btn-blue';
-      btnSaber.textContent = '⚔️ Игра 1: 3D SABER SLICER (Из глубины в экран) ✓';
+      btnSaber.textContent = '⚔️ Игра 2: 3D SABER SLICER (Сабли из 3D-глубины) ✓';
       btnBox.className = 'btn btn-secondary';
-      btnBox.textContent = '🥊 Игра 2: BOXFRUIT 2D (Боксёрские перчатки)';
+      btnBox.textContent = '🥊 Игра 1: BOXFRUIT 2D (Боксёрские перчатки)';
       if (descEl) {
         descEl.innerHTML =
           '<strong>Выбрана игра: ⚔️ 3D SABER SLICER.</strong> Предметы вылетают из глубины 3D-туннеля прямо на тебя и растут в размере — руби их светящимися плазменными саблями!';
       }
     } else {
       btnBox.className = 'btn btn-gold';
-      btnBox.textContent = '🥊 Игра 2: BOXFRUIT 2D (Боксёрские перчатки) ✓';
+      btnBox.textContent = '🥊 Игра 1: BOXFRUIT 2D (Боксёрские перчатки) ✓';
       btnSaber.className = 'btn btn-secondary';
-      btnSaber.textContent = '⚔️ Игра 1: 3D SABER SLICER (Из глубины в экран)';
+      btnSaber.textContent = '⚔️ Игра 2: 3D SABER SLICER (Сабли из 3D-глубины)';
       if (descEl) {
         descEl.innerHTML =
-          '<strong>Выбрана игра: 🥊 BOXFRUIT 2D.</strong> Классический боксёрский поединок с яркими векторными фруктами и минами на плоскости арены.';
+          '<strong>Выбрана игра: 🥊 BOXFRUIT 2D.</strong> Классический боксёрский поединок с яркими векторными фруктами, перчатками и минами (а рядом можно включить 3D Сабли!).';
       }
     }
   }
@@ -1964,22 +1964,22 @@ function broadcastFromPhone(payload) {
   }
   lastSentAt = now;
   state.sentFramesCount++;
-  payload.seq = state.sentFramesCount;
+  const outPayload = { ...payload, seq: state.sentFramesCount };
 
-  if (payload.type === 'POSE' && state.sentFramesCount % 2 !== 0) {
-    delete payload.body;
+  if (outPayload.type === 'POSE' && state.sentFramesCount % 2 !== 0) {
+    delete outPayload.body;
   }
 
   let connectedChannels = 0;
 
   if (hasDirectWebRtc) {
     try {
-      state.conn.send(payload);
+      state.conn.send(outPayload);
       connectedChannels++;
     } catch (e) {}
   }
 
-  const jsonStr = JSON.stringify(payload);
+  const jsonStr = JSON.stringify(outPayload);
   state.mqttClients.forEach((client) => {
     if (client && client.connected) {
       connectedChannels++;
@@ -2064,8 +2064,10 @@ function updateGlovesFromStableSlots(handsList) {
       const slotIdx = h.slot === 0 ? 0 : 1;
       seenSlots.add(slotIdx);
       const g = state.gloves[slotIdx];
-      g.targetX = Math.max(45, Math.min(canvas.width - 45, h.normX * canvas.width));
-      g.targetY = Math.max(45, Math.min(canvas.height - 45, h.normY * canvas.height));
+      const reachX = Math.max(0.02, Math.min(0.98, 0.5 + (h.normX - 0.5) * 1.35));
+      const reachY = Math.max(0.02, Math.min(0.98, 0.52 + (h.normY - 0.52) * 1.30));
+      g.targetX = Math.max(45, Math.min(canvas.width - 45, reachX * canvas.width));
+      g.targetY = Math.max(45, Math.min(canvas.height - 45, reachY * canvas.height));
       g.netVx = (h.vx || 0) * canvas.width;
       g.netVy = (h.vy || 0) * canvas.height;
       if (typeof h.angle === 'number') {
@@ -2122,11 +2124,11 @@ async function startCameraAndMediaPipePose(videoElement, overlayCanvas, overlayC
         locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`
       });
       poseDetector.setOptions({
-        modelComplexity: 0,
+        modelComplexity: 1,
         smoothLandmarks: true,
         enableSegmentation: false,
-        minDetectionConfidence: 0.45,
-        minTrackingConfidence: 0.45
+        minDetectionConfidence: 0.5,
+        minTrackingConfidence: 0.5
       });
     }
 
@@ -2562,7 +2564,11 @@ function drawBoxingGlove(ctx, g) {
   ctx.strokeStyle = '#ffffff';
   ctx.lineWidth = 3;
   ctx.beginPath();
-  ctx.roundRect(-26, 22, 52, 28, 8);
+  if (ctx.roundRect) {
+    ctx.roundRect(-26, 22, 52, 28, 8);
+  } else {
+    ctx.rect(-26, 22, 52, 28);
+  }
   ctx.fill();
   ctx.stroke();
 
@@ -2640,8 +2646,17 @@ function gameLoop(timestamp) {
     const prevY = g.y;
 
     if (g.active && now - g.lastSeen < 50) {
-      g.targetX = Math.max(45, Math.min(canvas.width - 45, g.targetX + g.netVx * 0.5));
-      g.targetY = Math.max(45, Math.min(canvas.height - 45, g.targetY + g.netVy * 0.5));
+      g.targetX = Math.max(45, Math.min(canvas.width - 45, g.targetX + (g.netVx || 0) * 0.5));
+      g.targetY = Math.max(45, Math.min(canvas.height - 45, g.targetY + (g.netVy || 0) * 0.5));
+    }
+
+    if (!Number.isFinite(g.x) || !Number.isFinite(g.y)) {
+      g.x = canvas.width * (g.id === 'left' ? 0.32 : 0.68);
+      g.y = canvas.height * 0.72;
+    }
+    if (!Number.isFinite(g.targetX) || !Number.isFinite(g.targetY)) {
+      g.targetX = g.x;
+      g.targetY = g.y;
     }
 
     const distToTarget = Math.hypot(g.targetX - g.x, g.targetY - g.y);
@@ -2652,6 +2667,8 @@ function gameLoop(timestamp) {
     g.vy = g.y - prevY;
     g.speed = Math.hypot(g.vx, g.vy);
 
+    if (!Number.isFinite(g.angle)) g.angle = g.id === 'left' ? -0.2 : 0.2;
+    if (!Number.isFinite(g.targetAngle)) g.targetAngle = g.angle;
     const angleDiff = g.targetAngle - g.angle;
     g.angle += Math.max(-0.55, Math.min(0.55, angleDiff * 0.55));
 
