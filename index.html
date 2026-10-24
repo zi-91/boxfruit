@@ -3422,7 +3422,7 @@ window.playKatanaSlashSound = playKatanaSlashSound;
         var lp = bigPx(api, 0.062), label, lx = w * 0.5, ly = topY(api) + lp * 0.95;
         if (bm.type === 'low') label = '↑ ПРЫГАЙ ЧЕРЕЗ ЛАЗЕР! ↑';
         else if (bm.type === 'high') label = '↓ ПРИСЯДЬ ПОД ЛАЗЕР! ↓';
-        else label = bm.side > 0 ? 'ШАГ ВПРАВО + ЛОВИ 🪙 →' : '← ШАГ ВЛЕВО + ЛОВИ 🪙';
+        else label = bm.side > 0 ? 'ШАГ ВПРАВО + ЛОВИ МОНЕТКУ →' : '← ШАГ ВЛЕВО + ЛОВИ МОНЕТКУ';
         ctx.save();
         ctx.font = F(lp);
         var lw = ctx.measureText(label).width + lp * 1.1;
@@ -3480,8 +3480,8 @@ window.playKatanaSlashSound = playKatanaSlashSound;
           if (!caught && c.z <= 0.18 && playerLane === c.lane) caught = true;
 
           if (caught) {
-            api.addScore(35, cx, cy, '+35 🪙 МОНЕТКА!');
-            popText(this, now, '+35 🪙', cx, cy - r * 1.3, COL.gold, bigPx(api, 0.055));
+            api.addScore(35, cx, cy, '+35 МОНЕТКА!');
+            popText(this, now, '+35', cx, cy - r * 1.3, COL.gold, bigPx(api, 0.055));
             api.particles(cx, cy, COL.gold, 16);
             api.sfx.hit(false);
             this.coins.splice(i, 1);
@@ -3583,8 +3583,8 @@ window.playKatanaSlashSound = playKatanaSlashSound;
         drawFx(api, this);
         drawFlash(api, this);
         drawBanner(api, this, 'LASER MATRIX 3D', B.real ?
-          ['Лазеры и 🪙 Монетки катятся по 3 трапециям!', 'Низкий — ПРЫГАЙ, Высокий — ПРИСЯДЬ, Лови 🪙 руками!'] :
-          ['Лазеры и 🪙 Монетки катятся по 3 трапециям!', 'Руки ВВЕРХ = прыжок, ВНИЗ = присед, лови 🪙 монетки!'], COL.crimson);
+          ['Лазеры и Монетки катятся по 3 трапециям!', 'Низкий — ПРЫГАЙ, Высокий — ПРИСЯДЬ, Лови монетки руками!'] :
+          ['Лазеры и Монетки катятся по 3 трапециям!', 'Руки ВВЕРХ = прыжок, ВНИЗ = присед, лови монетки!'], COL.crimson);
       } catch (e) { reportErr(api, this, e); }
     }
   };
@@ -3688,7 +3688,7 @@ window.playKatanaSlashSound = playKatanaSlashSound;
       if (res === 'perfect' || res === 'good') {
         var perfect = res === 'perfect';
         this.hits++; this.missStreak = 0;
-        var labelHit = tg.isCoin ? '+100 🪙 МОНЕТКА!' : (perfect ? 'ИДЕАЛЬНО!' : 'ХОРОШО!');
+        var labelHit = tg.isCoin ? '+100 МОНЕТКА!' : (perfect ? 'ИДЕАЛЬНО!' : 'ХОРОШО!');
         api.addScore(perfect ? 100 : 60, x, y, labelHit);
         popText(this, now, labelHit, x, y - this.radius(api) * 1.3, perfect || tg.isCoin ? COL.gold : COL.jade, bigPx(api, 0.058));
         api.particles(x, y, col, perfect ? 22 : 14);
@@ -3903,7 +3903,7 @@ window.playKatanaSlashSound = playKatanaSlashSound;
         }
         drawFx(api, this);
         drawFlash(api, this);
-        drawBanner(api, this, 'RHYTHM DOJO 3D', ['По 3 дорожкам-трапециям катятся диски и 🪙 МОНЕТКИ', 'СИНЯЯ — левой, КРАСНАЯ — правой, 🪙 МОНЕТКА — лови любой рукой!'], COL.gold);
+        drawBanner(api, this, 'RHYTHM DOJO 3D', ['По 3 дорожкам-трапециям катятся диски и МОНЕТКИ', 'СИНЯЯ — левой, КРАСНАЯ — правой, МОНЕТКА — лови любой рукой!'], COL.gold);
       } catch (e) { reportErr(api, this, e); }
     }
   };
