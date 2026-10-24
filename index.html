@@ -3371,16 +3371,17 @@ window.playKatanaSlashSound = playKatanaSlashSound;
 // ============================================================================
 // Настоящий 3D-движок на Three.js (WebGL) со стилизацией под Fortiche "ARCANE",
 // "Hi-Fi Rush", "Ghostrunner" и "Beat Saber":
-// 1. Настоящий 3D SkinnedMesh Персонаж (Xbot.glb с костями mixamorig и 3D-пальцами!):
-//    - Полный анатомический 3D-скелет (65 костей, включая фаланги пальцев, сжимающие
-//      рукояти катан!), поверх которого на кости Head, Spine2, LeftArm, RightArm,
-//      LeftHand и RightHand надеты 3D-доспехи Кибер-Самурая: шлем Кабуто с золотыми
-//      рогами Кувагата, светящийся Hextech-визор, нагрудный и спинной реакторы,
-//      наплечники Содэ, развевающийся в 3D плащ и две плазменные 3D-катаны!
-// 2. Кастомный шейдер в стиле "ARCANE" (Fortiche Production):
+// 1. Настоящий 3D SkinnedMesh Персонаж (Xbot.glb с 67 костями mixamorig и 3D-пальцами):
+//    - Полная 3D-анатомия человека (грудные мышцы, пресс, плечи, бицепсы, предплечья,
+//      кисти с фалангами пальцев, бёдра, колени и голени — 28 374 полигональных вершин!)
+//    - Поверх костей Head, Spine2, LeftArm, RightArm, LeftHand, RightHand, LeftLeg, RightLeg
+//      надеты пропорциональные 3D-доспехи Кибер-Самурая: шлем Кабуто с золотыми рогами
+//      Кувагата, светящийся V-образный Hextech-визор, маска Они, нагрудное ядро,
+//      наплечники Содэ, наручи Котэ, поножи Сунэатэ и две плазменные 3D-катаны!
+// 2. Кастомный GLSL-шейдер в стиле "ARCANE" (Fortiche Production):
 //    - Живописная текстура мазков кисти (Painterly Brushstroke Normal/Roughness Map)
 //    - Двухцветный Fresnel Rim Light (Hextech Cyan #00f0ff слева + Shimmer Magenta #ff1e78 справа)
-//    - Контурная 3D-обводка тушью (Inverted Hull BackSide Ink Outline)
+//    - Контурная 3D-обводка тушью (Inverted Hull BackSide Ink Outline со skinning: true)
 // 3. Настоящая 3D-сцена, 3 ракурса 3D-камеры и 3D-разрезание объектов на полусферы!
 // ============================================================================
 
@@ -3401,31 +3402,30 @@ window.playKatanaSlashSound = playKatanaSlashSound;
       {
         id: 'arcaneHero34',
         label: '🎥 3D: Ракурс Arcane (3/4)',
-        pos: { x: -1.45, y: 1.72, z: 3.85 },
-        look: { x: 0.15, y: 1.35, z: -5.5 },
-        charPos: { x: -0.62, y: 0.0, z: 0.95 },
-        charRotY: Math.PI - 0.58 // 3/4 героический разворот: видна и анатомия/броня/катаны, и 3D-арена!
+        pos: { x: -1.55, y: 1.48, z: 4.15 },
+        look: { x: 0.10, y: 1.18, z: -4.5 },
+        charPos: { x: -0.68, y: 0.0, z: 0.75 },
+        charRotY: Math.PI - 0.68 // Героический 3/4 разворот: видна вся 3D-анатомия, торс, ноги, броня, катаны и 3D-коридор!
       },
       {
         id: 'faceOff',
         label: '🎥 3D: Лицом (Герой Arcane)',
-        pos: { x: 0.0, y: 1.58, z: 3.75 },
-        look: { x: 0.0, y: 1.32, z: -5.0 },
-        charPos: { x: -0.75, y: 0.0, z: 0.85 },
-        charRotY: -0.45 // Персонаж стоит лицом в 3/4 к камере — видны маска Они, Hextech-грудь и катаны!
+        pos: { x: -0.15, y: 1.42, z: 3.95 },
+        look: { x: -0.10, y: 1.15, z: -4.5 },
+        charPos: { x: -0.82, y: 0.0, z: 0.65 },
+        charRotY: -0.42 // Персонаж стоит лицом в 3/4 к камере — видны визор, маска Они, пресс, грудь, ноги и обе катаны!
       },
       {
         id: 'overShoulder',
         label: '🎥 3D: Из-за плеча (VR Бой)',
-        pos: { x: -0.45, y: 1.88, z: 3.95 },
-        look: { x: 0.0, y: 1.30, z: -8.0 },
-        charPos: { x: -0.15, y: 0.0, z: 1.15 },
-        charRotY: Math.PI - 0.15 // Вид из-за плеча прямо на 3D-коридор
+        pos: { x: -0.52, y: 1.72, z: 3.85 },
+        look: { x: 0.05, y: 1.22, z: -8.0 },
+        charPos: { x: -0.18, y: 0.0, z: 0.95 },
+        charRotY: Math.PI - 0.22 // Вид из-за плеча прямо на летящие 3D-цели
       }
     ],
 
     characterRoot: null,
-    fallbackRigGroup: null,
     gltfModel: null,
     gltfBones: {},
     capeMesh: null,
@@ -3457,10 +3457,20 @@ window.playKatanaSlashSound = playKatanaSlashSound;
       const mode = this.cameraModes[this.cameraModeIdx];
       const btn = document.getElementById('btn-hud-camera-3d');
       if (btn) btn.textContent = mode.label;
+      if (this.camera) {
+        this.camera.position.set(mode.pos.x, mode.pos.y, mode.pos.z);
+        this.camera.lookAt(mode.look.x, mode.look.y, mode.look.z);
+      }
+      if (this.characterRoot) {
+        this.characterRoot.position.set(mode.charPos.x, 0, mode.charPos.z);
+        this.characterRoot.rotation.y = mode.charRotY;
+      }
+      this.leftTrailHistory = [];
+      this.rightTrailHistory = [];
       return mode;
     },
 
-    // Процедурная текстура живописных мазков кисти Fortiche (только тонкая фактура без грубых полос)
+    // Процедурная текстура живописных мазков кисти Fortiche
     createPainterlyBrushTexture() {
       const c = document.createElement('canvas');
       c.width = 256;
@@ -3531,13 +3541,13 @@ window.playKatanaSlashSound = playKatanaSlashSound;
       const baseColor = new THREE.Color(opts.color !== undefined ? opts.color : 0x263248);
       const rimColorLeft = new THREE.Color(opts.rimLeft !== undefined ? opts.rimLeft : 0x00f0ff);
       const rimColorRight = new THREE.Color(opts.rimRight !== undefined ? opts.rimRight : 0xff1e78);
-      const rimPower = opts.rimPower !== undefined ? opts.rimPower : 2.2;
-      const rimStrength = opts.rimStrength !== undefined ? opts.rimStrength : 0.92;
+      const rimPower = opts.rimPower !== undefined ? opts.rimPower : 2.1;
+      const rimStrength = opts.rimStrength !== undefined ? opts.rimStrength : 1.05;
 
       const mat = new THREE.MeshStandardMaterial({
         color: baseColor,
-        roughness: opts.roughness !== undefined ? opts.roughness : 0.42,
-        metalness: opts.metalness !== undefined ? opts.metalness : 0.28,
+        roughness: opts.roughness !== undefined ? opts.roughness : 0.38,
+        metalness: opts.metalness !== undefined ? opts.metalness : 0.32,
         roughnessMap: this.painterlyTex,
         bumpMap: this.painterlyTex,
         bumpScale: opts.bumpScale !== undefined ? opts.bumpScale : 0.004,
@@ -3567,9 +3577,12 @@ window.playKatanaSlashSound = playKatanaSlashSound;
           vec3 arcaneViewDir = normalize(vViewPosition);
           vec3 arcaneNormal = normalize(normal);
           float fresnel = 1.0 - max(dot(arcaneViewDir, arcaneNormal), 0.0);
-          float rimBand = smoothstep(0.28, 0.86, pow(fresnel, uRimPower));
+          float rimBand = smoothstep(0.52, 0.92, pow(fresnel, uRimPower));
           vec3 sideRimColor = mix(uRimLeft, uRimRight, clamp(arcaneNormal.x * 0.5 + 0.5, 0.0, 1.0));
-          gl_FragColor.rgb = mix(gl_FragColor.rgb * 0.85, smoothstep(0.03, 0.97, gl_FragColor.rgb) * 1.15, 0.62);
+          // Живописная ступенчатая тонировка Fortiche Arcane (глубокие тени + контрастный мазок без засвета в белый)
+          float lum = dot(gl_FragColor.rgb, vec3(0.299, 0.587, 0.114));
+          float celFactor = mix(0.55, 1.12, smoothstep(0.08, 0.48, lum));
+          gl_FragColor.rgb = clamp(gl_FragColor.rgb * celFactor, 0.0, 0.78);
           gl_FragColor.rgb += sideRimColor * rimBand * uRimStrength;
           #include <dithering_fragment>
           `
@@ -3596,6 +3609,7 @@ window.playKatanaSlashSound = playKatanaSlashSound;
       };
       const outlineMesh = new THREE.Mesh(mesh.geometry, outlineMat);
       outlineMesh.name = 'inkOutline';
+      outlineMesh.frustumCulled = false;
       mesh.add(outlineMesh);
     },
 
@@ -3633,7 +3647,7 @@ window.playKatanaSlashSound = playKatanaSlashSound;
       this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
       if (THREE.ACESFilmicToneMapping !== undefined) {
         this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-        this.renderer.toneMappingExposure = 1.22;
+        this.renderer.toneMappingExposure = 0.95;
       }
       if (THREE.sRGBEncoding !== undefined) {
         this.renderer.outputEncoding = THREE.sRGBEncoding;
@@ -3644,7 +3658,7 @@ window.playKatanaSlashSound = playKatanaSlashSound;
 
       this.scene = new THREE.Scene();
       this.scene.background = new THREE.Color(0x070614);
-      this.scene.fog = new THREE.FogExp2(0x09071a, 0.030);
+      this.scene.fog = new THREE.FogExp2(0x09071a, 0.028);
 
       this.camera = new THREE.PerspectiveCamera(48, w / h, 0.1, 160);
       const initialCam = this.cameraModes[this.cameraModeIdx];
@@ -3670,12 +3684,12 @@ window.playKatanaSlashSound = playKatanaSlashSound;
     },
 
     setupLighting() {
-      const hemi = new THREE.HemisphereLight(0x5a82ff, 0x1e0b36, 0.72);
+      const hemi = new THREE.HemisphereLight(0x3b5998, 0x090514, 0.55);
       hemi.position.set(0, 15, 0);
       this.scene.add(hemi);
 
-      const dirLight = new THREE.DirectionalLight(0xffead0, 1.65);
-      dirLight.position.set(4.5, 10.5, 6.5);
+      const dirLight = new THREE.DirectionalLight(0xffe4c4, 1.15);
+      dirLight.position.set(3.5, 9.5, 6.5);
       dirLight.castShadow = true;
       dirLight.shadow.mapSize.width = 1024;
       dirLight.shadow.mapSize.height = 1024;
@@ -3689,12 +3703,12 @@ window.playKatanaSlashSound = playKatanaSlashSound;
       dirLight.shadow.bias = -0.0008;
       this.scene.add(dirLight);
 
-      const cyanRimLight = new THREE.PointLight(0x00f0ff, 3.0, 18, 1.5);
-      cyanRimLight.position.set(-3.8, 2.6, 1.2);
+      const cyanRimLight = new THREE.PointLight(0x00f0ff, 1.35, 16, 1.6);
+      cyanRimLight.position.set(-3.4, 2.4, 1.6);
       this.scene.add(cyanRimLight);
 
-      const magentaRimLight = new THREE.PointLight(0xff1e78, 2.8, 18, 1.5);
-      magentaRimLight.position.set(3.8, 2.5, 1.2);
+      const magentaRimLight = new THREE.PointLight(0xff1e78, 1.25, 16, 1.6);
+      magentaRimLight.position.set(3.4, 2.4, 1.6);
       this.scene.add(magentaRimLight);
     },
 
@@ -3809,7 +3823,7 @@ window.playKatanaSlashSound = playKatanaSlashSound;
 
       // Неоновый 3D-пьедестал под ногами персонажа
       const pedMesh = new THREE.Mesh(
-        new THREE.RingGeometry(0.62, 0.76, 36),
+        new THREE.RingGeometry(0.55, 0.68, 36),
         new THREE.MeshBasicMaterial({
           color: 0x00f0ff,
           side: THREE.DoubleSide,
@@ -3823,33 +3837,34 @@ window.playKatanaSlashSound = playKatanaSlashSound;
 
       // Материалы в стиле Fortiche "ARCANE"
       const darkArmorMat = this.createArcaneMaterial({
-        color: 0x1b243b,
+        color: 0x1b263e,
         rimLeft: 0x00f0ff,
         rimRight: 0xff1e78,
-        roughness: 0.34,
-        metalness: 0.48
+        roughness: 0.30,
+        metalness: 0.52
       });
       const crimsonArmorMat = this.createArcaneMaterial({
-        color: 0xa1162a,
+        color: 0xb91c2c,
+        emissive: 0x2a060d,
         rimLeft: 0x00f0ff,
         rimRight: 0xffb800,
-        roughness: 0.32,
-        metalness: 0.38
+        roughness: 0.28,
+        metalness: 0.42
       });
       const goldTrimMat = this.createArcaneMaterial({
         color: 0xf59e0b,
         emissive: 0x451a03,
         rimLeft: 0xffffff,
         rimRight: 0xffb800,
-        roughness: 0.22,
-        metalness: 0.80
+        roughness: 0.20,
+        metalness: 0.85
       });
       const clothMat = this.createArcaneMaterial({
-        color: 0x111729,
+        color: 0x141d36,
         rimLeft: 0x00f0ff,
         rimRight: 0xff1e78,
-        roughness: 0.75,
-        metalness: 0.1,
+        roughness: 0.65,
+        metalness: 0.12,
         side: THREE.DoubleSide
       });
       const cyanGlowMat = new THREE.MeshBasicMaterial({ color: 0x00f0ff });
@@ -3863,34 +3878,46 @@ window.playKatanaSlashSound = playKatanaSlashSound;
           (gltf) => {
             if (!gltf || !gltf.scene || !this.characterRoot) return;
             const model = gltf.scene;
+            model.scale.set(1.12, 1.12, 1.12); // Героический масштаб (~1.95м роста)
 
+            // Шейдер для мускулатуры и бронепластин корпуса (Beta_Surface — 15 901 вершина!)
+            // Тёмный графитово-индиговый доспех в стиле Arcane / Ghostrunner с резким неоновым контуром
             const arcaneBodyMat = this.createArcaneMaterial({
-              color: 0x1e2942,
+              color: 0x162038,
+              emissive: 0x030712,
               rimLeft: 0x00f0ff,
               rimRight: 0xff1e78,
-              roughness: 0.32,
-              metalness: 0.45,
+              rimPower: 2.5,
+              rimStrength: 0.95,
+              roughness: 0.34,
+              metalness: 0.58,
               skinning: true
             });
+            // Шейдер для кибер-суставов и сочленений (Beta_Joints — 12 473 вершины!)
             const arcaneJointsMat = this.createArcaneMaterial({
-              color: 0x991b2e,
-              emissive: 0x042f40,
+              color: 0x7f1121,
+              emissive: 0x180409,
               rimLeft: 0x00f0ff,
               rimRight: 0xffb800,
-              roughness: 0.25,
-              metalness: 0.65,
+              rimPower: 2.6,
+              rimStrength: 0.85,
+              roughness: 0.28,
+              metalness: 0.72,
               skinning: true
             });
 
             this.gltfBones = {};
             model.traverse((obj) => {
+              // КРИТИЧНО: Отключаем frustumCulled, так как Armature имеет scale 0.01,
+              // из-за чего boundingSphere SkinnedMesh сжимается до 1.29см у пола!
+              obj.frustumCulled = false;
+
               if (obj.isMesh) {
                 obj.castShadow = true;
                 obj.receiveShadow = true;
                 obj.material = obj.name.includes('Joints') ? arcaneJointsMat : arcaneBodyMat;
               }
               if (obj.isBone && obj.name) {
-                // В Three.js GLTFLoader двоеточие из 'mixamorig:LeftArm' удаляется -> 'mixamorigLeftArm'
                 const shortName = obj.name.replace(/^mixamorig:?/, '');
                 this.gltfBones[shortName] = obj;
               }
@@ -3899,7 +3926,7 @@ window.playKatanaSlashSound = playKatanaSlashSound;
             this.gltfModel = model;
             this.characterRoot.add(model);
 
-            // Надеваем 3D-доспехи Кибер-Самурая и 3D-катаны прямо на кости Xbot.glb!
+            // Надеваем пропорциональные 3D-доспехи Кибер-Самурая и 3D-катаны прямо на кости Xbot.glb!
             this.attachSamuraiArmorToGLTFBones(
               darkArmorMat,
               crimsonArmorMat,
@@ -3913,9 +3940,7 @@ window.playKatanaSlashSound = playKatanaSlashSound;
       }
     },
 
-    // Надевание 3D-доспехов, маски Они, шлема Кабуто, Hextech-ядра, плаща и 3D-катан
-    // напрямую на анатомические кости SkinnedMesh (Xbot.glb)!
-    // Важно: внутри Armature масштаб = 0.01 (1 ед. = 1 см), поэтому создаём сокеты с масштабом 100 (1 ед. = 1 м)!
+    // Надевание пропорциональных 3D-доспехов (не перекрывающих скульптурный торс и ноги Xbot.glb!)
     attachSamuraiArmorToGLTFBones(darkArmorMat, crimsonArmorMat, goldTrimMat, clothMat, cyanGlowMat, magentaGlowMat) {
       const makeMeterSocket = (bone) => {
         const s = new THREE.Group();
@@ -3924,171 +3949,220 @@ window.playKatanaSlashSound = playKatanaSlashSound;
         return s;
       };
 
-      // 1. ГОЛОВА (Head): Светящийся кибер-визор, маска Они, шлем Кабуто и золотые рога Кувагата
+      // 1. ГОЛОВА (Head): Пропорциональный шлем Кабуто, светящийся V-визор, маска Они и рога Кувагата
       const headBone = this.gltfBones['Head'];
       if (headBone) {
         const headSocket = makeMeterSocket(headBone);
 
-        // V-образный светящийся Hextech-визор на глазах
-        const visorL = new THREE.Mesh(new THREE.BoxGeometry(0.062, 0.020, 0.025), cyanGlowMat);
-        visorL.position.set(0.042, 0.065, 0.112);
-        visorL.rotation.z = -0.16;
+        // V-образный светящийся Hextech-визор точно по глазам Xbot (вынесен вперёд на z=0.116, чтобы ярко читался анфас!)
+        const visorL = new THREE.Mesh(new THREE.BoxGeometry(0.052, 0.016, 0.024), cyanGlowMat);
+        visorL.position.set(0.034, 0.072, 0.116);
+        visorL.rotation.y = 0.22;
+        visorL.rotation.z = -0.18;
+        visorL.frustumCulled = false;
         headSocket.add(visorL);
 
-        const visorR = new THREE.Mesh(new THREE.BoxGeometry(0.062, 0.020, 0.025), cyanGlowMat);
-        visorR.position.set(-0.042, 0.065, 0.112);
-        visorR.rotation.z = 0.16;
+        const visorR = new THREE.Mesh(new THREE.BoxGeometry(0.052, 0.016, 0.024), cyanGlowMat);
+        visorR.position.set(-0.034, 0.072, 0.116);
+        visorR.rotation.y = -0.22;
+        visorR.rotation.z = 0.18;
+        visorR.frustumCulled = false;
         headSocket.add(visorR);
 
-        // Забрало маски Они (Menpo)
-        const maskJaw = new THREE.Mesh(new THREE.CylinderGeometry(0.095, 0.072, 0.095, 10), crimsonArmorMat);
-        maskJaw.position.set(0, 0.01, 0.035);
+        // Изящная полумаска Они (Menpo) на нижней челюсти
+        const maskJaw = new THREE.Mesh(new THREE.CylinderGeometry(0.064, 0.048, 0.062, 10), darkArmorMat);
+        maskJaw.position.set(0, 0.018, 0.042);
+        maskJaw.frustumCulled = false;
         headSocket.add(maskJaw);
 
-        // 3D-купол шлема Кабуто
+        // Пропорциональный купол шлема Кабуто (радиус 0.114м по черепу Xbot)
         const kabutoDome = new THREE.Mesh(
-          new THREE.SphereGeometry(0.155, 24, 16, 0, Math.PI * 2, 0, Math.PI * 0.56),
+          new THREE.SphereGeometry(0.114, 24, 16, 0, Math.PI * 2, 0, Math.PI * 0.52),
           darkArmorMat
         );
-        kabutoDome.position.set(0, 0.085, -0.005);
+        kabutoDome.position.set(0, 0.094, -0.005);
         kabutoDome.castShadow = true;
-        this.addInkOutline(kabutoDome, 0.010);
+        kabutoDome.frustumCulled = false;
+        this.addInkOutline(kabutoDome, 0.008);
         headSocket.add(kabutoDome);
 
-        // Каскадные пластины защиты шеи Сикоро
-        for (let s = 0; s < 3; s++) {
+        // Затылочный щиток Сикоро (дуга 110 градусов строго сзади на затылке: от 0.7*PI до 1.3*PI)
+        for (let s = 0; s < 2; s++) {
           const shikoro = new THREE.Mesh(
             new THREE.CylinderGeometry(
-              0.15 + s * 0.024,
-              0.175 + s * 0.026,
-              0.038,
-              18,
+              0.106 + s * 0.012,
+              0.118 + s * 0.014,
+              0.026,
+              16,
               1,
               true,
-              Math.PI * 0.55,
-              Math.PI * 1.9
+              Math.PI * 0.72,
+              Math.PI * 0.56
             ),
             crimsonArmorMat
           );
-          shikoro.position.set(0, 0.055 - s * 0.036, -0.015);
+          shikoro.position.set(0, 0.066 - s * 0.024, -0.018);
+          shikoro.frustumCulled = false;
           headSocket.add(shikoro);
         }
 
         // Золотые изогнутые 3D-рога Кувагата на лбу шлема
         [-1, 1].forEach((side) => {
           const hornCurve = new THREE.CatmullRomCurve3([
-            new THREE.Vector3(0, 0.13, 0.145),
-            new THREE.Vector3(side * 0.12, 0.21, 0.13),
-            new THREE.Vector3(side * 0.22, 0.34, 0.08)
+            new THREE.Vector3(0, 0.12, 0.105),
+            new THREE.Vector3(side * 0.09, 0.19, 0.095),
+            new THREE.Vector3(side * 0.16, 0.28, 0.06)
           ]);
-          const hornMesh = new THREE.Mesh(new THREE.TubeGeometry(hornCurve, 12, 0.016, 8, false), goldTrimMat);
-          this.addInkOutline(hornMesh, 0.007);
+          const hornMesh = new THREE.Mesh(new THREE.TubeGeometry(hornCurve, 12, 0.012, 8, false), goldTrimMat);
+          hornMesh.frustumCulled = false;
+          this.addInkOutline(hornMesh, 0.005);
           headSocket.add(hornMesh);
         });
       }
 
-      // 2. ГРУДЬ И СПИНА (Spine2): Hextech-реактор на груди, 6 узлов позвоночника и развевающийся 3D-плащ
+      // 2. ГРУДЬ И СПИНА (Spine2): Компактный Hextech-кристалл на груди и спинной энерго-реактор
+      // (Без широкого пончо, чтобы полностью читались 3D-мышцы груди, пресса, талии и ног Xbot!)
       const spine2Bone = this.gltfBones['Spine2'];
       if (spine2Bone) {
         const chestSocket = makeMeterSocket(spine2Bone);
 
-        // Нагрудный Hextech-кристалл в золотой оправе
-        const coreRing = new THREE.Mesh(new THREE.TorusGeometry(0.068, 0.014, 10, 24), goldTrimMat);
-        coreRing.position.set(0, 0.08, 0.155);
+        // Нагрудный Hextech-реактор в золотой оправе
+        const coreRing = new THREE.Mesh(new THREE.TorusGeometry(0.052, 0.011, 10, 24), goldTrimMat);
+        coreRing.position.set(0, 0.05, 0.135);
+        coreRing.frustumCulled = false;
         chestSocket.add(coreRing);
 
-        const coreGem = new THREE.Mesh(new THREE.OctahedronGeometry(0.052, 0), cyanGlowMat);
-        coreGem.position.set(0, 0.08, 0.165);
+        const coreGem = new THREE.Mesh(new THREE.OctahedronGeometry(0.038, 0), cyanGlowMat);
+        coreGem.position.set(0, 0.05, 0.145);
+        coreGem.frustumCulled = false;
         chestSocket.add(coreGem);
 
-        // Спинной 5-узловой светящийся кибер-позвоночник
-        for (let n = 0; n < 5; n++) {
+        // Спинной 4-узловой светящийся кибер-имплант (Sandevistan / Hextech Spine)
+        for (let n = 0; n < 4; n++) {
           const spineNode = new THREE.Mesh(
-            new THREE.CylinderGeometry(0.034, 0.034, 0.03, 12),
+            new THREE.CylinderGeometry(0.026, 0.026, 0.024, 12),
             n === 0 ? goldTrimMat : cyanGlowMat
           );
           spineNode.rotation.x = Math.PI / 2;
-          spineNode.position.set(0, 0.14 - n * 0.065, -0.145);
+          spineNode.position.set(0, 0.11 - n * 0.055, -0.115);
+          spineNode.frustumCulled = false;
           chestSocket.add(spineNode);
         }
-
-        // Короткий боевой 3D-шарф/плащ за плечами (чтобы были полностью видны 3D-ноги и торс!)
-        const capeGeo = new THREE.PlaneGeometry(0.46, 0.58, 10, 12);
-        this.capeMesh = new THREE.Mesh(capeGeo, clothMat);
-        this.capeMesh.position.set(0, -0.08, -0.18);
-        this.capeMesh.rotation.x = 0.18;
-        this.capeMesh.castShadow = true;
-        this.capeBasePositions = capeGeo.attributes.position.array.slice();
-        chestSocket.add(this.capeMesh);
       }
 
-      // 3. НАПЛЕЧНИКИ СОДЭ НА ПЛЕЧАХ (LeftArm / RightArm)
+      // 3. ПОЯС И БОКОВЫЕ ЩИТКИ КУСАДЗУРИ НА ТАЗУ (Hips) — подчёркивают талию и бёдра!
+      const hipsBone = this.gltfBones['Hips'];
+      if (hipsBone) {
+        const hipsSocket = makeMeterSocket(hipsBone);
+        const beltBuckle = new THREE.Mesh(new THREE.OctahedronGeometry(0.036, 0), goldTrimMat);
+        beltBuckle.position.set(0, -0.02, 0.125);
+        beltBuckle.frustumCulled = false;
+        hipsSocket.add(beltBuckle);
+
+        [-1, 1].forEach((side) => {
+          const tasset = new THREE.Mesh(new THREE.BoxGeometry(0.035, 0.16, 0.14), crimsonArmorMat);
+          tasset.position.set(side * 0.155, -0.09, 0.0);
+          tasset.rotation.z = -side * 0.18;
+          tasset.frustumCulled = false;
+          this.addInkOutline(tasset, 0.006);
+          hipsSocket.add(tasset);
+        });
+      }
+
+      // 4. ПРОПОРЦИОНАЛЬНЫЕ НАПЛЕЧНИКИ СОДЭ (LeftArm / RightArm) И СВЕТЯЩИЕСЯ НАРУЧИ КОТЭ (LeftForeArm / RightForeArm)
       ['LeftArm', 'RightArm'].forEach((boneName, idx) => {
         const armBone = this.gltfBones[boneName];
         if (!armBone) return;
         const side = idx === 0 ? 1 : -1;
         const armSocket = makeMeterSocket(armBone);
-        for (let p = 0; p < 2; p++) {
-          const plate = new THREE.Mesh(
-            new THREE.BoxGeometry(0.14, 0.065, 0.16),
-            p === 0 ? crimsonArmorMat : darkArmorMat
-          );
-          plate.position.set(side * (0.04 + p * 0.04), 0.055 - p * 0.03, 0);
-          plate.rotation.z = -side * 0.35;
-          this.addInkOutline(plate, 0.008);
-          armSocket.add(plate);
-        }
+        const plate = new THREE.Mesh(new THREE.BoxGeometry(0.105, 0.048, 0.115), crimsonArmorMat);
+        plate.position.set(side * 0.03, 0.045, 0);
+        plate.rotation.z = -side * 0.25;
+        plate.frustumCulled = false;
+        this.addInkOutline(plate, 0.006);
+        armSocket.add(plate);
       });
 
-      // 4. ПАРНЫЕ 3D-КАТАНЫ В РУКАХ (LeftHand / RightHand) — КЛИНКИ НАПРАВЛЕНЫ ВВЕРХ И ВПЕРЁД!
+      ['LeftForeArm', 'RightForeArm'].forEach((boneName, idx) => {
+        const foreBone = this.gltfBones[boneName];
+        if (!foreBone) return;
+        const side = idx === 0 ? 1 : -1;
+        const foreSocket = makeMeterSocket(foreBone);
+        const strip = new THREE.Mesh(
+          new THREE.BoxGeometry(0.14, 0.016, 0.018),
+          idx === 0 ? cyanGlowMat : magentaGlowMat
+        );
+        strip.position.set(side * 0.13, 0.042, 0.02);
+        strip.frustumCulled = false;
+        foreSocket.add(strip);
+      });
+
+      // 5. СВЕТЯЩИЕСЯ НАКОЛЕННИКИ И ПОНОЖИ СУНЭАТЭ НА ГОЛЕНЯХ (LeftLeg / RightLeg)
+      ['LeftLeg', 'RightLeg'].forEach((boneName, idx) => {
+        const legBone = this.gltfBones[boneName];
+        if (!legBone) return;
+        const legSocket = makeMeterSocket(legBone);
+        const kneeGem = new THREE.Mesh(
+          new THREE.OctahedronGeometry(0.028, 0),
+          idx === 0 ? cyanGlowMat : magentaGlowMat
+        );
+        kneeGem.position.set(0, -0.02, 0.075);
+        kneeGem.frustumCulled = false;
+        legSocket.add(kneeGem);
+      });
+
+      // 6. ПАРНЫЕ 3D-КАТАНЫ В РУКАХ (LeftHand / RightHand) — КЛИНКИ НАПРАВЛЕНЫ ВВЕРХ И ВПЕРЁД!
       const attachKatanaToHand = (handBone, isLeft) => {
         if (!handBone) return;
         const handSocket = makeMeterSocket(handBone);
         const side = isLeft ? 1 : -1;
 
         const katanaGroup = new THREE.Group();
-        // В кости кисти Xbot ось X идёт вдоль ладони, ось Z — вперёд, ось Y — вверх от тыльной стороны.
-        // Поворачиваем катану так, чтобы клинок гордо смотрел ВВЕРХ И ВПЕРЁД в боевой стойке!
-        katanaGroup.position.set(side * 0.08, 0.02, 0.04);
-        katanaGroup.rotation.set(0.35, 0, side * 0.25);
+        katanaGroup.position.set(side * 0.04, 0.08, 0.04);
+        // Разворачиваем катану из кулака вверх и вперёд (боевой хват со стороны большого пальца!)
+        katanaGroup.rotation.set(Math.PI * 0.68, side * 0.25, -side * 0.85);
         handSocket.add(katanaGroup);
 
-        // Рукоять Цука в сжатом 3D-кулаке
-        const handleMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.020, 0.28, 10), darkArmorMat);
-        handleMesh.position.y = -0.06;
+        // Рукоять Цука в сжатом 3D-кулаке (вдоль +Y)
+        const handleMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.016, 0.25, 10), darkArmorMat);
+        handleMesh.position.y = 0.05;
+        handleMesh.frustumCulled = false;
         katanaGroup.add(handleMesh);
 
-        // Золотая гарда Цуба
-        const tsubaMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.075, 0.020, 18), goldTrimMat);
-        tsubaMesh.position.y = 0.08;
+        // Золотая гарда Цуба (у большого пальца на -0.075)
+        const tsubaMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.062, 0.062, 0.016, 18), goldTrimMat);
+        tsubaMesh.position.y = -0.075;
+        tsubaMesh.frustumCulled = false;
         katanaGroup.add(tsubaMesh);
 
-        // Светящийся 3D-клинок (белое раскалённое ядро + неоновое свечение Cyan / Magenta)
-        const bladeLen = 1.18;
+        // Светящийся 3D-клинок направлен ВВЕРХ и ВПЕРЁД (вдоль -Y из кулака!)
+        const bladeLen = 1.08;
         const bladeCore = new THREE.Mesh(
-          new THREE.BoxGeometry(0.016, bladeLen, 0.036),
+          new THREE.BoxGeometry(0.014, bladeLen, 0.030),
           new THREE.MeshBasicMaterial({ color: 0xffffff })
         );
-        bladeCore.position.y = 0.08 + bladeLen * 0.5;
+        bladeCore.position.y = -0.075 - bladeLen * 0.5;
+        bladeCore.frustumCulled = false;
         katanaGroup.add(bladeCore);
 
         const bladeGlow = new THREE.Mesh(
-          new THREE.BoxGeometry(0.038, bladeLen * 1.02, 0.068),
+          new THREE.BoxGeometry(0.032, bladeLen * 1.02, 0.058),
           new THREE.MeshBasicMaterial({
             color: isLeft ? 0x00f0ff : 0xff1e78,
             transparent: true,
-            opacity: 0.48
+            opacity: 0.46
           })
         );
-        bladeGlow.position.y = 0.08 + bladeLen * 0.5;
+        bladeGlow.position.y = -0.075 - bladeLen * 0.5;
+        bladeGlow.frustumCulled = false;
         katanaGroup.add(bladeGlow);
 
         const baseNode = new THREE.Object3D();
-        baseNode.position.set(0, 0.10, 0);
+        baseNode.position.set(0, -0.09, 0);
         katanaGroup.add(baseNode);
 
         const tipNode = new THREE.Object3D();
-        tipNode.position.set(0, 0.08 + bladeLen, 0);
+        tipNode.position.set(0, -0.075 - bladeLen, 0);
         katanaGroup.add(tipNode);
 
         if (isLeft) {
@@ -4103,7 +4177,7 @@ window.playKatanaSlashSound = playKatanaSlashSound;
       attachKatanaToHand(this.gltfBones['LeftHand'], true);
       attachKatanaToHand(this.gltfBones['RightHand'], false);
 
-      // 5. Сжимаем 3D-пальцы Xbot.glb вокруг рукоятей катан (реалистичный хват меча!)
+      // 7. Сжимаем 3D-пальцы Xbot.glb вокруг рукоятей катан (реалистичный хват меча!)
       const fingerNames = ['Index', 'Middle', 'Ring', 'Pinky'];
       ['LeftHand', 'RightHand'].forEach((handPrefix, idx) => {
         const side = idx === 0 ? 1 : -1;
@@ -4122,7 +4196,7 @@ window.playKatanaSlashSound = playKatanaSlashSound;
 
     init3DSlashTrails() {
       const makeTrailMesh = (colorHex) => {
-        const maxSegs = 12;
+        const maxSegs = 6;
         const geo = new THREE.BufferGeometry();
         const positions = new Float32Array(maxSegs * 2 * 3);
         geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
@@ -4139,7 +4213,7 @@ window.playKatanaSlashSound = playKatanaSlashSound;
           color: colorHex,
           side: THREE.DoubleSide,
           transparent: true,
-          opacity: 0.52,
+          opacity: 0.38,
           depthWrite: false
         });
         const m = new THREE.Mesh(geo, mat);
@@ -4158,6 +4232,16 @@ window.playKatanaSlashSound = playKatanaSlashSound;
 
     updateTrailRibbon(trailMesh, history, baseVec, tipVec) {
       if (!trailMesh) return;
+      if (history.length > 0) {
+        const prev = history[0];
+        const jumpDistSq =
+          (tipVec.x - prev.tx) * (tipVec.x - prev.tx) +
+          (tipVec.y - prev.ty) * (tipVec.y - prev.ty) +
+          (tipVec.z - prev.tz) * (tipVec.z - prev.tz);
+        if (jumpDistSq > 0.35) {
+          history.length = 0;
+        }
+      }
       history.unshift({
         bx: baseVec.x,
         by: baseVec.y,
@@ -4166,13 +4250,14 @@ window.playKatanaSlashSound = playKatanaSlashSound;
         ty: tipVec.y,
         tz: tipVec.z
       });
-      const maxSegs = 12;
+      const maxSegs = 6;
       while (history.length > maxSegs) history.pop();
 
       const posAttr = trailMesh.geometry.attributes.position;
       const arr = posAttr.array;
-      for (let i = 0; i < maxSegs; i++) {
-        const sample = history[Math.min(i, history.length - 1)] || {
+      const totalPts = posAttr.count / 2;
+      for (let i = 0; i < totalPts; i++) {
+        const raw = history[Math.min(i, history.length - 1)] || {
           bx: baseVec.x,
           by: baseVec.y,
           bz: baseVec.z,
@@ -4180,18 +4265,26 @@ window.playKatanaSlashSound = playKatanaSlashSound;
           ty: tipVec.y,
           tz: tipVec.z
         };
-        const shrink = i / maxSegs;
-        const bx = sample.bx + (sample.tx - sample.bx) * shrink * 0.65;
-        const by = sample.by + (sample.ty - sample.by) * shrink * 0.65;
-        const bz = sample.bz + (sample.tz - sample.bz) * shrink * 0.65;
+        // Ограничиваем растяжение шлейфа максимум 22см от текущего клинка (чтобы шлейф был изящным серпом, а не треугольником)
+        const blend = Math.min(1, i * 0.16);
+        const tx = tipVec.x + (raw.tx - tipVec.x) * 0.35;
+        const ty = tipVec.y + (raw.ty - tipVec.y) * 0.35;
+        const tz = tipVec.z + (raw.tz - tipVec.z) * 0.35;
+        const bx = baseVec.x + (raw.bx - baseVec.x) * 0.35;
+        const by = baseVec.y + (raw.by - baseVec.y) * 0.35;
+        const bz = baseVec.z + (raw.bz - baseVec.z) * 0.35;
+
+        const edgeBx = bx + (tx - bx) * (0.45 + blend * 0.52);
+        const edgeBy = by + (ty - by) * (0.45 + blend * 0.52);
+        const edgeBz = bz + (tz - bz) * (0.45 + blend * 0.52);
 
         const idx = i * 6;
-        arr[idx] = bx;
-        arr[idx + 1] = by;
-        arr[idx + 2] = bz;
-        arr[idx + 3] = sample.tx;
-        arr[idx + 4] = sample.ty;
-        arr[idx + 5] = sample.tz;
+        arr[idx] = edgeBx;
+        arr[idx + 1] = edgeBy;
+        arr[idx + 2] = edgeBz;
+        arr[idx + 3] = tx;
+        arr[idx + 4] = ty;
+        arr[idx + 5] = tz;
       }
       posAttr.needsUpdate = true;
     },
@@ -4430,46 +4523,46 @@ window.playKatanaSlashSound = playKatanaSlashSound;
       const targetCharX = camTarget.charPos.x + bodyShiftX;
       this.characterRoot.position.x += (targetCharX - this.characterRoot.position.x) * 0.22;
       this.characterRoot.position.z += (camTarget.charPos.z - this.characterRoot.position.z) * 0.18;
-      this.characterRoot.position.y = Math.sin(elapsed * 3.2) * 0.022;
+      this.characterRoot.position.y = Math.sin(elapsed * 3.2) * 0.018;
       this.characterRoot.rotation.y += (camTarget.charRotY - this.characterRoot.rotation.y) * 0.16;
 
-      const leftGlove = (state.gloves && state.gloves[0]) || { x: w * 0.32, y: h * 0.62, angle: -0.25 };
-      const rightGlove = (state.gloves && state.gloves[1]) || { x: w * 0.68, y: h * 0.62, angle: 0.25 };
+      const leftGlove = (state.gloves && state.gloves[0]) || { x: w * 0.34, y: h * 0.56, angle: -0.25 };
+      const rightGlove = (state.gloves && state.gloves[1]) || { x: w * 0.66, y: h * 0.56, angle: 0.25 };
 
       const b = this.gltfBones;
       if (b['Spine']) {
-        // Живая боевая стойка самурая (наклон корпуса вперёд, разворот плеч и дыхание)
-        b['Spine'].rotation.x = 0.14 + Math.sin(elapsed * 3.2) * 0.03;
-        b['Spine'].rotation.z = torsoLeanZ;
+        // Живая боевая стойка самурая (наклон корпуса, разворот грудной клетки и дыхание)
+        b['Spine'].rotation.set(0.08 + Math.sin(elapsed * 3.2) * 0.025, 0.04, torsoLeanZ);
+        if (b['Spine1']) {
+          b['Spine1'].rotation.set(0.04, 0.03, 0);
+        }
         if (b['Spine2']) {
-          b['Spine2'].rotation.y = Math.sin(elapsed * 1.8) * 0.06;
+          b['Spine2'].rotation.set(0.04, Math.sin(elapsed * 1.8) * 0.05, 0);
         }
         if (b['Head']) {
-          b['Head'].rotation.x = -0.10;
-          b['Head'].rotation.y = 0.22;
+          b['Head'].rotation.set(-0.08, 0.18, 0);
         }
 
-        // Боевая стойка ног (широкий упор в коленях)
+        // Выверенная по кватернионам Mixamo боевая стойка ног (широкий упор без инверсии суставов!)
         if (b['LeftUpLeg']) {
-          b['LeftUpLeg'].rotation.x = -0.28;
-          b['LeftUpLeg'].rotation.z = -0.16;
+          b['LeftUpLeg'].rotation.set(-0.22, 0.22, 0.18);
         }
         if (b['LeftLeg']) {
-          b['LeftLeg'].rotation.x = 0.38;
+          b['LeftLeg'].rotation.set(0.26, 0.03, 0.06);
         }
         if (b['RightUpLeg']) {
-          b['RightUpLeg'].rotation.x = 0.18;
-          b['RightUpLeg'].rotation.z = 0.16;
+          b['RightUpLeg'].rotation.set(0.04, -0.18, -0.14);
         }
         if (b['RightLeg']) {
-          b['RightLeg'].rotation.x = 0.26;
+          b['RightLeg'].rotation.set(0.20, -0.14, -0.05);
         }
 
         // Управление 3D-костями рук (LeftArm / LeftForeArm / LeftHand и RightArm / RightForeArm / RightHand)
-        // В T-позе LeftArm смотрит вдоль +X, RightArm — вдоль -X.
+        // По кватернионам Mixamo:
+        // LeftArm.z = -0.85 опускает левое плечо из T-позы вниз; RightArm.z = +0.85 опускает правое плечо вниз!
         const poseArm = (isLeft, glove) => {
           const nx = (glove.x / Math.max(1, w) - 0.5) * 2; // [-1..1]
-          const ny = (glove.y / Math.max(1, h) - 0.5) * 2; // [-1..1] (-1 = верх, +1 = низ)
+          const ny = (glove.y / Math.max(1, h) - 0.5) * 2; // [-1..1]
           const side = isLeft ? 1 : -1;
 
           const armBone = b[isLeft ? 'LeftArm' : 'RightArm'];
@@ -4477,46 +4570,28 @@ window.playKatanaSlashSound = playKatanaSlashSound;
           const handBone = b[isLeft ? 'LeftHand' : 'RightHand'];
 
           if (armBone) {
-            // Опускаем плечо из горизонтальной T-позы в боевую стойку и двигаем за рукой игрока!
-            const targetZ = -side * (0.62 + ny * 0.45);
-            const targetY = side * (0.58 - side * nx * 0.48);
-            const targetX = 0.25 - ny * 0.55;
-            armBone.rotation.z += (targetZ - armBone.rotation.z) * 0.35;
-            armBone.rotation.y += (targetY - armBone.rotation.y) * 0.35;
+            const targetX = 0.42 - ny * 0.55;
+            const targetY = -side * (0.45 - side * nx * 0.48);
+            const targetZ = -side * (0.52 + ny * 0.38);
             armBone.rotation.x += (targetX - armBone.rotation.x) * 0.35;
+            armBone.rotation.y += (targetY - armBone.rotation.y) * 0.35;
+            armBone.rotation.z += (targetZ - armBone.rotation.z) * 0.35;
           }
           if (foreArmBone) {
-            // Сгибаем локоть вперёд и вверх, чтобы катаны держались перед бойцом!
-            const targetForeY = side * 0.95;
-            const targetForeZ = side * (0.45 - ny * 0.35);
+            const targetForeX = 0.35;
+            const targetForeY = -side * 0.65;
+            const targetForeZ = -side * (0.72 - ny * 0.32);
+            foreArmBone.rotation.x += (targetForeX - foreArmBone.rotation.x) * 0.35;
             foreArmBone.rotation.y += (targetForeY - foreArmBone.rotation.y) * 0.35;
             foreArmBone.rotation.z += (targetForeZ - foreArmBone.rotation.z) * 0.35;
           }
           if (handBone) {
-            handBone.rotation.x = (glove.angle || 0) * 0.55;
+            handBone.rotation.x = (glove.angle || 0) * 0.45;
           }
         };
 
         poseArm(true, leftGlove);
         poseArm(false, rightGlove);
-      }
-
-      // Синусоидальная 3D-физика ткани плаща на ветру
-      if (this.capeMesh && this.capeBasePositions) {
-        const posAttr = this.capeMesh.geometry.attributes.position;
-        const arr = posAttr.array;
-        const base = this.capeBasePositions;
-        for (let i = 0; i < arr.length; i += 3) {
-          const origX = base[i];
-          const origY = base[i + 1];
-          const pinFactor = Math.max(0, (0.29 - origY) / 0.58);
-          arr[i + 2] =
-            base[i + 2] +
-            Math.sin(elapsed * 5.5 - origY * 5.0 + origX * 2.5) * 0.11 * pinFactor -
-            pinFactor * 0.09;
-        }
-        posAttr.needsUpdate = true;
-        this.capeMesh.geometry.computeVertexNormals();
       }
 
       // Обновление 3D-лент шлейфов за клинками катан
