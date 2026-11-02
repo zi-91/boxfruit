@@ -565,7 +565,7 @@ h1.game-title {
         Mode: 2D Boxing
       </button>
       <button id="btn-hud-camera-3d" class="btn btn-secondary" type="button" style="border-color: #00f0ff; color: #00f0ff;">
-        CAM: FRONT
+        CAM: BEHIND
       </button>
       <div class="hud-stat">
         <span class="hud-label">Score</span>
@@ -613,7 +613,7 @@ h1.game-title {
             <h1 class="game-title">
               MOTION ARENA TV
               <span style="display: inline-block; font-size: 18px; background: var(--accent-gold); color: #0b0e14; padding: 5px 12px; border-radius: 8px; vertical-align: middle; margin-left: 8px; font-weight: 900;">
-                VERSION: v10.0
+                VERSION: v10.1
               </span>
             </h1>
           </div>
@@ -3912,16 +3912,16 @@ window.playKatanaSlashSound = playKatanaSlashSound;
 </script>
   <script>
 // ============================================================================
-// MOTION ARENA TV v10 - ARENA 3D ENGINE (Three.js r128, global build)
+// MOTION ARENA TV v10.1 - ARENA 3D ENGINE (Three.js r128, global build)
 // One realistic rigged 3D character (Mixamo "Vanguard" soldier) for ALL games,
-// driven by the phone's MediaPipe Pose through analytic two-bone IK:
-//   - each hand is placed exactly on its glove's screen position (the same point
-//     the game logic uses for hits), with natural depth from arm length;
-//   - elbows bend toward the player's real elbows;
-//   - feet stay planted (knees bend on squats, body lifts on jumps).
-// Night dojo environment, PBR lighting, soft shadows, 3D katanas / boxing gloves,
-// 3D fruits / bombs / coins for 3D Saber Slicer.
-// Smart TV safe: no optional chaining, adaptive quality, never throws to host.
+// seen from BEHIND (third-person), facing the torii where targets come from.
+//   - Arms are retargeted from the player's real pose (phone 3D world landmarks,
+//     or 2D keypoints + aspect + foreshortening on older phones).
+//   - Body steps left/right, jumps, squats (feet stay planted), twists and rolls.
+//   - 3D Saber Slicer: katanas continue the forearm; hits are swept 3D blade tests;
+//     targets fly in from the front and arrive within reach; x-ray when occluded.
+// Night dojo environment, PBR lighting, shadows, adaptive quality for Smart TVs.
+// Smart TV safe: no optional chaining, never throws to the host.
 // ============================================================================
 (function () {
   'use strict';
@@ -3937,21 +3937,30 @@ window.playKatanaSlashSound = playKatanaSlashSound;
     'https://raw.githubusercontent.com/mrdoob/three.js/r128/examples/models/gltf/Soldier.glb'
   ];
 
-  // Finger curl into a fist (Mixamo finger bones)
-  var FINGER_AXIS = 'x';
-  var FINGER_CURL = 1.25;
-  var FINGER_SIGN_L = 1;
-  var FINGER_SIGN_R = 1;
-
+  // Third-person cameras, all from BEHIND the character (full body in frame)
   var CAMERA_MODES = [
-    { label: 'CAM: FRONT', pos: [0, 1.38, 4.5], look: [0, 1.12, 0] },
-    { label: 'CAM: HERO 3/4', pos: [2.3, 1.55, 3.9], look: [0, 1.1, 0] },
-    { label: 'CAM: WIDE', pos: [0, 2.1, 6.4], look: [0, 1.0, -0.6] }
+    { label: 'CAM: BEHIND', pos: [0.55, 2.0, 4.9], look: [0.0, 1.15, -3.0], follow: 0.35 },
+    { label: 'CAM: 3/4 REAR', pos: [2.2, 2.1, 4.2], look: [-0.2, 1.1, -2.5], follow: 0.35 },
+    { label: 'CAM: HIGH', pos: [0.0, 3.6, 6.6], look: [0.0, 0.8, -3.0], follow: 0.3 }
   ];
 
-  // Same reach mapping the host applies to gloves (game.js updateGlovesFromStableSlots)
-  function mapX(x) { return 0.5 + (x - 0.5) * 1.35; }
-  function mapY(y) { return 0.52 + (y - 0.52) * 1.3; }
+  var CHAR_HEIGHT = 1.78; // meters
+  var BLADE_LEN = 0.92; // katana blade length in the world (m)
+  var STRIKE_DIST = 0.7; // targets arrive this far in front of the character (m)
+  var LANE_X = 0.85; // left / right lane offset (m)
+  var LANE_Y_HIGH = 1.72;
+  var LANE_Y_LOW = 1.0;
+  var TARGET_R = 0.2; // target radius (m)
+  var TORII_Z = -17;
+
+  // Ready stance when no phone is connected (character's left / right arm; -Z = forward)
+  var GUARD = [
+    { u: new THREE.Vector3(-0.3, -0.75, -0.55).normalize(), f: new THREE.Vector3(0.15, 0.55, -0.82).normalize() },
+    { u: new THREE.Vector3(0.3, -0.75, -0.55).normalize(), f: new THREE.Vector3(-0.15, 0.55, -0.82).normalize() }
+  ];
+  var AXIS_Y = new THREE.Vector3(0, 1, 0);
+  var AXIS_Z = new THREE.Vector3(0, 0, 1);
+
   function fin(v, d) { return typeof v === 'number' && isFinite(v) ? v : d; }
   function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
 
@@ -3966,6 +3975,22 @@ window.playKatanaSlashSound = playKatanaSlashSound;
   var _ray = new THREE.Ray();
   var _plane = new THREE.Plane();
   var _m4 = new THREE.Matrix4();
+  var _a1 = new THREE.Vector3();
+  var _a2 = new THREE.Vector3();
+  var _p1 = new THREE.Vector3();
+  var _p2 = new THREE.Vector3();
+  var _p3 = new THREE.Vector3();
+  var _p4 = new THREE.Vector3();
+  var _p5 = new THREE.Vector3();
+  var _p6 = new THREE.Vector3();
+  var _p7 = new THREE.Vector3();
+  var _p8 = new THREE.Vector3();
+  var _s0 = new THREE.Vector3();
+  var _s1 = new THREE.Vector3();
+  var _s2 = new THREE.Vector3();
+  var _s3 = new THREE.Vector3();
+  var _s4 = new THREE.Vector3();
+  var _s5 = new THREE.Vector3();
 
   // ---------------------------------------------------------------------------
   // Procedural textures (canvas)
@@ -4215,13 +4240,11 @@ window.playKatanaSlashSound = playKatanaSlashSound;
         this.camera.position.set(cm.pos[0], cm.pos[1], cm.pos[2]);
         this.camLook = new THREE.Vector3(cm.look[0], cm.look[1], cm.look[2]);
         this.camera.lookAt(this.camLook);
-        this.camOffsetY = 0;
 
         this.buildEnvironmentMap();
         this.buildLights();
         this.buildDojo();
         this.buildKatanas();
-        this.buildBoxingGloves();
         this.initSaberAssets();
         this.loadCharacter(0);
 
@@ -4509,7 +4532,11 @@ window.playKatanaSlashSound = playKatanaSlashSound;
     },
 
     // ---------------------------------------------------------------------------
-    // Character (rigged Mixamo model) + IK
+    // Character: rigged Mixamo model seen from BEHIND (third-person). It faces the
+    // torii where targets come from, so screen-left = the player's left hand.
+    // Arms are retargeted from the player's real pose every frame:
+    //   - 3D world landmarks from the phone (meters) when available,
+    //   - otherwise 2D keypoints + aspect correction + foreshortening for depth.
     // ---------------------------------------------------------------------------
     loadCharacter: function (urlIdx) {
       var self = this;
@@ -4538,7 +4565,7 @@ window.playKatanaSlashSound = playKatanaSlashSound;
     setupCharacter: function (gltf) {
       var model = gltf.scene;
       var bones = {};
-      var self = this;
+      var nodes = {};
       model.traverse(function (o) {
         if (o.isMesh || o.isSkinnedMesh) {
           o.castShadow = true;
@@ -4549,12 +4576,12 @@ window.playKatanaSlashSound = playKatanaSlashSound;
             if (o.material.roughness !== undefined) o.material.roughness = Math.max(0.35, o.material.roughness);
           }
         }
-        if (o.isBone) {
-          var short = o.name.replace(/^mixamorig[:_]?/, '');
-          bones[short] = o;
-        }
+        var short = (o.name || '').replace(/^mixamorig[:_]?/, '');
+        if (short) nodes[short] = o;
+        if (o.isBone) bones[short] = o;
       });
       this.bones = bones;
+      this.nodes = nodes;
 
       var pivot = new THREE.Group(); // facing fix
       pivot.add(model);
@@ -4565,59 +4592,96 @@ window.playKatanaSlashSound = playKatanaSlashSound;
       this.charPivot = pivot;
       this.charModel = model;
 
-      // Idle animation for natural breathing / balance (arms and legs are overridden by IK)
+      var clips = gltf.animations || [];
+      var findClip = function (re) {
+        for (var i = 0; i < clips.length; i++) if (re.test(clips[i].name)) return clips[i];
+        return null;
+      };
       this.mixer = new THREE.AnimationMixer(model);
-      var idle = null;
-      for (var i = 0; i < gltf.animations.length; i++) {
-        if (/idle/i.test(gltf.animations[i].name)) idle = gltf.animations[i];
+
+      // 1) T-pose = retargeting reference (arms horizontal, palms down): arm swings stay < 180 deg, no flips
+      var tclip = findClip(/t-?pose/i);
+      if (tclip) {
+        this.mixer.clipAction(tclip).play();
+        this.mixer.update(0.0001);
       }
-      if (idle) {
-        this.mixer.clipAction(idle).play();
-      }
+      root.updateMatrixWorld(true);
+      var la = bones.LeftArm;
+      var ra = bones.RightArm;
+      // Face AWAY from the camera (-Z): the character's anatomical left is then on screen-left (-X)
+      if (la.getWorldPosition(new THREE.Vector3()).x > ra.getWorldPosition(new THREE.Vector3()).x) pivot.rotation.y = Math.PI;
+      root.updateMatrixWorld(true);
+
+      var self = this;
+      this.bindQ = {};
+      ['Left', 'Right'].forEach(function (sd) {
+        ['Arm', 'ForeArm', 'Hand'].forEach(function (n) {
+          if (bones[sd + n]) self.bindQ[sd + n] = bones[sd + n].quaternion.clone();
+        });
+        ['Index', 'Middle', 'Ring', 'Pinky', 'Thumb'].forEach(function (f) {
+          for (var k = 1; k <= 3; k++) {
+            var b = bones[sd + 'Hand' + f + k];
+            if (b) self.bindQ[sd + 'Hand' + f + k] = b.quaternion.clone();
+          }
+        });
+      });
+      // Palm normal orientation per hand (palms face down in the T-pose)
+      this.palmFlip = [1, 1];
+      ['Left', 'Right'].forEach(function (sd, idx) {
+        var h = bones[sd + 'Hand'];
+        var ib = bones[sd + 'HandIndex1'];
+        var pb = bones[sd + 'HandPinky1'];
+        if (!h || !ib || !pb) return;
+        var hp = h.getWorldPosition(new THREE.Vector3());
+        var n = new THREE.Vector3().crossVectors(
+          ib.getWorldPosition(new THREE.Vector3()).sub(hp),
+          pb.getWorldPosition(new THREE.Vector3()).sub(hp)
+        );
+        self.palmFlip[idx] = n.y > 0 ? -1 : 1;
+      });
+      var lf = bones.LeftForeArm.getWorldPosition(new THREE.Vector3());
+      var lhp = bones.LeftHand.getWorldPosition(new THREE.Vector3());
+      var lap = la.getWorldPosition(new THREE.Vector3());
+      var rawArm = lap.distanceTo(lf) + lf.distanceTo(lhp);
+
+      // 2) Idle animation for breathing / balance (arms are overridden every frame)
+      this.mixer.stopAllAction();
+      var idle = findClip(/idle/i);
+      if (idle) this.mixer.clipAction(idle).play();
       this.mixer.update(0.01);
       root.updateMatrixWorld(true);
 
-      // Face the camera (+Z): if the model's left arm is on -X it faces -Z, so turn it around
-      var la = bones.LeftArm;
-      var ra = bones.RightArm;
-      if (la && ra) {
-        var lp = la.getWorldPosition(new THREE.Vector3());
-        var rp = ra.getWorldPosition(new THREE.Vector3());
-        if (lp.x < rp.x) pivot.rotation.y = Math.PI;
-      }
+      var head = nodes.HeadTop_End || bones.HeadTop_End || bones.Head;
+      var rawHeight = head ? head.getWorldPosition(new THREE.Vector3()).y : 1.8;
+      this.charScale = clamp(CHAR_HEIGHT / Math.max(0.5, rawHeight), 0.2, 5);
+      root.scale.setScalar(this.charScale);
       root.updateMatrixWorld(true);
-
-      // Rest measurements (root at origin, scale 1)
+      this.armLen = rawArm * this.charScale;
       var lpos = la.getWorldPosition(new THREE.Vector3());
       var rpos = ra.getWorldPosition(new THREE.Vector3());
-      this.restShoulderMid = lpos.clone().add(rpos).multiplyScalar(0.5);
-      this.restShoulderWidth = Math.max(0.1, lpos.distanceTo(rpos));
       var hipL = bones.LeftUpLeg.getWorldPosition(new THREE.Vector3());
       var hipR = bones.RightUpLeg.getWorldPosition(new THREE.Vector3());
-      this.restTorso = Math.max(0.2, this.restShoulderMid.y - (hipL.y + hipR.y) / 2);
-      var head = bones.HeadTop_End || bones.Head;
-      this.restHeight = head ? head.getWorldPosition(new THREE.Vector3()).y : 1.8;
+      this.restTorso = Math.max(0.2, (lpos.y + rpos.y) / 2 - (hipL.y + hipR.y) / 2);
+      this.footRestY = bones.LeftFoot ? bones.LeftFoot.getWorldPosition(new THREE.Vector3()).y : 0.08;
 
-      // Arm chains by SCREEN side: chain[0] drives the screen-left glove, chain[1] the screen-right glove.
-      var leftChain = { upper: bones.LeftArm, fore: bones.LeftForeArm, hand: bones.LeftHand, prefix: 'Left' };
-      var rightChain = { upper: bones.RightArm, fore: bones.RightForeArm, hand: bones.RightHand, prefix: 'Right' };
-      var lx = this.projectToScreen(lpos, 1280, 720).x;
-      var rx = this.projectToScreen(rpos, 1280, 720).x;
-      this.armChains = lx < rx ? [leftChain, rightChain] : [rightChain, leftChain];
+      this.armSides = [
+        { upper: bones.LeftArm, fore: bones.LeftForeArm, hand: bones.LeftHand, sd: 'Left', keys: ['lS', 'lE', 'lW'] },
+        { upper: bones.RightArm, fore: bones.RightForeArm, hand: bones.RightHand, sd: 'Right', keys: ['rS', 'rE', 'rW'] }
+      ];
       this.legChains = [
         { upper: bones.LeftUpLeg, lower: bones.LeftLeg, foot: bones.LeftFoot },
         { upper: bones.RightUpLeg, lower: bones.RightLeg, foot: bones.RightFoot }
       ];
-      this.fingerBones = [];
-      Object.keys(bones).forEach(function (k) {
-        if (/Hand(Index|Middle|Ring|Pinky)[123]$/.test(k)) self.fingerBones.push(bones[k]);
-      });
-      this.thumbBones = [];
-      Object.keys(bones).forEach(function (k) {
-        if (/HandThumb[23]$/.test(k)) self.thumbBones.push(bones[k]);
-      });
-
-      this.smooth = { scale: 1.25, x: 0, y: 0, ready: false };
+      this.handWorld = [new THREE.Vector3(), new THREE.Vector3()];
+      this.elbowWorld = [new THREE.Vector3(), new THREE.Vector3()];
+      this.shoulderWorld = [new THREE.Vector3(), new THREE.Vector3()];
+      this.foreDir = [new THREE.Vector3(0, 0, -1), new THREE.Vector3(0, 0, -1)];
+      this.armDir = [
+        { u: GUARD[0].u.clone(), f: GUARD[0].f.clone(), live: false },
+        { u: GUARD[1].u.clone(), f: GUARD[1].f.clone(), live: false }
+      ];
+      this.segMax = [{ u: 0, f: 0 }, { u: 0, f: 0 }];
+      this.motion = { x: 0, y: 0, baseY: null, mpu: null, roll: 0, yaw: 0, ar: null, zSign: 1, zEma: 0 };
       this.modelReady = true;
     },
 
@@ -4668,198 +4732,6 @@ window.playKatanaSlashSound = playKatanaSlashSound;
       bone.updateMatrixWorld(true);
     },
 
-    // Analytic two-bone IK: returns the elbow/knee position for root S, target T, lengths a,b and pole
-    solveTwoBone: function (S, T, a, b, pole, outJoint) {
-      var d = clamp(S.distanceTo(T), 1e-4, a + b - 1e-4);
-      var u = _v1.copy(T).sub(S).normalize();
-      var cosA = clamp((a * a + d * d - b * b) / (2 * a * d), -1, 1);
-      var sinA = Math.sqrt(1 - cosA * cosA);
-      var v = _v2.copy(pole).sub(S);
-      v.sub(_v3.copy(u).multiplyScalar(v.dot(u)));
-      if (v.lengthSq() < 1e-8) v.set(0, -1, 0).sub(_v3.copy(u).multiplyScalar(-u.y));
-      v.normalize();
-      outJoint.copy(S).add(u.multiplyScalar(a * cosA)).add(v.multiplyScalar(a * sinA));
-      return outJoint;
-    },
-
-    // Body keypoint (normalized, already mirrored) -> mapped screen pixel
-    kp: function (body, key, w, h) {
-      var p = body && body[key];
-      if (!p || !isFinite(p[0]) || !isFinite(p[1])) return null;
-      return { x: mapX(p[0]) * w, y: mapY(p[1]) * h };
-    },
-
-    updateCharacter: function (state, w, h, dt, handsMode) {
-      if (!this.modelReady) return;
-      var root = this.charRoot;
-      var bones = this.bones;
-      var body = state.bodySilhouette;
-      var sm = this.smooth;
-
-      this.mixer.update(dt);
-
-      // ---- 1. Fit the character to the player's mapped shoulders (size + position) ----
-      var targetScale = 1.25;
-      var targetX = 0;
-      var targetY = 0;
-      var lS = this.kp(body, 'lS', w, h);
-      var rS = this.kp(body, 'rS', w, h);
-      if (lS && rS) {
-        var planePoint = _v4.set(0, 1.4, 0);
-        var PL = this.pixelOnPlane(lS.x, lS.y, w, h, planePoint, new THREE.Vector3());
-        var PR = this.pixelOnPlane(rS.x, rS.y, w, h, planePoint, new THREE.Vector3());
-        var mid = PL.add(PR).multiplyScalar(0.5);
-        // Size from the vertical torso length (robust to the phone 4:3 vs TV 16:9 aspect stretch)
-        var lH = this.kp(body, 'lH', w, h);
-        var rH = this.kp(body, 'rH', w, h);
-        if (lH && rH) {
-          var hipMid = this.pixelOnPlane((lH.x + rH.x) / 2, (lH.y + rH.y) / 2, w, h, planePoint, new THREE.Vector3());
-          targetScale = clamp(Math.abs(mid.y - hipMid.y) / this.restTorso, 0.9, 1.55);
-        }
-        // Reach fit: the phone frame (4:3 / portrait) is stretched to 16:9 on the TV, so the player's mapped
-        // arm span is wider than a real body. Grow the character until its hands can reach the gloves.
-        if (this.reachNeedScale) {
-          targetScale = Math.max(targetScale, Math.min(1.85, this.reachNeedScale));
-        }
-        targetX = mid.x - this.restShoulderMid.x * targetScale;
-        targetY = mid.y - this.restShoulderMid.y * targetScale;
-      }
-      if (!sm.ready) {
-        sm.scale = targetScale;
-        sm.x = targetX;
-        sm.y = targetY;
-        this.camOffsetY = clamp(-targetY, -1.6, 1.6);
-        sm.ready = true;
-      }
-      sm.scale += (targetScale - sm.scale) * (targetScale > sm.scale ? 0.06 : 0.015);
-      sm.x += (clamp(targetX, -2.6, 2.6) - sm.x) * 0.3;
-      sm.y += (targetY - sm.y) * 0.35;
-      // The slow part of the vertical offset is absorbed by moving the camera (feet stay on the floor
-      // whatever the phone's framing is); fast changes (jumps / squats) move the character.
-      this.camOffsetY = clamp((this.camOffsetY || 0) - sm.y * 0.03, -1.6, 1.6);
-      var bodyY = clamp(sm.y, -0.5 * sm.scale, 0.9);
-      root.scale.setScalar(sm.scale);
-      root.position.set(sm.x, bodyY, 0);
-
-      // ---- 2. Torso lean / roll and head ----
-      root.updateMatrixWorld(true);
-      if (body && lS && rS) {
-        var roll = Math.atan2(rS.y - lS.y, rS.x - lS.x); // screen-space shoulder tilt
-        var pelvis = this.kp(body, 'pelvis', w, h);
-        var chestPx = { x: (lS.x + rS.x) / 2, y: (lS.y + rS.y) / 2 };
-        var lean = pelvis ? Math.atan2(chestPx.x - pelvis.x, pelvis.y - chestPx.y) : 0;
-        this.camera.getWorldDirection(_v4);
-        var axis = _v4.clone().negate(); // toward the viewer
-        var leanAmt = clamp(-lean, -0.6, 0.6);
-        var rollAmt = clamp(-roll, -0.5, 0.5);
-        this.rotateBoneWorld(bones.Spine, axis, leanAmt * 0.5);
-        this.rotateBoneWorld(bones.Spine1, axis, leanAmt * 0.25 + rollAmt * 0.3);
-        this.rotateBoneWorld(bones.Spine2, axis, rollAmt * 0.3);
-        var headPx = this.kp(body, 'head', w, h);
-        if (headPx && bones.Head) {
-          var tilt = Math.atan2(headPx.x - chestPx.x, chestPx.y - headPx.y);
-          this.rotateBoneWorld(bones.Neck || bones.Head, axis, clamp(-tilt - leanAmt * 0.75, -0.5, 0.5) * 0.6);
-        }
-      }
-
-      // ---- 3. Arms: two-bone IK to the gloves (exact screen match), elbows toward real elbows ----
-      root.updateMatrixWorld(true);
-      var gloves = state.gloves || [];
-      this.handWorld = this.handWorld || [new THREE.Vector3(), new THREE.Vector3()];
-      this.foreDir = this.foreDir || [new THREE.Vector3(0, 1, 0), new THREE.Vector3(0, 1, 0)];
-      var elbowKeys = [['lE', 'lS'], ['rE', 'rS']];
-      var forward = _v4.set(0, 0, 1); // character faces +Z (toward the viewer)
-      var needMax = 0;
-      for (var i = 0; i < 2; i++) {
-        var chain = this.armChains[i];
-        var g = gloves[i];
-        if (!chain.upper || !chain.fore || !chain.hand || !g) continue;
-        var S = chain.upper.getWorldPosition(new THREE.Vector3());
-        var E0 = chain.fore.getWorldPosition(new THREE.Vector3());
-        var H0 = chain.hand.getWorldPosition(new THREE.Vector3());
-        var a = S.distanceTo(E0);
-        var b = E0.distanceTo(H0);
-        var reach = a + b;
-        var curScale = root.scale.x;
-
-        // Target on the glove's pixel ray, at a natural distance from the shoulder
-        this.pixelRay(fin(g.x, w * (i === 0 ? 0.32 : 0.68)), fin(g.y, h * 0.72), w, h, _ray);
-        var tc = _v1.copy(S).sub(_ray.origin).dot(_ray.direction);
-        var Pc = _ray.at(tc, new THREE.Vector3());
-        var dc = Pc.distanceTo(S);
-        var need = (curScale * dc) / (reach * 0.93);
-        needMax = Math.max(needMax, need);
-        var T = new THREE.Vector3();
-        if (dc >= reach * 0.97) {
-          T.copy(Pc).sub(S).normalize().multiplyScalar(reach * 0.97).add(S);
-        } else {
-          var R = clamp(Math.max(dc, reach * 0.74), dc, reach * 0.97);
-          var off = Math.sqrt(Math.max(0, R * R - dc * dc));
-          var T1 = _ray.at(tc - off, new THREE.Vector3());
-          var T2 = _ray.at(tc + off, new THREE.Vector3());
-          T.copy(_v2.copy(T1).sub(S).dot(forward) >= _v3.copy(T2).sub(S).dot(forward) ? T1 : T2);
-        }
-
-        // Pole: the player's real elbow (projected), biased down/out/back for stability
-        var side = i === 0 ? -1 : 1; // screen side
-        var pole = new THREE.Vector3(S.x + side * 0.35 * root.scale.x, S.y - 0.6 * root.scale.x, S.z - 0.25 * root.scale.x);
-        var ePx = this.kp(body, elbowKeys[i][0], w, h);
-        if (ePx) {
-          var EP = this.pixelOnPlane(ePx.x, ePx.y, w, h, S, new THREE.Vector3());
-          pole.lerp(EP.add(_v1.set(0, 0, -0.15 * root.scale.x)), 0.75);
-        }
-        var elbow = this.solveTwoBone(S, T, a, b, pole, new THREE.Vector3());
-        this.aimBone(chain.upper, chain.fore, elbow);
-        this.aimBone(chain.fore, chain.hand, T);
-        chain.hand.getWorldPosition(this.handWorld[i]);
-        this.foreDir[i].copy(T).sub(elbow).normalize();
-      }
-
-      // Decaying max of the scale needed for the hands to reach the gloves (only when a phone is connected)
-      if (body) {
-        this.reachNeedScale = Math.max(Math.min(needMax, 1.85), (this.reachNeedScale || 0) * 0.998);
-      } else {
-        this.reachNeedScale = 0;
-      }
-
-      // Curl fingers into a fist / grip when holding katanas or wearing gloves
-      if (handsMode === 'katana' || handsMode === 'gloves') {
-        for (var f = 0; f < this.fingerBones.length; f++) {
-          this.fingerBones[f].rotation[FINGER_AXIS] += FINGER_CURL * (this.fingerBones[f].name.indexOf('Left') >= 0 ? FINGER_SIGN_L : FINGER_SIGN_R);
-        }
-        for (var tb = 0; tb < this.thumbBones.length; tb++) {
-          this.thumbBones[tb].rotation[FINGER_AXIS] += 0.5 * (this.thumbBones[tb].name.indexOf('Left') >= 0 ? FINGER_SIGN_L : FINGER_SIGN_R);
-        }
-      }
-
-      // ---- 4. Legs: keep feet planted on the floor (knees bend on squats) ----
-      root.updateMatrixWorld(true);
-      for (var L = 0; L < this.legChains.length; L++) {
-        var leg = this.legChains[L];
-        if (!leg.upper || !leg.lower || !leg.foot) continue;
-        var hip = leg.upper.getWorldPosition(new THREE.Vector3());
-        var knee = leg.lower.getWorldPosition(new THREE.Vector3());
-        var foot = leg.foot.getWorldPosition(new THREE.Vector3());
-        var la2 = hip.distanceTo(knee);
-        var lb2 = knee.distanceTo(foot);
-        var footFloorY = 0.09 * root.scale.x;
-        if (bodyY < 0.02 && foot.y < footFloorY + 0.25 * root.scale.x) {
-          var footT = new THREE.Vector3(foot.x, footFloorY, foot.z + 0.02);
-          var kneePole = new THREE.Vector3(knee.x, knee.y, knee.z + 1.0 * root.scale.x);
-          var kneeJ = this.solveTwoBone(hip, footT, la2, lb2, kneePole, new THREE.Vector3());
-          this.aimBone(leg.upper, leg.lower, kneeJ);
-          this.aimBone(leg.lower, leg.foot, footT);
-        }
-      }
-
-      // Contact shadow under the character
-      this.charBlob.position.x = root.position.x;
-      this.charBlob.position.z = root.position.z + 0.05;
-      var air = clamp(bodyY, 0, 1);
-      this.charBlob.scale.set(sm.scale * (1 - air * 0.4), sm.scale * (1 - air * 0.4), 1);
-      this.charBlob.material.opacity = 0.8 * (1 - air * 0.6);
-    },
-
     rotateBoneWorld: function (bone, axisWorld, angle) {
       if (!bone || !bone.parent || !angle) return;
       bone.updateMatrixWorld(true);
@@ -4872,11 +4744,248 @@ window.playKatanaSlashSound = playKatanaSlashSound;
       bone.updateMatrixWorld(true);
     },
 
+    // Analytic two-bone IK: returns the knee position for root S, target T, lengths a,b and pole
+    solveTwoBone: function (S, T, a, b, pole, outJoint) {
+      var d = clamp(S.distanceTo(T), 1e-4, a + b - 1e-4);
+      var u = _v1.copy(T).sub(S).normalize();
+      var cosA = clamp((a * a + d * d - b * b) / (2 * a * d), -1, 1);
+      var sinA = Math.sqrt(1 - cosA * cosA);
+      var v = _v2.copy(pole).sub(S);
+      v.sub(_v3.copy(u).multiplyScalar(v.dot(u)));
+      if (v.lengthSq() < 1e-8) v.set(0, 0, -1);
+      v.normalize();
+      outJoint.copy(S).add(u.multiplyScalar(a * cosA)).add(v.multiplyScalar(a * sinA));
+      return outJoint;
+    },
+
+    // Phone camera aspect (width / height). Old phones don't send it: estimate from body proportions.
+    getAspect: function (state, body) {
+      if (state.camAspect && isFinite(state.camAspect)) return clamp(state.camAspect, 0.4, 2.5);
+      var m = this.motion;
+      if (body && body.lS && body.rS && body.lH && body.rH) {
+        var swx = Math.abs(body.rS[0] - body.lS[0]);
+        var ty = Math.abs((body.lH[1] + body.rH[1]) / 2 - (body.lS[1] + body.rS[1]) / 2);
+        if (swx > 0.02 && ty > 0.05) {
+          var est = clamp((0.72 * ty) / swx, 0.45, 2.2); // real shoulder width / torso length ~ 0.72
+          m.ar = m.ar ? m.ar + (est - m.ar) * 0.01 : est;
+        }
+      }
+      return m.ar || 1.333;
+    },
+
+    livePose: function (state) {
+      var now = performance.now();
+      var fresh = state.lastBodyAt && now - state.lastBodyAt < 1000;
+      return {
+        body: fresh ? state.bodySilhouette : null,
+        w3: fresh && state.bodyWorldAt && now - state.bodyWorldAt < 1000 ? state.bodyWorld : null
+      };
+    },
+
+    // Player pose -> smoothed world-space directions of upper arm (u) and forearm (f) for each arm
+    readArms: function (state, dt) {
+      var live = this.livePose(state);
+      var body = live.body;
+      var w3 = live.w3;
+      var m = this.motion;
+      var a = 1 - Math.pow(1 - 0.5, dt * 60); // frame-rate independent smoothing (responsive)
+      var ar = this.getAspect(state, body);
+      // Depth sign self-check: hands are almost always in front of the shoulders
+      if (w3 && w3.lS && w3.rS && w3.lW && w3.rW) {
+        var fwd = (w3.lW[2] - w3.lS[2] + (w3.rW[2] - w3.rS[2])) * 0.5;
+        m.zEma += (fwd - m.zEma) * Math.min(1, dt * 0.4);
+        if (m.zEma < -0.1) m.zSign = -1;
+        else if (m.zEma > 0.1) m.zSign = 1;
+      }
+      for (var s = 0; s < 2; s++) {
+        var K = this.armSides[s].keys;
+        var ok = false;
+        if (w3 && w3[K[0]] && w3[K[1]] && w3[K[2]]) {
+          var S = w3[K[0]];
+          var E = w3[K[1]];
+          var W = w3[K[2]];
+          // w3 = [right, up, toward camera]; world: X right, Y up, -Z = character forward
+          _a1.set(E[0] - S[0], E[1] - S[1], -m.zSign * (E[2] - S[2]));
+          _a2.set(W[0] - E[0], W[1] - E[1], -m.zSign * (W[2] - E[2]));
+          ok = true;
+        } else if (body && body[K[0]] && body[K[1]] && body[K[2]] && body.lS && body.rS) {
+          var S2 = body[K[0]];
+          var E2 = body[K[1]];
+          var W2 = body[K[2]];
+          var sw = Math.max(0.03, Math.hypot((body.rS[0] - body.lS[0]) * ar, body.rS[1] - body.lS[1]));
+          var dux = (E2[0] - S2[0]) * ar;
+          var duy = E2[1] - S2[1];
+          var dfx = (W2[0] - E2[0]) * ar;
+          var dfy = W2[1] - E2[1];
+          var lu = Math.hypot(dux, duy);
+          var lf = Math.hypot(dfx, dfy);
+          var sm = this.segMax[s];
+          sm.u = Math.max(sm.u * 0.9995, lu, sw * 0.7);
+          sm.f = Math.max(sm.f * 0.9995, lf, sw * 0.78);
+          // A segment that looks shorter than its full length points toward the camera (forward)
+          _a1.set(dux, -duy, -Math.sqrt(Math.max(0, sm.u * sm.u - lu * lu)));
+          _a2.set(dfx, -dfy, -Math.sqrt(Math.max(0, sm.f * sm.f - lf * lf)));
+          ok = true;
+        }
+        var cur = this.armDir[s];
+        if (ok && _a1.lengthSq() > 1e-8 && _a2.lengthSq() > 1e-8) {
+          _a1.normalize();
+          _a2.normalize();
+          cur.u.lerp(_a1, a);
+          cur.f.lerp(_a2, a);
+          cur.live = true;
+        } else {
+          cur.u.lerp(GUARD[s].u, 0.08);
+          cur.f.lerp(GUARD[s].f, 0.08);
+          cur.live = false;
+        }
+        if (cur.u.lengthSq() < 1e-6) cur.u.copy(GUARD[s].u);
+        if (cur.f.lengthSq() < 1e-6) cur.f.copy(GUARD[s].f);
+        cur.u.normalize();
+        cur.f.normalize();
+      }
+    },
+
+    // Whole-body motion: step left/right, jump, squat, shoulder roll, torso twist
+    readBody: function (state, dt) {
+      var live = this.livePose(state);
+      var body = live.body;
+      var w3 = live.w3;
+      var m = this.motion;
+      var tx = 0;
+      var ty = 0;
+      var troll = 0;
+      var tyaw = 0;
+      if (body && body.lS && body.rS && body.lH && body.rH) {
+        var ar = this.getAspect(state, body);
+        var shY = (body.lS[1] + body.rS[1]) / 2;
+        var hipY = (body.lH[1] + body.rH[1]) / 2;
+        var hipX = (body.lH[0] + body.rH[0]) / 2;
+        var mpu = this.restTorso / Math.max(0.05, hipY - shY); // meters per normalized image-height unit
+        m.mpu = m.mpu ? m.mpu + (mpu - m.mpu) * 0.02 : mpu;
+        tx = clamp((hipX - 0.5) * ar * m.mpu, -1.3, 1.3);
+        if (m.baseY === null) m.baseY = hipY;
+        m.baseY += (hipY - m.baseY) * Math.min(1, dt * 0.25); // ~4 s standing baseline
+        ty = clamp((m.baseY - hipY) * m.mpu, -0.6, 0.8);
+        troll = clamp(-Math.atan2(body.rS[1] - body.lS[1], (body.rS[0] - body.lS[0]) * ar), -0.6, 0.6);
+        if (w3 && w3.lS && w3.rS) {
+          tyaw = clamp(Math.atan2(m.zSign * (w3.rS[2] - w3.lS[2]), w3.rS[0] - w3.lS[0]), -0.7, 0.7);
+        }
+      } else {
+        m.baseY = null;
+      }
+      var a = 1 - Math.pow(1 - 0.3, dt * 60);
+      m.x += (tx - m.x) * a;
+      m.y += (ty - m.y) * Math.min(1, a * 1.6);
+      m.roll += (troll - m.roll) * a;
+      m.yaw += (tyaw - m.yaw) * a;
+    },
+
+    curlFingers: function (s, amount) {
+      var sd = this.armSides[s].sd;
+      var b = this.bones;
+      var hand = b[sd + 'Hand'];
+      var ib = b[sd + 'HandIndex1'];
+      var pb = b[sd + 'HandPinky1'];
+      if (!hand || !ib || !pb) return;
+      var fingers = ['Index', 'Middle', 'Ring', 'Pinky', 'Thumb'];
+      var f;
+      var k;
+      var bone;
+      for (f = 0; f < fingers.length; f++) {
+        for (k = 1; k <= 3; k++) {
+          var key = sd + 'Hand' + fingers[f] + k;
+          if (b[key] && this.bindQ[key]) b[key].quaternion.copy(this.bindQ[key]);
+        }
+      }
+      hand.updateMatrixWorld(true);
+      var hp = hand.getWorldPosition(_p4);
+      var n = _p5.crossVectors(ib.getWorldPosition(_p6).sub(hp), pb.getWorldPosition(_p7).sub(hp)).multiplyScalar(this.palmFlip[s]);
+      if (n.lengthSq() < 1e-12) return;
+      n.normalize();
+      var angles = [0.95, 1.05, 0.75];
+      for (f = 0; f < fingers.length; f++) {
+        var isThumb = fingers[f] === 'Thumb';
+        for (k = isThumb ? 2 : 1; k <= 3; k++) {
+          bone = b[sd + 'Hand' + fingers[f] + k];
+          if (!bone || !bone.children.length) continue;
+          var d = bone.children[0].getWorldPosition(_p6).sub(bone.getWorldPosition(_p7));
+          var axis = _p8.crossVectors(d, n); // rotating d about (d x n) moves the fingertip toward the palm
+          if (axis.lengthSq() < 1e-12) continue;
+          axis.normalize();
+          this.rotateBoneWorld(bone, axis, angles[k - 1] * amount * (isThumb ? 0.45 : 1));
+        }
+      }
+    },
+
+    updateCharacter: function (state, w, h, dt, handsMode) {
+      if (!this.modelReady) return;
+      var root = this.charRoot;
+      var b = this.bones;
+      var m = this.motion;
+
+      this.mixer.update(dt);
+      this.readBody(state, dt);
+      this.readArms(state, dt);
+      root.position.set(m.x, m.y, 0);
+      root.updateMatrixWorld(true);
+
+      // Torso: shoulder roll + twist toward punches
+      this.rotateBoneWorld(b.Spine, AXIS_Z, m.roll * 0.45);
+      this.rotateBoneWorld(b.Spine1, AXIS_Z, m.roll * 0.3);
+      this.rotateBoneWorld(b.Spine, AXIS_Y, m.yaw * 0.45);
+      this.rotateBoneWorld(b.Spine1, AXIS_Y, m.yaw * 0.3);
+      this.rotateBoneWorld(b.Spine2, AXIS_Y, m.yaw * 0.25);
+
+      // Arms: reset to the T-pose reference, then swing each segment onto the player's direction
+      for (var s = 0; s < 2; s++) {
+        var A2 = this.armSides[s];
+        if (!A2.upper || !A2.fore || !A2.hand) continue;
+        A2.upper.quaternion.copy(this.bindQ[A2.sd + 'Arm']);
+        A2.fore.quaternion.copy(this.bindQ[A2.sd + 'ForeArm']);
+        A2.hand.quaternion.copy(this.bindQ[A2.sd + 'Hand']);
+        A2.upper.updateMatrixWorld(true);
+        A2.upper.getWorldPosition(this.shoulderWorld[s]);
+        this.aimBone(A2.upper, A2.fore, _p1.copy(this.shoulderWorld[s]).addScaledVector(this.armDir[s].u, 0.5));
+        A2.fore.getWorldPosition(this.elbowWorld[s]);
+        this.aimBone(A2.fore, A2.hand, _p1.copy(this.elbowWorld[s]).addScaledVector(this.armDir[s].f, 0.5));
+        A2.hand.getWorldPosition(this.handWorld[s]);
+        this.foreDir[s].copy(this.handWorld[s]).sub(this.elbowWorld[s]);
+        if (this.foreDir[s].lengthSq() < 1e-8) this.foreDir[s].copy(this.armDir[s].f);
+        this.foreDir[s].normalize();
+        this.curlFingers(s, handsMode === 'katana' ? 1.1 : handsMode === 'gloves' ? 1.3 : 0.5);
+      }
+
+      // Legs: on squats keep the feet planted on the floor (knees bend forward)
+      if (m.y < -0.02) {
+        root.updateMatrixWorld(true);
+        for (var L = 0; L < this.legChains.length; L++) {
+          var leg = this.legChains[L];
+          if (!leg.upper || !leg.lower || !leg.foot) continue;
+          var hip = leg.upper.getWorldPosition(new THREE.Vector3());
+          var knee = leg.lower.getWorldPosition(new THREE.Vector3());
+          var foot = leg.foot.getWorldPosition(new THREE.Vector3());
+          var footT = new THREE.Vector3(foot.x, this.footRestY, foot.z);
+          var kneePole = new THREE.Vector3(knee.x, knee.y, knee.z - 1.0);
+          var kneeJ = this.solveTwoBone(hip, footT, hip.distanceTo(knee), knee.distanceTo(foot), kneePole, new THREE.Vector3());
+          this.aimBone(leg.upper, leg.lower, kneeJ);
+          this.aimBone(leg.lower, leg.foot, footT);
+        }
+      }
+
+      // Contact shadow under the character
+      this.charBlob.position.set(root.position.x, 0.005, 0.05);
+      var air = clamp(m.y, 0, 1);
+      this.charBlob.scale.set(1.1 * (1 - air * 0.4), 1.1 * (1 - air * 0.4), 1);
+      this.charBlob.material.opacity = 0.8 * (1 - air * 0.6);
+      if (this.strikeArc) this.strikeArc.position.set(root.position.x, 0.012, 0);
+    },
+
     // ---------------------------------------------------------------------------
-    // Katanas (3D, placed to match the gameplay blade segment exactly)
+    // Katanas (3D): held in the fist, blade continues the forearm (elbow -> hand -> tip)
     // ---------------------------------------------------------------------------
     buildKatanas: function () {
-      var BL = 0.78; // blade length (m) at scale 1
+      var BL = 0.78; // geometry blade length (m)
       var shape = new THREE.Shape();
       var steps = 24;
       var back = function (t) { return 0.05 * t * t; };
@@ -4904,17 +5013,19 @@ window.playKatanaSlashSound = playKatanaSlashSound;
         var blade = new THREE.Mesh(bladeGeo, steel);
         blade.castShadow = true;
         group.add(blade);
-        // Neon edge glow
+        // Neon edge + glow: drawn on top (visible even when the body is in front of the blade)
         var edgeGeo = new THREE.PlaneGeometry(0.03, BL * 0.95);
         edgeGeo.translate(0.03, BL * 0.475, 0);
-        var edge = new THREE.Mesh(edgeGeo, new THREE.MeshBasicMaterial({ color: colors[k], transparent: true, opacity: 0.75, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
+        var edge = new THREE.Mesh(edgeGeo, new THREE.MeshBasicMaterial({ color: colors[k], transparent: true, opacity: 0.75, blending: THREE.AdditiveBlending, depthWrite: false, depthTest: false, side: THREE.DoubleSide }));
+        edge.renderOrder = 20;
         group.add(edge);
-        var glowSprite = new THREE.Mesh(
+        var glowPlane = new THREE.Mesh(
           new THREE.PlaneGeometry(0.16, BL * 1.05),
-          new THREE.MeshBasicMaterial({ map: glowSpriteTexture('rgba(255,255,255,0.9)', 'rgba(255,255,255,0.15)'), color: colors[k], transparent: true, opacity: 0.45, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide })
+          new THREE.MeshBasicMaterial({ map: glowSpriteTexture('rgba(255,255,255,0.9)', 'rgba(255,255,255,0.15)'), color: colors[k], transparent: true, opacity: 0.45, blending: THREE.AdditiveBlending, depthWrite: false, depthTest: false, side: THREE.DoubleSide })
         );
-        glowSprite.position.set(0.01, BL * 0.5, 0);
-        group.add(glowSprite);
+        glowPlane.position.set(0.01, BL * 0.5, 0);
+        glowPlane.renderOrder = 20;
+        group.add(glowPlane);
         var habaki = new THREE.Mesh(new THREE.BoxGeometry(0.042, 0.03, 0.014), gold);
         habaki.position.y = 0.012;
         group.add(habaki);
@@ -4938,8 +5049,7 @@ window.playKatanaSlashSound = playKatanaSlashSound;
         var trailN = 8;
         var trailGeo = new THREE.BufferGeometry();
         trailGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(trailN * 2 * 3), 3));
-        var alphas = new Float32Array(trailN * 2);
-        trailGeo.setAttribute('alpha', new THREE.BufferAttribute(alphas, 1));
+        trailGeo.setAttribute('alpha', new THREE.BufferAttribute(new Float32Array(trailN * 2), 1));
         var idx = [];
         for (var n = 0; n < trailN - 1; n++) {
           var a0 = n * 2;
@@ -4949,7 +5059,7 @@ window.playKatanaSlashSound = playKatanaSlashSound;
         var trailMat = new THREE.ShaderMaterial({
           uniforms: { uColor: { value: new THREE.Color(colors[k]) } },
           vertexShader: 'attribute float alpha; varying float vA; void main(){ vA = alpha; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
-          fragmentShader: 'uniform vec3 uColor; varying float vA; void main(){ gl_FragColor = vec4(uColor, vA * 0.4); }',
+          fragmentShader: 'uniform vec3 uColor; varying float vA; void main(){ gl_FragColor = vec4(uColor, vA * 0.28); }',
           transparent: true,
           depthWrite: false,
           blending: THREE.AdditiveBlending,
@@ -4959,25 +5069,44 @@ window.playKatanaSlashSound = playKatanaSlashSound;
         trail.frustumCulled = false;
         trail.visible = false;
         this.scene.add(trail);
-        this.katanas.push({ group: group, bladeLen: BL, trail: trail, history: [], n: trailN });
+        this.katanas.push({ group: group, bladeLen: BL, trail: trail, history: [], n: trailN, base: null, tip: null, prevBase: null, prevTip: null, placed: false });
       }
     },
 
-    placeKatana: function (k, glove, i, w, h, gripWorld) {
+    placeKatana: function (i, glove, w, h) {
       var kat = this.katanas[i];
-      var L = Math.min(w, h) * 0.25; // must match Saber3DEngine.computeSaberSegment
-      var dirAngle = fin(glove.angle, 0) - Math.PI * 0.5;
-      var gx = fin(glove.x, w * 0.5);
-      var gy = fin(glove.y, h * 0.7);
-      var grip = gripWorld ? gripWorld : this.pixelOnPlane(gx, gy, w, h, _v4.set(0, 1.2, 0.3), new THREE.Vector3());
-      var tip = this.pixelOnPlane(gx + Math.cos(dirAngle) * L, gy + Math.sin(dirAngle) * L, w, h, grip, new THREE.Vector3());
-      var dir = tip.clone().sub(grip);
-      var natural = kat.bladeLen * (this.charRoot ? this.charRoot.scale.x : 1.4);
-      var len = clamp(dir.length(), natural * 0.6, natural * 1.5);
-      if (dir.lengthSq() < 1e-8) dir.set(0, 1, 0);
+      var dir = _p1.copy(this.foreDir[i]);
+      if (dir.lengthSq() < 1e-6) dir.set(0, 0.5, -1);
       dir.normalize();
-      tip.copy(grip).add(_v1.copy(dir).multiplyScalar(len));
-      // Screen-space blade segment = what the player sees -> used by the host for slicing hits
+      var grip = _p2.copy(this.handWorld[i]).addScaledVector(dir, 0.05);
+      var len = BLADE_LEN;
+      // Basis: +Y along the blade, flat side facing the camera
+      this.camera.getWorldDirection(_p3).negate();
+      var zAxis = _p3.sub(_p4.copy(dir).multiplyScalar(_p3.dot(dir)));
+      if (zAxis.lengthSq() < 1e-6) zAxis.set(0, 0, 1);
+      zAxis.normalize();
+      var xAxis = _p5.crossVectors(dir, zAxis).normalize();
+      _m4.makeBasis(xAxis, dir, zAxis);
+      kat.group.quaternion.setFromRotationMatrix(_m4);
+      kat.group.position.copy(grip);
+      kat.group.scale.setScalar(len / kat.bladeLen);
+      kat.group.visible = true;
+
+      // World blade segment (+ previous frame) for swept 3D hit tests
+      var base = new THREE.Vector3().copy(grip).addScaledVector(dir, 0.04);
+      var tip = new THREE.Vector3().copy(grip).addScaledVector(dir, len);
+      if (!kat.placed || !kat.base) {
+        kat.prevBase = base.clone();
+        kat.prevTip = tip.clone();
+      } else {
+        kat.prevBase = kat.base;
+        kat.prevTip = kat.tip;
+      }
+      kat.base = base;
+      kat.tip = tip;
+      kat.placed = true;
+
+      // Screen-space blade (slice direction / feedback for the host)
       var gp = this.projectToScreen(grip, w, h);
       var tp = this.projectToScreen(tip, w, h);
       this.bladeScreen = this.bladeScreen || [null, null];
@@ -4989,22 +5118,13 @@ window.playKatanaSlashSound = playKatanaSlashSound;
         dirAngle: Math.atan2(tp.y - gp.y, tp.x - gp.x),
         bladeLength: Math.hypot(tp.x - gp.x, tp.y - gp.y)
       };
-      // Basis: +Y along the blade, flat side facing the camera
-      this.camera.getWorldDirection(_v1).negate();
-      var zAxis = _v1.sub(_v2.copy(dir).multiplyScalar(_v1.dot(dir))).normalize();
-      var xAxis = _v3.crossVectors(dir, zAxis).normalize();
-      _m4.makeBasis(xAxis, dir, zAxis);
-      kat.group.quaternion.setFromRotationMatrix(_m4);
-      kat.group.position.copy(grip);
-      kat.group.scale.setScalar(len / kat.bladeLen);
-      kat.group.visible = true;
 
-      // Trail
+      // Trail ribbon
       var hist = kat.history;
-      if (hist.length && hist[0][1].distanceTo(tip) > len * 1.2) hist.length = 0;
-      hist.unshift([grip.clone().add(dir.clone().multiplyScalar(len * 0.25)), tip.clone()]);
+      var tnow = performance.now();
+      hist.unshift([base.clone().lerp(tip, 0.25), tip.clone(), tnow]);
       if (hist.length > kat.n) hist.pop();
-      // Cut the ribbon at any big jump (low FPS / tracking glitch) so it never turns into giant triangles
+      while (hist.length > 1 && tnow - hist[hist.length - 1][2] > 120) hist.pop();
       for (var hcut = 1; hcut < hist.length; hcut++) {
         if (hist[hcut][1].distanceTo(hist[hcut - 1][1]) > len * 0.6) {
           hist.length = hcut;
@@ -5013,7 +5133,7 @@ window.playKatanaSlashSound = playKatanaSlashSound;
       }
       var pos = kat.trail.geometry.attributes.position;
       var al = kat.trail.geometry.attributes.alpha;
-      var speed = Math.min(1, fin(glove.speed, 0) / 18);
+      var speed = hist.length > 1 ? clamp(hist[0][1].distanceTo(hist[1][1]) / 0.08, 0, 1) : 0;
       for (var s = 0; s < kat.n; s++) {
         var e = hist[Math.min(s, hist.length - 1)];
         pos.setXYZ(s * 2, e[0].x, e[0].y, e[0].z);
@@ -5027,51 +5147,40 @@ window.playKatanaSlashSound = playKatanaSlashSound;
       kat.trail.visible = true;
     },
 
-    // ---------------------------------------------------------------------------
-    // 3D boxing gloves (worn on the character's hands)
-    // ---------------------------------------------------------------------------
-    buildBoxingGloves: function () {
-      this.boxGloves = [];
-      var cols = [0x1aa8ff, 0xff2a3c];
-      for (var i = 0; i < 2; i++) {
-        var g = new THREE.Group();
-        var leather = new THREE.MeshStandardMaterial({ color: cols[i], roughness: 0.32, metalness: 0.0, envMapIntensity: 1.0 });
-        var fist = new THREE.Mesh(new THREE.SphereGeometry(0.1, 24, 18), leather);
-        fist.scale.set(1, 1.15, 1.05);
-        fist.position.y = 0.09;
-        fist.castShadow = true;
-        g.add(fist);
-        var thumb = new THREE.Mesh(new THREE.SphereGeometry(0.045, 14, 10), leather);
-        thumb.scale.set(1, 1.6, 1);
-        thumb.position.set(i === 0 ? 0.075 : -0.075, 0.06, 0.03);
-        g.add(thumb);
-        var cuff = new THREE.Mesh(new THREE.CylinderGeometry(0.068, 0.072, 0.1, 18), new THREE.MeshStandardMaterial({ color: 0xf2f2f2, roughness: 0.5 }));
-        cuff.position.y = -0.02;
-        g.add(cuff);
-        var band = new THREE.Mesh(new THREE.CylinderGeometry(0.073, 0.073, 0.025, 18), new THREE.MeshStandardMaterial({ color: 0xffb800, roughness: 0.4, metalness: 0.3 }));
-        band.position.y = -0.01;
-        g.add(band);
-        g.visible = false;
-        this.scene.add(g);
-        this.boxGloves.push(g);
+    hideKatana: function (i) {
+      var kat = this.katanas[i];
+      kat.group.visible = false;
+      kat.trail.visible = false;
+      kat.placed = false;
+      kat.history.length = 0;
+      if (this.bladeScreen) this.bladeScreen[i] = null;
+    },
+
+    // Swept distance from point c to the blade moving from its previous to its current position
+    bladeSweepDist: function (kat, c) {
+      if (!kat.placed || !kat.base) return Infinity;
+      var best = Infinity;
+      for (var t = 0; t <= 4; t++) {
+        var f = t / 4;
+        _s0.copy(kat.prevBase).lerp(kat.base, f);
+        _s1.copy(kat.prevTip).lerp(kat.tip, f);
+        var ab = _s2.copy(_s1).sub(_s0);
+        var ap = _s3.copy(c).sub(_s0);
+        var tt = clamp(ap.dot(ab) / Math.max(1e-9, ab.lengthSq()), 0, 1);
+        var d = _s0.addScaledVector(ab, tt).distanceTo(c);
+        if (d < best) best = d;
       }
-    },
-
-    placeBoxGlove: function (i, handPos, foreDir, scale) {
-      var g = this.boxGloves[i];
-      g.position.copy(handPos).add(_v1.copy(foreDir).multiplyScalar(-0.02 * scale));
-      _q1.setFromUnitVectors(_v2.set(0, 1, 0), foreDir);
-      g.quaternion.copy(_q1);
-      g.scale.setScalar(scale * 1.05);
-      g.visible = true;
+      return best;
     },
 
     // ---------------------------------------------------------------------------
-    // 3D Saber Slicer objects (fruits / bombs / coins + sliced halves)
+    // 3D Saber Slicer targets: fly out of the torii IN FRONT of the character and
+    // arrive at its reach (6 lanes: left / center / right x high / low)
     // ---------------------------------------------------------------------------
     initSaberAssets: function () {
       this.objMeshes = new Map();
       this.halfMeshes = new Map();
+      this.xrayMats = {};
       var sphere = new THREE.SphereGeometry(1, 28, 20);
       this.geo = {
         sphere: sphere,
@@ -5088,22 +5197,42 @@ window.playKatanaSlashSound = playKatanaSlashSound;
         cybercore: new THREE.MeshStandardMaterial({ color: 0x22e8ff, emissive: 0x0aa6c8, emissiveIntensity: 1.2, roughness: 0.15, metalness: 0.3 }),
         bomb: new THREE.MeshStandardMaterial({ color: 0x1a1d24, roughness: 0.3, metalness: 0.85 }),
         bombCore: new THREE.MeshBasicMaterial({ color: 0xff2a3a }),
-        coin: new THREE.MeshStandardMaterial({ map: coinFaceTexture(), color: 0xffd34d, metalness: 1.0, roughness: 0.25, envMapIntensity: 1.5 }),
-        ringReady: new THREE.MeshBasicMaterial({ color: 0x2bff9a, transparent: true, opacity: 0.9, side: THREE.DoubleSide, depthWrite: false }),
-        ringBomb: new THREE.MeshBasicMaterial({ color: 0xff3344, transparent: true, opacity: 0.8, side: THREE.DoubleSide, depthWrite: false })
+        coin: new THREE.MeshStandardMaterial({ map: coinFaceTexture(), color: 0xffd34d, metalness: 0.85, roughness: 0.3, envMapIntensity: 1.5, emissive: 0x8a5a00, emissiveIntensity: 0.55 }),
+        ringReady: new THREE.MeshBasicMaterial({ color: 0x2bff9a, transparent: true, opacity: 0.9, side: THREE.DoubleSide, depthWrite: false, depthTest: false }),
+        ringBomb: new THREE.MeshBasicMaterial({ color: 0xff3344, transparent: true, opacity: 0.8, side: THREE.DoubleSide, depthWrite: false, depthTest: false })
       };
-      this.fleshColors = { watermelon: 0xff3355, orange: 0xffb347, dragon: 0xf6f6f6, cybercore: 0xd8fbff, goldcoin: 0xffe27a, bomb3d: 0xff5a00 };
+      this.xrayColors = { watermelon: 0x4dff88, orange: 0xffa040, dragon: 0xff4fa8, cybercore: 0x40f0ff, goldcoin: 0xffd84d, bomb3d: 0xff3344 };
+
+      // Floor arc in front of the character: where targets arrive (shown in 3D Saber Slicer)
+      var arc = new THREE.Mesh(
+        new THREE.RingGeometry(STRIKE_DIST - 0.04, STRIKE_DIST + 0.04, 48, 1, Math.PI * 0.15, Math.PI * 0.7),
+        new THREE.MeshBasicMaterial({ color: 0x37f0ff, transparent: true, opacity: 0.6, depthWrite: false, side: THREE.DoubleSide, toneMapped: false, fog: false })
+      );
+      arc.rotation.x = -Math.PI / 2;
+      arc.visible = false;
+      this.scene.add(arc);
+      this.strikeArc = arc;
+    },
+
+    // Target seen through the character's body (x-ray silhouette)
+    xrayMaterial: function (hex) {
+      if (!this.xrayMats[hex]) {
+        this.xrayMats[hex] = new THREE.MeshBasicMaterial({ color: hex, transparent: true, opacity: 0.55, depthWrite: false, depthFunc: THREE.GreaterDepth });
+      }
+      return this.xrayMats[hex];
     },
 
     makeObjectMesh: function (obj) {
       var g = new THREE.Group();
       var id = obj.id;
       var body;
+      var geom = this.geo.sphere;
       if (obj.isCoin) {
-        body = new THREE.Mesh(this.geo.coin, this.mats.coin);
+        geom = this.geo.coin;
+        body = new THREE.Mesh(geom, this.mats.coin);
         body.rotation.x = Math.PI / 2;
       } else if (obj.isBomb) {
-        body = new THREE.Mesh(this.geo.sphere, this.mats.bomb);
+        body = new THREE.Mesh(geom, this.mats.bomb);
         for (var s = 0; s < 10; s++) {
           var sp = new THREE.Mesh(this.geo.spike, this.mats.bomb);
           var phi = Math.acos(1 - (2 * (s + 0.5)) / 10);
@@ -5113,25 +5242,30 @@ window.playKatanaSlashSound = playKatanaSlashSound;
           sp.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), n);
           body.add(sp);
         }
-        var core = new THREE.Mesh(this.geo.sphere, this.mats.bombCore);
+        var core = new THREE.Mesh(geom, this.mats.bombCore);
         core.scale.setScalar(0.38);
         core.position.z = 0.75;
         body.add(core);
         g.userData.core = core;
       } else {
-        body = new THREE.Mesh(this.geo.sphere, this.mats[id] || this.mats.orange);
+        body = new THREE.Mesh(geom, this.mats[id] || this.mats.orange);
         if (id === 'cybercore') {
-          var halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowSpriteTexture('rgba(120,250,255,0.9)', 'rgba(0,200,255,0.25)'), blending: THREE.AdditiveBlending, transparent: true, depthWrite: false }));
-          halo.scale.set(3.4, 3.4, 1);
-          g.add(halo);
+          if (!this.haloTex) this.haloTex = glowSpriteTexture('rgba(120,250,255,0.9)', 'rgba(0,200,255,0.25)');
+          var halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: this.haloTex, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false }));
+          halo.scale.set(3.2, 3.2, 1); // relative to the target radius (body is scaled by R)
+          body.add(halo);
         }
         if (id === 'orange') body.scale.set(1, 0.94, 1);
       }
       body.castShadow = true;
+      var xr = new THREE.Mesh(geom, this.xrayMaterial(this.xrayColors[id] || 0xffffff));
+      xr.renderOrder = 15;
+      body.add(xr);
       g.add(body);
       g.userData.body = body;
       var ring = new THREE.Mesh(this.geo.ring, obj.isBomb ? this.mats.ringBomb : this.mats.ringReady);
       ring.visible = false;
+      ring.renderOrder = 18;
       g.add(ring);
       g.userData.ring = ring;
       var blob = new THREE.Mesh(new THREE.PlaneGeometry(2.2, 2.2), new THREE.MeshBasicMaterial({ map: this.blobTex, transparent: true, depthWrite: false, opacity: 0.6 }));
@@ -5142,11 +5276,19 @@ window.playKatanaSlashSound = playKatanaSlashSound;
       return g;
     },
 
+    lanePosition: function (eng, obj, out) {
+      var lane = (eng && eng.LANES && eng.LANES[obj.laneIdx]) || { col: 1, row: 0 };
+      var col = typeof lane.col === 'number' ? lane.col : 1;
+      var row = typeof lane.row === 'number' ? lane.row : 0;
+      var cx = this.charRoot ? this.charRoot.position.x : 0;
+      return out.set(cx + (col - 1) * LANE_X, row === 0 ? LANE_Y_HIGH : LANE_Y_LOW, -STRIKE_DIST);
+    },
+
     updateSaberObjects: function (eng, w, h, now, show) {
       var seen = new Set();
+      if (this.strikeArc) this.strikeArc.visible = !!show && this.modelReady;
       if (show && eng) {
-        var nearPlanePoint = _v4.set(0, 1.2, 0.55);
-        var strikeZ = eng.STRIKE_Z || 0.3;
+        var reach = (this.armLen || 0.6) + BLADE_LEN;
         for (var i = 0; i < eng.objects3D.length; i++) {
           var obj = eng.objects3D[i];
           seen.add(obj);
@@ -5155,39 +5297,44 @@ window.playKatanaSlashSound = playKatanaSlashSound;
             g = this.makeObjectMesh(obj);
             this.objMeshes.set(obj, g);
           }
-          var lane = (eng.LANES && eng.LANES[obj.laneIdx]) || { fx: 0.5, fy: 0.5 };
-          var near = this.pixelOnPlane(lane.fx * w, lane.fy * h, w, h, nearPlanePoint, new THREE.Vector3());
-          var far = _v1.copy(this.toriiPos).add(_v2.set((lane.fx - 0.5) * 3.2, (0.5 - lane.fy) * 2.2, 0));
+          var near = this.lanePosition(eng, obj, new THREE.Vector3());
+          var far = _s4.set(near.x * 0.3, 2.5, TORII_Z + 0.5);
           var p = clamp(1 - obj.z, 0, 1);
-          var e = 1 - Math.pow(1 - p, 1.6);
+          var e = 1 - Math.pow(1 - p, 2.6); // fast out of the torii, slows down near the player
           var pos = far.clone().lerp(near, e);
-          pos.y += Math.sin(p * Math.PI) * 1.1 * (1 - p * 0.4);
+          pos.y += Math.sin(e * Math.PI) * 0.9;
           g.position.copy(pos);
-          var wpp = this.worldPerPixelAt(near, h);
-          var radiusW = (obj.baseRadius || 80) * wpp * 0.85;
-          g.userData.body.scale.setScalar(radiusW * (obj.isCoin ? 1 : 1));
+          var R = TARGET_R * clamp((obj.baseRadius || 84) / 84, 0.8, 1.2);
+          g.userData.body.scale.setScalar(R);
           g.userData.body.rotation.y = obj.rotation || 0;
           if (!obj.isCoin) g.userData.body.rotation.x = (obj.rotation || 0) * 0.6;
           else g.userData.body.rotation.z = (obj.rotation || 0) * 2.5;
           if (g.userData.core) g.userData.core.material.color.setHSL(0, 1, 0.45 + Math.sin(now * 0.02) * 0.15);
-          // Strike-zone ring (faces the camera)
+
+          // Reachable = inside arm + katana range of a shoulder (what the ring shows is what can be cut)
+          var dS = this.modelReady ? Math.min(pos.distanceTo(this.shoulderWorld[0]), pos.distanceTo(this.shoulderWorld[1])) : Infinity;
+          obj._reachable = this.modelReady ? dS <= reach + R : obj.z <= (eng.STRIKE_Z || 0.3);
           var ring = g.userData.ring;
-          ring.visible = obj.z <= strikeZ;
+          ring.visible = obj._reachable;
           if (ring.visible) {
             ring.quaternion.copy(this.camera.quaternion);
-            ring.scale.setScalar(radiusW * (1 + Math.sin(now * 0.02) * 0.05));
+            ring.scale.setScalar(R * (1 + Math.sin(now * 0.02) * 0.05));
           }
           // Ground shadow
           var blob = g.userData.blob;
           blob.position.set(pos.x, 0.01, pos.z);
           var hgt = Math.max(0, pos.y);
-          blob.scale.setScalar(radiusW * (1.1 + hgt * 0.15));
+          blob.scale.setScalar(R * (1.1 + hgt * 0.15));
           blob.material.opacity = clamp(0.65 - hgt * 0.08, 0.1, 0.65);
-          // Hit-test geometry for the host (screen space)
+
+          // 3D hit geometry for the host: swept distance from each katana blade to the target center
+          obj._radius3D = R;
+          obj._bladeDist3D = [this.bladeSweepDist(this.katanas[0], pos), this.bladeSweepDist(this.katanas[1], pos)];
           var sp = this.projectToScreen(pos, w, h);
           obj._webglScreenX = sp.x;
           obj._webglScreenY = sp.y;
-          obj._webglRadius = radiusW / this.worldPerPixelAt(pos, h);
+          obj._webglRadius = R / this.worldPerPixelAt(pos, h);
+          obj._world = pos;
         }
       }
       var self = this;
@@ -5199,9 +5346,10 @@ window.playKatanaSlashSound = playKatanaSlashSound;
         }
       });
 
-      // Sliced halves (host keeps them in screen space; we lift them into 3D)
+      // Sliced halves (host keeps them in screen space; we lift them into 3D at the strike distance)
       var seenH = new Set();
       if (show && eng && eng.slicedHalves3D) {
+        var anchor = _s5.set(this.charRoot ? this.charRoot.position.x : 0, 1.35, -STRIKE_DIST);
         for (var k = 0; k < eng.slicedHalves3D.length; k++) {
           var hf = eng.slicedHalves3D[k];
           seenH.add(hf);
@@ -5219,10 +5367,10 @@ window.playKatanaSlashSound = playKatanaSlashSound;
             this.scene.add(m);
             this.halfMeshes.set(hf, m);
           }
-          var hp = this.pixelOnPlane(hf.x, hf.y, w, h, _v4.set(0, 1.2, 0.55), new THREE.Vector3());
+          var hp = this.pixelOnPlane(hf.x, hf.y, w, h, anchor, new THREE.Vector3());
           m.position.copy(hp);
           var rW = (hf.radius || 60) * this.worldPerPixelAt(hp, h);
-          m.scale.setScalar(rW);
+          m.scale.setScalar(clamp(rW, 0.05, 0.4));
           m.rotation.set((hf.side > 0 ? 0 : Math.PI) + m.userData.spin * k, 0, fin(hf.cutAngle, 0));
           m.rotation.y += now * 0.003 * (hf.side || 1);
           var alpha = clamp(fin(hf.alpha, 1), 0, 1);
@@ -5245,14 +5393,14 @@ window.playKatanaSlashSound = playKatanaSlashSound;
     adaptQuality: function (now) {
       if (this.lastFrameAt) {
         this.frameTimes.push(now - this.lastFrameAt);
-        if (this.frameTimes.length > 90) this.frameTimes.shift();
+        if (this.frameTimes.length > 60) this.frameTimes.shift();
       }
       this.lastFrameAt = now;
-      if (this.frameTimes.length < 90 || this.qualityCooldown > now) return;
+      if (this.frameTimes.length < 60 || this.qualityCooldown > now) return;
       var avg = 0;
       for (var i = 0; i < this.frameTimes.length; i++) avg += this.frameTimes[i];
       avg /= this.frameTimes.length;
-      if (avg > 30 && this.quality > 0) {
+      if (avg > 28 && this.quality > 0) {
         this.quality--;
         if (this.quality === 1) {
           this.renderer.shadowMap.enabled = false;
@@ -5285,16 +5433,21 @@ window.playKatanaSlashSound = playKatanaSlashSound;
         this.prevNow = now;
         this.adaptQuality(now);
 
-        // Camera (smoothly follows the selected mode + slow vertical baseline + screen shake)
+        var hands = (opts && opts.hands) || 'none';
+        var game = opts && opts.game;
+        this.updateCharacter(state, w, h, dt, hands);
+
+        // Third-person camera behind the character (follows sideways steps partially)
         var cm = CAMERA_MODES[this.camModeIdx];
-        var by = this.camOffsetY || 0;
+        var fx = (this.motion ? this.motion.x : 0) * cm.follow;
         var cam = this.camera;
-        cam.position.x += (cm.pos[0] - cam.position.x) * 0.08;
-        cam.position.y += (cm.pos[1] + by - cam.position.y) * 0.08;
-        cam.position.z += (cm.pos[2] - cam.position.z) * 0.08;
-        this.camLook.x += (cm.look[0] - this.camLook.x) * 0.08;
-        this.camLook.y += (cm.look[1] + by - this.camLook.y) * 0.08;
-        this.camLook.z += (cm.look[2] - this.camLook.z) * 0.08;
+        var k = 1 - Math.pow(1 - 0.08, dt * 60);
+        cam.position.x += (cm.pos[0] + fx - cam.position.x) * k;
+        cam.position.y += (cm.pos[1] - cam.position.y) * k;
+        cam.position.z += (cm.pos[2] - cam.position.z) * k;
+        this.camLook.x += (cm.look[0] + fx - this.camLook.x) * k;
+        this.camLook.y += (cm.look[1] - this.camLook.y) * k;
+        this.camLook.z += (cm.look[2] - this.camLook.z) * k;
         cam.lookAt(this.camLook);
         var shake = fin(state.screenShake, 0);
         if (shake > 0.4) {
@@ -5303,23 +5456,15 @@ window.playKatanaSlashSound = playKatanaSlashSound;
         }
         cam.updateMatrixWorld(true);
 
-        var hands = (opts && opts.hands) || 'none';
-        this.updateCharacter(state, w, h, dt, hands);
-
-        // Hands: katanas / gloves
+        // Katanas in 3D Saber Slicer (2D games draw their own glove cursors on top)
         var gloves = state.gloves || [];
         for (var i = 0; i < 2; i++) {
-          var showK = hands === 'katana' && gloves[i];
-          var showG = hands === 'gloves' && gloves[i] && this.modelReady;
-          if (showK) this.placeKatana(null, gloves[i], i, w, h, this.modelReady && this.handWorld ? this.handWorld[i] : null);
-          if (!showK && this.bladeScreen) this.bladeScreen[i] = null;
-          this.katanas[i].group.visible = !!showK;
-          this.katanas[i].trail.visible = !!showK;
-          if (showG) this.placeBoxGlove(i, this.handWorld[i], this.foreDir[i], this.charRoot.scale.x);
-          this.boxGloves[i].visible = !!showG;
+          if (hands === 'katana' && this.modelReady) this.placeKatana(i, gloves[i], w, h);
+          else this.hideKatana(i);
+          if (this.boxGloves && this.boxGloves[i]) this.boxGloves[i].visible = false;
         }
 
-        this.updateSaberObjects(opts && opts.saberEngine, w, h, now, opts && opts.game === 'saber3d');
+        this.updateSaberObjects(opts && opts.saberEngine, w, h, now, game === 'saber3d');
 
         // Ambient motion
         var t = now * 0.001;
@@ -5486,10 +5631,10 @@ const poseTracker = {
     return Math.max(0.02, Math.min(0.98, 0.55 + (y - 0.55) * 1.55));
   },
 
-  extractFistAndBody(poseLandmarks) {
+  extractFistAndBody(poseLandmarks, worldLandmarks, aspect) {
     const now = performance.now();
     if (!poseLandmarks || poseLandmarks.length < 27) {
-      return { hands: [], body: null };
+      return { hands: [], body: null, w3: null, ar: null };
     }
 
     const pt = (idx) => {
@@ -5610,7 +5755,41 @@ const poseTracker = {
       rK: roundPt(rKnee)
     };
 
-    return { hands, body };
+    // 3D world landmarks (meters, hip-centered) for the TV's 3D character: [right, up, toward camera]
+    let w3 = null;
+    if (worldLandmarks && worldLandmarks.length > 26) {
+      const wp = (idx) => {
+        const lm = worldLandmarks[idx];
+        const nl = poseLandmarks[idx];
+        const vis = nl && nl.visibility !== undefined ? nl.visibility : 1;
+        if (!lm || vis < 0.25) return null;
+        return [+(-lm.x).toFixed(3), +(-lm.y).toFixed(3), +(-lm.z).toFixed(3)];
+      };
+      const wFist = (wIdx, eIdx, iIdx, pIdx) => {
+        const W = wp(wIdx);
+        if (!W) return null;
+        const I = wp(iIdx);
+        const P = wp(pIdx);
+        if (I && P) return [0, 1, 2].map((k) => +(W[k] * 0.25 + (I[k] * 0.55 + P[k] * 0.45) * 0.75).toFixed(3));
+        const E = wp(eIdx);
+        if (E) return [0, 1, 2].map((k) => +(W[k] + (W[k] - E[k]) * 0.3).toFixed(3));
+        return W;
+      };
+      w3 = {
+        head: wp(0),
+        lS: wp(11),
+        rS: wp(12),
+        lE: wp(13),
+        rE: wp(14),
+        lW: wFist(15, 13, 19, 17),
+        rW: wFist(16, 14, 20, 18),
+        lH: wp(23),
+        rH: wp(24),
+        lK: wp(25),
+        rK: wp(26)
+      };
+    }
+    return { hands, body, w3, ar: aspect && isFinite(aspect) ? +aspect.toFixed(3) : null };
   }
 };
 
@@ -6276,6 +6455,14 @@ function handleIncomingRemotePayload(payload) {
   if (payload.type === 'POSE') {
     if (payload.body) {
       state.bodySilhouette = payload.body;
+      state.lastBodyAt = performance.now();
+    }
+    if (payload.w3) {
+      state.bodyWorld = payload.w3;
+      state.bodyWorldAt = performance.now();
+    }
+    if (payload.ar) {
+      state.camAspect = payload.ar;
     }
     updateGlovesFromStableSlots(payload.hands);
     if (
@@ -6311,6 +6498,7 @@ function broadcastFromPhone(payload) {
 
   if (outPayload.type === 'POSE' && state.sentFramesCount % 2 !== 0) {
     delete outPayload.body;
+    delete outPayload.w3;
   }
 
   let connectedChannels = 0;
@@ -6478,7 +6666,9 @@ async function startCameraAndMediaPipePose(videoElement, overlayCanvas, overlayC
 
     if (poseDetector) {
       poseDetector.onResults((results) => {
-        const extracted = poseTracker.extractFistAndBody(results.poseLandmarks);
+        const vw = activeVideoEl && activeVideoEl.videoWidth;
+        const vh = activeVideoEl && activeVideoEl.videoHeight;
+        const extracted = poseTracker.extractFistAndBody(results.poseLandmarks, results.poseWorldLandmarks, vw && vh ? vw / vh : null);
         drawPhonePoseSkeleton(extracted, activeOverlayCanvas, activeOverlayCtx);
         onPoseCallback(extracted);
       });
@@ -7087,7 +7277,6 @@ function gameLoop(timestamp) {
       lastRenderError = pluginGame.id + ': ' + (e && e.message ? e.message : String(e));
     }
     state.gloves.forEach((g) => {
-      if (rendered3D) return; // 3D gloves / katanas are worn by the 3D character
       try {
         if (pluginGame.hands === 'gloves') drawBoxingGlove(ctx, g);
         else if (pluginGame.hands === 'katana' && window.ArenaVisuals) window.ArenaVisuals.drawKatana(ctx, g, canvas.width, canvas.height);
@@ -7130,16 +7319,29 @@ function gameLoop(timestamp) {
       const hitY = webglRendered && Number.isFinite(obj._webglScreenY) ? obj._webglScreenY : proj.screenY;
       const radius = webglRendered && Number.isFinite(obj._webglRadius) ? obj._webglRadius : Math.max(10, obj.baseRadius * proj.scale);
 
-      // Depth check: slicing is allowed ONLY when the target is close (z <= STRIKE_Z) and large.
-      obj.inStrikeZone = obj.z <= eng.STRIKE_Z && obj.z > 0.02;
-      if (obj.inStrikeZone) {
-        for (let gIdx = 0; gIdx < state.gloves.length; gIdx++) {
-          const g = state.gloves[gIdx];
-          if (!g.active) continue;
-          const sb = sabers[gIdx];
-          if (eng.segmentCircleHit(sb.handleX, sb.handleY, sb.tipX, sb.tipY, hitX, hitY, radius + 12)) {
-            trigger3DSaberSlice(obj, hitX, hitY, radius, g, sb);
-            break;
+      if (webglRendered && Array.isArray(obj._bladeDist3D)) {
+        // 3D: a target can be cut only when it is within reach (green ring) and a katana blade touches it in 3D
+        obj.inStrikeZone = Boolean(obj._reachable) && obj.z > 0.02;
+        if (obj.inStrikeZone) {
+          for (let gIdx = 0; gIdx < 2; gIdx++) {
+            if (obj._bladeDist3D[gIdx] <= (obj._radius3D || 0.2) + 0.1) {
+              trigger3DSaberSlice(obj, hitX, hitY, radius, state.gloves[gIdx], sabers[gIdx]);
+              break;
+            }
+          }
+        }
+      } else {
+        // 2D fallback: slicing is allowed ONLY when the target is close (z <= STRIKE_Z) and large.
+        obj.inStrikeZone = obj.z <= eng.STRIKE_Z && obj.z > 0.02;
+        if (obj.inStrikeZone) {
+          for (let gIdx = 0; gIdx < state.gloves.length; gIdx++) {
+            const g = state.gloves[gIdx];
+            if (!g.active) continue;
+            const sb = sabers[gIdx];
+            if (eng.segmentCircleHit(sb.handleX, sb.handleY, sb.tipX, sb.tipY, hitX, hitY, radius + 12)) {
+              trigger3DSaberSlice(obj, hitX, hitY, radius, g, sb);
+              break;
+            }
           }
         }
       }
@@ -7286,7 +7488,6 @@ function gameLoop(timestamp) {
     }
 
     state.gloves.forEach((g) => {
-      if (rendered3D) return; // 3D boxing gloves are worn by the 3D character
       try {
         drawBoxingGlove(ctx, g);
       } catch (e) {}
@@ -7434,6 +7635,12 @@ async function launchSoloMode() {
   startRound();
   await startCameraAndMediaPipePose(inputVideo, pipCanvas, pipCtx, (extracted) => {
     state.bodySilhouette = extracted.body;
+    if (extracted.body) state.lastBodyAt = performance.now();
+    if (extracted.w3) {
+      state.bodyWorld = extracted.w3;
+      state.bodyWorldAt = performance.now();
+    }
+    if (extracted.ar) state.camAspect = extracted.ar;
     updateGlovesFromStableSlots(extracted.hands);
   });
 }
@@ -7505,6 +7712,8 @@ async function launchPhoneSensorMode(prefilledCode = '') {
     broadcastFromPhone({
       type: 'POSE',
       hands: extracted.hands,
+      w3: extracted.w3,
+      ar: extracted.ar,
       body: extracted.body
     });
   });
